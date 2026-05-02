@@ -17,6 +17,7 @@ export interface GeneratedNode {
   requirements: Record<string, unknown>;
   xpReward: number;
   parentIds: string[];
+  unlocked?: boolean;
   justification: string;
 }
 

@@ -28,7 +28,7 @@ const pathColors: Record<string, string> = {
 
 export function SkillTree() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [loading, setLoading] = useState(true);
   const [selectedNode, setSelectedNode] = useState<SkillTreeNodeData | null>(null);
 
