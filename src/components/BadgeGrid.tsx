@@ -23,40 +23,67 @@ const rarityStyles: Record<string, { border: string; glow: string; text: string;
   legendary: { border: 'border-amber-500/30', glow: 'shadow-amber-500/10', text: 'text-amber-400', bg: 'from-amber-500/10 to-transparent' },
 };
 
-const weeklyBadgeSvgMap: Record<string, string> = {
-  'svg:mvp': '/badges/mvp.svg',
-  'svg:2nd': '/badges/2nd.svg',
-  'svg:3rd': '/badges/3rd.svg',
-  'svg:last1': '/badges/last1.svg',
-  'svg:last2': '/badges/last2.svg',
+const weeklySvgMap: Record<string, { src: string; shadow: string }> = {
+  'svg:mvp': { src: '/badges/mvp.svg', shadow: '0 0 40px rgba(245,158,11,0.5), 0 0 80px rgba(245,158,11,0.2)' },
+  'svg:2nd': { src: '/badges/2nd.svg', shadow: '0 0 35px rgba(168,85,247,0.4), 0 0 70px rgba(168,85,247,0.15)' },
+  'svg:3rd': { src: '/badges/3rd.svg', shadow: '0 0 30px rgba(59,130,246,0.35), 0 0 60px rgba(59,130,246,0.1)' },
+  'svg:last2': { src: '/badges/last2.svg', shadow: '0 0 15px rgba(107,114,128,0.2)' },
+  'svg:last1': { src: '/badges/last1.svg', shadow: '0 0 15px rgba(107,114,128,0.2)' },
 };
 
 export function BadgeCard({ badge }: { badge: Badge }) {
   const style = rarityStyles[badge.rarity.toLowerCase()] || rarityStyles.common;
   const isSvg = badge.icon?.startsWith('svg:');
-  const svgSrc = isSvg ? weeklyBadgeSvgMap[badge.icon] : null;
+  const svgInfo = isSvg ? weeklySvgMap[badge.icon] : null;
   const Icon = !isSvg ? iconMap[badge.icon] || Zap : null;
-  const isWeeklyLeaderboard = badge.category === 'weekly_leaderboard';
+  const isWeekly = badge.category === 'weekly_leaderboard';
+
+  if (isWeekly && svgInfo) {
+    return (
+      <div
+        className={`relative p-5 rounded-xl border ${style.border} bg-gradient-to-br ${style.bg} backdrop-blur-sm transition-all hover:scale-[1.02] hover:shadow-xl ${style.glow}`}
+        style={{ boxShadow: svgInfo.shadow }}
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className="relative flex-shrink-0 h-20 w-20 rounded-xl overflow-hidden ring-2 ring-white/10 animate-pulse"
+            style={{ boxShadow: svgInfo.shadow }}
+          >
+            <img
+              src={svgInfo.src}
+              alt={badge.name}
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg font-bold text-white truncate">{badge.name}</span>
+              <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full border font-bold ${style.border} ${style.text}`}>
+                {badge.rarity}
+              </span>
+            </div>
+            <p className="text-sm text-white/50 leading-snug">{badge.description}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`relative p-4 rounded-xl border ${style.border} bg-gradient-to-br ${style.bg} backdrop-blur-sm transition-all hover:scale-[1.02] hover:shadow-lg ${style.glow} ${isWeeklyLeaderboard ? 'ring-1 ring-white/10' : ''}`}
-      style={{ boxShadow: `0 0 ${isWeeklyLeaderboard ? '30px' : '20px'} ${badge.color}20` }}
+      className={`relative p-4 rounded-xl border ${style.border} bg-gradient-to-br ${style.bg} backdrop-blur-sm transition-all hover:scale-[1.02] hover:shadow-lg ${style.glow}`}
+      style={{ boxShadow: `0 0 20px ${badge.color}15` }}
     >
       <div className="flex items-start gap-3">
         <div
-          className={`flex items-center justify-center rounded-lg shrink-0 ${isWeeklyLeaderboard ? 'h-16 w-16' : 'h-10 w-10'}`}
+          className="flex h-10 w-10 items-center justify-center rounded-lg shrink-0"
           style={{ background: `linear-gradient(135deg, ${badge.color}30, ${badge.color}10)`, border: `1px solid ${badge.color}40` }}
         >
-          {isSvg && svgSrc ? (
-            <img src={svgSrc} alt={badge.name} className="h-full w-full object-contain p-1" />
-          ) : (
-            <Icon className={`${isWeeklyLeaderboard ? 'h-8 w-8' : 'h-5 w-5'}`} style={{ color: badge.color }} />
-          )}
+          <Icon className="h-5 w-5" style={{ color: badge.color }} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span className={`${isWeeklyLeaderboard ? 'text-base' : 'text-sm'} font-bold text-white truncate`}>{badge.name}</span>
+            <span className="text-sm font-bold text-white truncate">{badge.name}</span>
             <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${style.border} ${style.text}`}>
               {badge.rarity}
             </span>
@@ -82,14 +109,14 @@ export function BadgeGrid({ badges }: { badges: Badge[] }) {
   const aiBadges = badges.filter(b => b.category !== 'weekly_leaderboard');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {weeklyBadges.length > 0 && (
         <div>
-          <h3 className="text-xs uppercase tracking-wider text-white/30 mb-2 flex items-center gap-1.5">
+          <h3 className="text-xs uppercase tracking-wider text-white/30 mb-3 flex items-center gap-1.5">
             <Crown className="h-3.5 w-3.5 text-amber-400" />
             Weekly Honors
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-3">
             {weeklyBadges.map((badge) => (
               <BadgeCard key={badge.id} badge={badge} />
             ))}
@@ -98,7 +125,7 @@ export function BadgeGrid({ badges }: { badges: Badge[] }) {
       )}
       {aiBadges.length > 0 && (
         <div>
-          <h3 className="text-xs uppercase tracking-wider text-white/30 mb-2 flex items-center gap-1.5">
+          <h3 className="text-xs uppercase tracking-wider text-white/30 mb-3 flex items-center gap-1.5">
             <Trophy className="h-3.5 w-3.5 text-purple-400" />
             AI-Forged Badges
           </h3>
