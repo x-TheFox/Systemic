@@ -159,6 +159,20 @@ async function syncUser(user: any) {
       leetcodeMedium = lcMetrics.solved.medium;
       leetcodeHard = lcMetrics.solved.hard;
 
+      // Never let stats regress to 0 if we had data before
+      if (leetcodeEasy < prevLeetcodeEasy && prevLeetcodeEasy > 0) {
+        console.log(`[Sync] LeetCode returned ${leetcodeEasy} easy but we had ${prevLeetcodeEasy} — keeping previous`);
+        leetcodeEasy = prevLeetcodeEasy;
+      }
+      if (leetcodeMedium < prevLeetcodeMedium && prevLeetcodeMedium > 0) {
+        console.log(`[Sync] LeetCode returned ${leetcodeMedium} medium but we had ${prevLeetcodeMedium} — keeping previous`);
+        leetcodeMedium = prevLeetcodeMedium;
+      }
+      if (leetcodeHard < prevLeetcodeHard && prevLeetcodeHard > 0) {
+        console.log(`[Sync] LeetCode returned ${leetcodeHard} hard but we had ${prevLeetcodeHard} — keeping previous`);
+        leetcodeHard = prevLeetcodeHard;
+      }
+
       const deltaEasy = Math.max(0, leetcodeEasy - prevLeetcodeEasy);
       const deltaMedium = Math.max(0, leetcodeMedium - prevLeetcodeMedium);
       const deltaHard = Math.max(0, leetcodeHard - prevLeetcodeHard);
@@ -192,6 +206,16 @@ async function syncUser(user: any) {
       const cfMetrics = await fetchCodeforcesMetrics(user.codeforcesHandle);
       codeforcesRating = cfMetrics.rating;
       codeforcesSolved = cfMetrics.solvedCount;
+
+      // Never let stats regress to 0
+      if (codeforcesSolved < prevCodeforcesSolved && prevCodeforcesSolved > 0) {
+        console.log(`[Sync] Codeforces returned ${codeforcesSolved} solved but we had ${prevCodeforcesSolved} — keeping previous`);
+        codeforcesSolved = prevCodeforcesSolved;
+      }
+      if (codeforcesRating < prevCodeforcesRating && prevCodeforcesRating > 0) {
+        console.log(`[Sync] Codeforces rating ${codeforcesRating} < previous ${prevCodeforcesRating} — keeping previous`);
+        codeforcesRating = prevCodeforcesRating;
+      }
 
       const deltaSolved = Math.max(0, codeforcesSolved - prevCodeforcesSolved);
       const deltaRatingMilestone = Math.max(0, Math.floor(codeforcesRating / 100) - Math.floor(prevCodeforcesRating / 100));
@@ -229,6 +253,11 @@ async function syncUser(user: any) {
       const hrMetrics = await fetchHackerRankMetrics(user.hackerrankHandle);
       hackerrankBadges = hrMetrics.badges;
 
+      if (hackerrankBadges < prevHackerrankBadges && prevHackerrankBadges > 0) {
+        console.log(`[Sync] HackerRank returned ${hackerrankBadges} badges but we had ${prevHackerrankBadges} — keeping previous`);
+        hackerrankBadges = prevHackerrankBadges;
+      }
+
       const deltaBadges = Math.max(0, hackerrankBadges - prevHackerrankBadges);
       const hrXP = (deltaBadges * XP_TABLE.HACKERRANK.BADGE) +
                    (hrMetrics.certificates * XP_TABLE.HACKERRANK.CERTIFICATE) +
@@ -254,7 +283,8 @@ async function syncUser(user: any) {
   // ---------- CALCULATE FINAL XP ----------
   // XP only ever goes UP: current XP + delta. Never regress.
   // GitHub stats (commits, PRs) update the stored totals but XP doesn't go down.
-  const finalXP = user.xp + totalDeltaXP;
+  // Additional safety: final XP must never be less than current XP.
+  const finalXP = Math.max(user.xp, user.xp + totalDeltaXP);
 
   // ---------- UPDATE USER ----------
   await prisma.user.update({
