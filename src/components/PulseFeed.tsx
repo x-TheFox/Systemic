@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Pusher from 'pusher-js';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, Trophy, Unlock, Zap, Star } from 'lucide-react';
 
 interface PulseEvent {
@@ -25,7 +26,26 @@ const eventConfig: Record<string, { icon: React.ReactNode; gradient: string; bor
 
 export function PulseFeed() {
   const [events, setEvents] = useState<PulseEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Load historical feed on mount
+  useEffect(() => {
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/pulse?limit=30');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        if (data.events) setEvents(data.events);
+      } catch (err) {
+        console.error('Pulse history load error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadHistory();
+  }, []);
+
+  // Subscribe to real-time updates
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
     if (!key) return;
@@ -56,6 +76,16 @@ export function PulseFeed() {
     };
   }, []);
 
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <ScrollArea className="h-[300px] w-full">
       <div className="space-y-2 px-1">
@@ -76,7 +106,7 @@ export function PulseFeed() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <Badge variant="outline" className="text-[9px] py-0 border-white/10 text-white/40">{e.type.replace('-', ' ')}</Badge>
-                    {e.xp && <span className="text-purple-400 text-xs font-medium">+{e.xp} XP</span>}
+                    {e.xp ? <span className="text-purple-400 text-xs font-medium">+{e.xp} XP</span> : null}
                   </div>
                   <p className="text-sm text-white/70 leading-snug">{e.message}</p>
                   <p className="text-[10px] text-white/15 mt-1">{new Date(e.timestamp).toLocaleTimeString()}</p>
