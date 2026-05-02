@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink, Brain } from 'lucide-react';
 import Link from 'next/link';
 
 const platformIcons: Record<string, any> = {
@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [deepDiving, setDeepDiving] = useState(false);
   const [formData, setFormData] = useState({
     githubHandle: '',
     leetcodeHandle: '',
@@ -86,6 +87,27 @@ export default function ProfilePage() {
       toast.error('Sync failed. Try again later.');
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function triggerDeepDive() {
+    setDeepDiving(true);
+    try {
+      const res = await fetch('/api/deepdive', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ''}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user?.id }),
+      });
+      if (!res.ok) throw new Error('Deep dive failed');
+      const data = await res.json();
+      toast.success(`Deep dive complete! Archetype: ${data.archetype}`);
+    } catch {
+      toast.error('Deep dive failed. Try again later.');
+    } finally {
+      setDeepDiving(false);
     }
   }
 
@@ -177,7 +199,7 @@ export default function ProfilePage() {
             <StatCard label="PRs" value={profile?.totalPRs || 0} icon="🔀" color="green" />
             <StatCard label="LC Hard" value={profile?.leetcodeHard || 0} icon="🧠" color="pink" />
           </div>
-          <div className="mt-4">
+          <div className="mt-4 space-y-2">
             <Button
               onClick={triggerSync}
               disabled={syncing}
@@ -185,6 +207,15 @@ export default function ProfilePage() {
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
               {syncing ? 'Syncing...' : 'Sync Now'}
+            </Button>
+            <Button
+              onClick={triggerDeepDive}
+              disabled={deepDiving}
+              variant="outline"
+              className="w-full border-white/10 hover:bg-white/5 text-white/70 hover:text-white"
+            >
+              <Brain className={`h-4 w-4 mr-2 ${deepDiving ? 'animate-pulse' : ''}`} />
+              {deepDiving ? 'Analyzing entire GitHub...' : 'Deep Dive (AI Research)'}
             </Button>
           </div>
         </div>

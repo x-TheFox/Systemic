@@ -20,13 +20,20 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const userIdParam = searchParams.get('userId');
+    const clerkIdParam = searchParams.get('clerkId');
 
     let userId = userIdParam;
 
-    if (!userId) {
+    if (clerkIdParam) {
+      const dbUser = await prisma.user.findUnique({ where: { clerkId: clerkIdParam } });
+      if (!dbUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      userId = dbUser.id;
+    } else if (!userId) {
       const clerkUser = await currentUser();
       if (!clerkUser) {
-        return NextResponse.json({ error: 'userId required or sign in' }, { status: 400 });
+        return NextResponse.json({ error: 'userId or clerkId required, or sign in' }, { status: 400 });
       }
 
       const dbUser = await getOrCreateUser(

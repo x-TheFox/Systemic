@@ -85,7 +85,6 @@ export async function deepDiveGitHub(handle: string, token: string): Promise<Dee
         login
         name
         bio
-        publicRepos
         followers {
           totalCount
         }
@@ -311,7 +310,7 @@ export async function deepDiveGitHub(handle: string, token: string): Promise<Dee
       login: ghUser.login,
       name: ghUser.name,
       bio: ghUser.bio,
-      publicRepos: ghUser.publicRepos,
+      publicRepos: ghUser.repositories?.totalCount || 0,
       followers: ghUser.followers.totalCount,
       following: ghUser.following.totalCount,
       createdAt: ghUser.createdAt,

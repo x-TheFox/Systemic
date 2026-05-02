@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/ghost',
   '/api/sync',
   '/api/weekly',
+  '/api/deepdive',
 ]);
 
 export default clerkMiddleware((auth, req) => {

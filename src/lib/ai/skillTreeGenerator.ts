@@ -17,12 +17,29 @@ export interface GeneratedNode {
   tier: number;
   positionX: number;
   positionY: number;
-  requirements: Record<string, unknown>;
+  requirements: Record<string, number>;
   xpReward: number;
   parentIds: string[];
   unlocked?: boolean;
   justification: string;
 }
+
+const requirementsSchema = z.object({
+  total_xp: z.number().describe("Total XP threshold"),
+  leetcode_hard: z.number().describe("LeetCode hard problems solved threshold. 0 means not required"),
+  leetcode_medium: z.number().describe("LeetCode medium problems solved threshold. 0 means not required"),
+  leetcode_easy: z.number().describe("LeetCode easy problems solved threshold. 0 means not required"),
+  github_prs: z.number().describe("GitHub PRs threshold. 0 means not required"),
+  github_commits: z.number().describe("GitHub commits threshold. 0 means not required"),
+  codeforces_rating: z.number().describe("Codeforces rating threshold. 0 means not required"),
+  codeforces_solved: z.number().describe("Codeforces problems solved threshold. 0 means not required"),
+  hackerrank_badges: z.number().describe("HackerRank badges threshold. 0 means not required"),
+  skill_xp_Frontend: z.number().describe("Frontend XP threshold. 0 means not required"),
+  skill_xp_Backend: z.number().describe("Backend XP threshold. 0 means not required"),
+  skill_xp_DevOps: z.number().describe("DevOps XP threshold. 0 means not required"),
+  skill_xp_Architecture: z.number().describe("Architecture XP threshold. 0 means not required"),
+  skill_xp_Algo: z.number().describe("Algo XP threshold. 0 means not required"),
+}).describe("Unlock requirements. Set fields to 0 if not required for this node. Only non-zero values are actual requirements.");
 
 const nodeSchema = z.object({
   nodeId: z.string().describe("Unique kebab-case ID. Use prefixes: 'core-', 'fw-', 'se-', 'ds-', 'fs-', 'devops-', 'mob-', 'sec-'"),
@@ -32,7 +49,7 @@ const nodeSchema = z.object({
   tier: z.number().int().min(1).max(10).describe('Depth in tree. Root=0, children=parent.tier+1'),
   positionX: z.number().int().describe('X coordinate on canvas. Range 0-1000'),
   positionY: z.number().int().describe('Y coordinate on canvas. Range 0-1000. Increase Y per tier'),
-  requirements: z.record(z.string(), z.number()).describe("Unlock requirements as key-value pairs. Keys: 'total_xp', 'leetcode_hard', 'github_prs', 'skill_xp_Backend', etc. Values are threshold numbers."),
+  requirements: requirementsSchema,
   xpReward: z.number().int().min(50).max(2000).describe('XP awarded when unlocked'),
   parentIds: z.array(z.string()).describe('Parent node IDs that must be unlocked first'),
   justification: z.string().describe('Why this node was generated for this user'),
@@ -46,7 +63,7 @@ const deepDiveNodeSchema = z.object({
   tier: z.number().int().min(0).max(5).describe('0=root, 1=first branch, 2=deeper, etc.'),
   positionX: z.number().int().describe('X on canvas 0-1000. Root=500. Spread paths apart.'),
   positionY: z.number().int().describe('Y on canvas 0-1000. Each tier adds 150-200.'),
-  requirements: z.record(z.string(), z.number()).describe("Requirements to unlock as key-value pairs. Keys: 'total_xp', 'leetcode_hard', 'github_prs', 'github_commits', 'skill_xp_Frontend', etc. Values should be ACHIEVABLE given current stats."),
+  requirements: requirementsSchema,
   xpReward: z.number().int().min(25).max(500).describe('XP bonus when unlocked'),
   parentIds: z.array(z.string()).describe('Parent node IDs. Root node has empty array.'),
   unlocked: z.boolean().describe('Whether this should start unlocked. Root always true, starter nodes based on existing skills.'),

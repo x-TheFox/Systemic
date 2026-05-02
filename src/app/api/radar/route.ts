@@ -5,18 +5,28 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
+    const clerkId = searchParams.get('clerkId');
     const ghost = searchParams.get('ghost') === 'true';
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'userId required' }), { status: 400 });
+    let dbUserId = userId;
+    if (clerkId) {
+      const user = await prisma.user.findUnique({ where: { clerkId } });
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+      }
+      dbUserId = user.id;
     }
 
-    const radar = await generateSkillRadar(userId);
+    if (!dbUserId) {
+      return new Response(JSON.stringify({ error: 'userId or clerkId required' }), { status: 400 });
+    }
+
+    const radar = await generateSkillRadar(dbUserId);
 
     let ghostData = null;
     if (ghost) {
       const snapshot = await prisma.ghostSnapshot.findFirst({
-        where: { userId },
+        where: { userId: dbUserId },
         orderBy: { createdAt: 'desc' },
       });
       if (snapshot) {

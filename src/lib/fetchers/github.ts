@@ -85,7 +85,7 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
                     (user.contributionsCollection?.restrictedContributionsCount || 0);
 
     const prs = user.pullRequests?.totalCount || 0;
-    const mergedPRs = user.pullRequests?.nodes?.filter((pr: any) => pr.mergedAt).length || 0;
+    const mergedPRs = user.pullRequests?.nodes?.filter((pr: any) => pr != null && pr.mergedAt != null).length || 0;
 
     const languageDistribution: Record<string, number> = {};
     let totalSize = 0;
@@ -105,7 +105,7 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
       }
     }
 
-    const recentPRs = user.pullRequests?.nodes?.map((pr: any) => ({
+    const recentPRs = user.pullRequests?.nodes?.filter((pr: any) => pr != null).map((pr: any) => ({
       title: pr.title,
       url: pr.url,
       mergedAt: pr.mergedAt,

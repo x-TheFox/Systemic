@@ -20,10 +20,21 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const userIdParam = searchParams.get('userId');
+    const clerkIdParam = searchParams.get('clerkId');
 
     let dbUser;
 
-    if (userIdParam) {
+    if (clerkIdParam) {
+      dbUser = await prisma.user.findUnique({
+        where: { clerkId: clerkIdParam },
+        include: {
+          activityLogs: { orderBy: { timestamp: 'desc' }, take: 50 },
+          skillTreeState: true,
+          achievements: { orderBy: { earnedAt: 'desc' } },
+          ghostSnapshots: { orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }], take: 10 },
+        },
+      });
+    } else if (userIdParam) {
       dbUser = await prisma.user.findUnique({
         where: { id: userIdParam },
         include: {

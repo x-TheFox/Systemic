@@ -41,8 +41,8 @@ export function SkillTree() {
     if (!isLoaded) return;
     async function loadTree() {
       try {
-        const userId = user?.id;
-        const url = userId ? `/api/skilltree?userId=${userId}` : '/api/skilltree';
+        const clerkId = user?.id;
+        const url = clerkId ? `/api/skilltree?clerkId=${clerkId}` : '/api/skilltree';
         const res = await fetch(url);
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();

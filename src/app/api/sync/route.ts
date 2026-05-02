@@ -304,7 +304,7 @@ async function syncUser(user: any) {
       tier: n.tier,
       positionX: n.positionX,
       positionY: n.positionY,
-      requirements: n.requirements as Record<string, unknown>,
+      requirements: n.requirements as Record<string, number>,
       xpReward: n.xpReward,
       parentIds: n.parentIds,
       unlocked: n.unlocked,
@@ -395,6 +395,7 @@ async function syncUser(user: any) {
     const reqs = node.requirements as Record<string, number>;
     let met = true;
     for (const [key, val] of Object.entries(reqs)) {
+      if (val === 0) continue; // 0 means not required
       let current = 0;
       if (key === 'total_xp') current = freshUser.xp;
       else if (key === 'leetcode_hard') current = freshUser.leetcodeHard;

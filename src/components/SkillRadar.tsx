@@ -33,12 +33,12 @@ export function SkillRadar() {
     if (!isLoaded) return;
     async function load() {
       try {
-        const userId = user?.id;
-        if (!userId) {
+        const clerkId = user?.id;
+        if (!clerkId) {
           setLoading(false);
           return;
         }
-        const res = await fetch(`/api/radar?userId=${userId}&ghost=true`);
+        const res = await fetch(`/api/radar?clerkId=${clerkId}&ghost=true`);
         if (!res.ok) throw new Error('Failed');
         const d = await res.json();
         if (d.radar && d.radar.length > 0) setData(d.radar);

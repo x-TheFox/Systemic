@@ -25,7 +25,7 @@ export default function Home() {
     async function loadStats() {
       if (!user) return;
       try {
-        const res = await fetch(`/api/profile?userId=${user.id}`);
+        const res = await fetch(`/api/profile?clerkId=${user.id}`);
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         setStats(data.user);
