@@ -41,7 +41,7 @@ graph TB
     end
 
     subgraph "AI Layer"
-        SYNC --> GROQ[Groq llama3-70b-8192]
+        SYNC --> GROQ[Groq openai/gpt-oss-120b]
         WEEKLY --> GROQ
         GROQ --> PR[PR Complexity Scoring]
         GROQ --> TREE[Skill Tree Generation]

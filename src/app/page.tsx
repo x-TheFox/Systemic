@@ -1,23 +1,57 @@
+"use client";
+
+import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { SkillRadar } from '@/components/SkillRadar';
 import { SkillTree } from '@/components/SkillTree';
 import { PulseFeed } from '@/components/PulseFeed';
 import { LeaderboardTable } from '@/components/LeaderboardTable';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, Trophy, Zap, GitBranch, Brain, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
 export default function Home() {
+  const { user, isLoaded } = useUser();
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isLoaded || !user) {
+      setLoading(false);
+      return;
+    }
+    async function loadStats() {
+      if (!user) return;
+      try {
+        const res = await fetch(`/api/profile?userId=${user.id}`);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        setStats(data.user);
+      } catch {
+        // Stats will show placeholder
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadStats();
+  }, [isLoaded, user]);
   return (
     <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">
       {/* Hero Stats Row */}
-        {/* Hero Stats Row */}
+      {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard icon={<Zap className="h-5 w-5" />} label="Total XP" value="—" color="purple" />
-          <StatCard icon={<GitBranch className="h-5 w-5" />} label="Commits" value="—" color="cyan" />
-          <StatCard icon={<Brain className="h-5 w-5" />} label="LC Hard" value="—" color="pink" />
-          <StatCard icon={<Activity className="h-5 w-5" />} label="Active" value="—" color="green" />
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard icon={<Zap className="h-5 w-5" />} label="Total XP" value={stats?.xp?.toLocaleString() ?? '—'} color="purple" />
+          <StatCard icon={<GitBranch className="h-5 w-5" />} label="Commits" value={stats?.totalCommits?.toLocaleString() ?? '—'} color="cyan" />
+          <StatCard icon={<Brain className="h-5 w-5" />} label="LC Hard" value={stats?.leetcodeHard?.toString() ?? '—'} color="pink" />
+          <StatCard icon={<Activity className="h-5 w-5" />} label="Active" value={stats ? 'Now' : '—'} color="green" />
+        </div>
+      )}
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

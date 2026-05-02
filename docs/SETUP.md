@@ -91,7 +91,7 @@ CLERK_WEBHOOK_SECRET=whsec_...
 GROQ_API_KEY=gsk_...
 ```
 
-> Groq offers free tier with generous rate limits. `llama3-70b-8192` is used for all AI features.
+> Groq offers free tier with generous rate limits. `openai/gpt-oss-120b` is used for all AI features.
 
 #### Pusher (Real-Time)
 

@@ -10,7 +10,7 @@ export async function evaluatePRComplexity(diff: string, description: string) {
   const truncatedDiff = diff.slice(0, 4000); // Keep within token limits
 
   const { object } = await generateObject({
-    model: groq('llama3-70b-8192'),
+    model: groq('openai/gpt-oss-120b'),
     schema: z.object({
       xp: z.number().describe('XP points between 10 and 100 based on complexity using Systemics scale'),
       category: z.enum(['Frontend', 'Backend', 'DevOps', 'Architecture', 'Algo']),
@@ -37,7 +37,7 @@ Also categorize into: Frontend, Backend, DevOps, Architecture, or Algo.`,
 
 export async function generateWeeklyPostMortem(activityData: string) {
   const { text } = await generateText({
-    model: groq('llama3-70b-8192'),
+    model: groq('openai/gpt-oss-120b'),
     prompt: `You are 'The Ghost', the AI overseer of a competitive coder gang called Systemics. 
 Generate a brutal, funny, and encouraging weekly "State of the Gang" report.
 
@@ -56,7 +56,7 @@ Weekly Data: ${activityData}`,
 
 export async function categorizeActivity(description: string, platform: string) {
   const { object } = await generateObject({
-    model: groq('llama3-70b-8192'),
+    model: groq('openai/gpt-oss-120b'),
     schema: z.object({
       category: z.enum(['Frontend', 'Backend', 'DevOps', 'Architecture', 'Algo']),
       confidence: z.number().min(0).max(1),
@@ -78,7 +78,7 @@ Categories:
 
 export async function classifyLeetCodeTags(problemTags: string[]): Promise<Record<string, number>> {
   const { object } = await generateObject({
-    model: groq('llama3-70b-8192'),
+    model: groq('openai/gpt-oss-120b'),
     schema: z.object({
       frontend: z.number().describe('Count of frontend-related tags'),
       backend: z.number().describe('Count of backend-related tags'),

@@ -29,7 +29,7 @@ The goal is fairness across platforms. A LeetCode Hard and a complex GitHub PR s
 - **61-80**: Hard (complex feature, integration, architecture change)
 - **81-100**: Epic (major refactor, new system, critical infrastructure)
 
-The Groq model (`llama3-70b-8192`) analyzes the PR diff and description to assign the score.
+The Groq model (`openai/gpt-oss-120b`) analyzes the PR diff and description to assign the score.
 
 ### LeetCode
 

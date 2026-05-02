@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Lock, Sparkles } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 interface SkillTreeNodeData {
   label: string;
@@ -34,11 +35,15 @@ export function SkillTree() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [loading, setLoading] = useState(true);
   const [selectedNode, setSelectedNode] = useState<SkillTreeNodeData | null>(null);
+  const { user, isLoaded } = useUser();
 
   useEffect(() => {
+    if (!isLoaded) return;
     async function loadTree() {
       try {
-        const res = await fetch('/api/skilltree');
+        const userId = user?.id;
+        const url = userId ? `/api/skilltree?userId=${userId}` : '/api/skilltree';
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
 
@@ -86,7 +91,7 @@ export function SkillTree() {
       }
     }
     loadTree();
-  }, [setNodes, setEdges]);
+  }, [isLoaded, user, setNodes, setEdges]);
 
   const onConnect = useCallback((params: any) => setEdges((eds: any) => addEdge(params, eds)), [setEdges]);
   const onNodeClick = useCallback((_event: any, node: Node) => {

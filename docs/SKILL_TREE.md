@@ -15,7 +15,7 @@ Traditional skill trees are static: every player sees the same nodes in the same
 - Contribute to infrastructure? DevOps branches appear.
 - Go full-stack? Architecture nodes unlock.
 
-The AI (Groq `llama3-70b-8192`) analyzes your last 20 activities and aggregate stats to generate 0-3 new nodes per sync cycle.
+The AI (Groq `openai/gpt-oss-120b`) analyzes your last 20 activities and aggregate stats to generate 0-3 new nodes per sync cycle.
 
 ---
 

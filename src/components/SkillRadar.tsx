@@ -5,6 +5,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Ghost } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 interface SkillData {
   subject: string;
@@ -23,16 +24,27 @@ const defaultData: SkillData[] = [
 
 export function SkillRadar() {
   const [data, setData] = useState<SkillData[]>(defaultData);
+  const [ghostData, setGhostData] = useState<SkillData[] | null>(null);
   const [ghostMode, setGhostMode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { user, isLoaded } = useUser();
 
   useEffect(() => {
+    if (!isLoaded) return;
     async function load() {
       try {
-        const res = await fetch('/api/radar');
+        const userId = user?.id;
+        if (!userId) {
+          setLoading(false);
+          return;
+        }
+        const res = await fetch(`/api/radar?userId=${userId}&ghost=true`);
         if (!res.ok) throw new Error('Failed');
         const d = await res.json();
         if (d.radar && d.radar.length > 0) setData(d.radar);
+        if (d.ghost && d.ghost.length > 0) {
+          setGhostData(d.ghost);
+        }
       } catch {
         // Keep defaults
       } finally {
@@ -40,9 +52,16 @@ export function SkillRadar() {
       }
     }
     load();
-  }, []);
+  }, [isLoaded, user]);
 
   if (loading) return <Skeleton className="w-full h-[300px] rounded-xl" />;
+
+  const mergedData = ghostMode && ghostData
+    ? data.map((d) => {
+        const ghostMatch = ghostData.find((g) => g.subject === d.subject);
+        return { ...d, ghost: ghostMatch?.ghost };
+      })
+    : data;
 
   return (
     <div>
@@ -58,7 +77,7 @@ export function SkillRadar() {
         </Button>
       </div>
       <ResponsiveContainer width="100%" height={280}>
-        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
+        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={mergedData}>
           <PolarGrid stroke="rgba(255,255,255,0.06)" />
           <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }} />
           <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
@@ -70,7 +89,7 @@ export function SkillRadar() {
             fillOpacity={0.25}
             strokeWidth={2}
           />
-          {ghostMode && data.some(d => d.ghost !== undefined) && (
+          {ghostMode && ghostData && (
             <Radar
               name="Ghost"
               dataKey="ghost"

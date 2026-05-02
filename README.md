@@ -79,7 +79,7 @@ graph TB
     end
 
     subgraph "AI"
-        L[Groq llama3-70b-8192]
+        L[Groq openai/gpt-oss-120b]
         M[PR Complexity Analysis]
         N[Dynamic Tree Generation]
         O[Weekly Post-Mortem]
@@ -115,7 +115,7 @@ graph TB
 - **Framework**: [Next.js 14](https://nextjs.org/) (App Router, TypeScript)
 - **Auth**: [Clerk](https://clerk.dev/) (GitHub/Discord OAuth)
 - **Database**: [Neon Postgres](https://neon.tech/) via Prisma v5
-- **AI**: [Groq](https://groq.com/) via Vercel AI SDK (`llama3-70b-8192`)
+- **AI**: [Groq](https://groq.com/) via Vercel AI SDK (`openai/gpt-oss-120b`)
 - **Real-time**: [Pusher Channels](https://pusher.com/channels)
 - **UI**: [shadcn/ui](https://ui.shadcn.com/) + Tailwind CSS
 - **Visualization**: [React Flow](https://reactflow.dev/) (skill tree) + [Recharts](https://recharts.org/) (radar)
