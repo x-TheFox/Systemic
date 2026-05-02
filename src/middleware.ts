@@ -15,6 +15,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/deepdive',
   '/api/pulse',
   '/api/badges',
+  '/api/title',
 ]);
 
 export default clerkMiddleware((auth, req) => {
