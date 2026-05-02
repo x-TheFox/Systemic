@@ -537,5 +537,26 @@ async function syncUser(user: any) {
     }).catch(() => {});
   }
 
+  // ---------- TRIGGER BADGE + TITLE GENERATION ----------
+  if (totalDeltaXP > 0 || isFirstSync) {
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      // Fire-and-forget badge generation
+      fetch(`${baseUrl}/api/badges`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${cronSecret}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      }).catch(() => {});
+
+      // Fire-and-forget title generation
+      fetch(`${baseUrl}/api/title`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${cronSecret}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      }).catch(() => {});
+    }
+  }
+
   console.log(`[Sync] ${user.email}: +${totalDeltaXP} delta XP (commits: +${totalCommits - prevCommits}, PRs processed)`);
 }

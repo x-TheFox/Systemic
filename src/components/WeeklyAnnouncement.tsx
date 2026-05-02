@@ -20,6 +20,90 @@ interface WeeklyReport {
   createdAt: string;
 }
 
+function MarkdownRender({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Headers
+    if (line.startsWith('### ')) {
+      elements.push(<h3 key={i} className="text-lg font-bold text-white mt-4 mb-2">{line.slice(4)}</h3>);
+    } else if (line.startsWith('## ')) {
+      elements.push(<h2 key={i} className="text-xl font-bold text-white mt-5 mb-2">{line.slice(3)}</h2>);
+    } else if (line.startsWith('# ')) {
+      elements.push(<h1 key={i} className="text-2xl font-bold text-white mt-6 mb-3">{line.slice(2)}</h1>);
+    }
+    // Divider
+    else if (line.trim() === '---') {
+      elements.push(<hr key={i} className="border-white/10 my-4" />);
+    }
+    // Unordered list
+    else if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+      const listItems: string[] = [];
+      while (i < lines.length && (lines[i].trim().startsWith('- ') || lines[i].trim().startsWith('* '))) {
+        listItems.push(lines[i].trim().slice(2));
+        i++;
+      }
+      elements.push(
+        <ul key={i} className="list-disc list-inside space-y-1 my-2 text-sm text-white/70">
+          {listItems.map((item, idx) => (
+            <li key={idx} dangerouslySetInnerHTML={{ __html: renderInline(item) }} />
+          ))}
+        </ul>
+      );
+      continue;
+    }
+    // Ordered list
+    else if (/^\d+\.\s/.test(line.trim())) {
+      const listItems: string[] = [];
+      while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
+        listItems.push(lines[i].trim().replace(/^\d+\.\s/, ''));
+        i++;
+      }
+      elements.push(
+        <ol key={i} className="list-decimal list-inside space-y-1 my-2 text-sm text-white/70">
+          {listItems.map((item, idx) => (
+            <li key={idx} dangerouslySetInnerHTML={{ __html: renderInline(item) }} />
+          ))}
+        </ol>
+      );
+      continue;
+    }
+    // Blockquote
+    else if (line.trim().startsWith('> ')) {
+      elements.push(
+        <blockquote key={i} className="border-l-2 border-purple-500/40 pl-3 my-2 text-sm text-white/50 italic">
+          {line.trim().slice(2)}
+        </blockquote>
+      );
+    }
+    // Empty line
+    else if (line.trim() === '') {
+      elements.push(<div key={i} className="h-2" />);
+    }
+    // Regular paragraph
+    else {
+      elements.push(
+        <p key={i} className="text-sm text-white/70 leading-relaxed my-1.5" dangerouslySetInnerHTML={{ __html: renderInline(line) }} />
+      );
+    }
+    i++;
+  }
+
+  return <>{elements}</>;
+}
+
+function renderInline(text: string): string {
+  return text
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<em><strong>$1</strong></em>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-white/10 text-purple-300 text-xs font-mono">$1</code>');
+}
+
 export function WeeklyAnnouncement() {
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +141,8 @@ export function WeeklyAnnouncement() {
     );
   }
 
-  const preview = report.content.split('\n').slice(0, 3).join('\n');
+  const lines = report.content.split('\n');
+  const previewLines = lines.slice(0, 8);
 
   return (
     <div className="glass-card p-6 relative overflow-hidden">
@@ -75,7 +160,7 @@ export function WeeklyAnnouncement() {
             </Badge>
           </div>
           <p className="text-[11px] text-white/30">
-            {report.participants} grinders · {report.totalXP.toLocaleString()} total XP
+            {report.participants} grinders · {report.totalXP.toLocaleString()} XP gained
           </p>
         </div>
       </div>
@@ -101,16 +186,20 @@ export function WeeklyAnnouncement() {
       </div>
 
       {/* Report content */}
-      <div className="prose prose-invert prose-sm max-w-none">
-        <div className={`text-sm text-white/60 leading-relaxed whitespace-pre-wrap ${expanded ? '' : 'line-clamp-4'}`}>
-          {expanded ? report.content : preview}
-        </div>
+      <div className="max-w-none">
+        {expanded ? (
+          <MarkdownRender text={report.content} />
+        ) : (
+          <div className="opacity-60">
+            <MarkdownRender text={previewLines.join('\n')} />
+          </div>
+        )}
       </div>
 
       {/* Expand toggle */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="mt-3 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+        className="mt-3 text-xs text-purple-400 hover:text-purple-300 transition-colors font-medium"
       >
         {expanded ? 'Show less' : 'Read full report'}
       </button>

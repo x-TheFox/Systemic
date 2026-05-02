@@ -8,60 +8,44 @@ const MODEL = 'openai/gpt-oss-120b';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request) {
-  try {
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+async function generateBadgesForUser(userId: string): Promise<number> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      badges: true,
+      activityLogs: { orderBy: { timestamp: 'desc' }, take: 20 },
+      dynamicNodes: { where: { unlocked: true } },
+      ghostSnapshots: { orderBy: { createdAt: 'desc' }, take: 1 },
+    },
+  });
 
-    const body = await req.json();
-    const userId = body.userId;
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
-    }
+  if (!user) return 0;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        badges: true,
-        activityLogs: { orderBy: { timestamp: 'desc' }, take: 20 },
-        dynamicNodes: { where: { unlocked: true } },
-        ghostSnapshots: { orderBy: { createdAt: 'desc' }, take: 1 },
-      },
-    });
+  const deepDiveSnapshot = user.ghostSnapshots.find((s: any) => {
+    const ac = s.activityCounts as any;
+    return ac?.deepDive === true;
+  });
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+  const deepDiveData = deepDiveSnapshot?.activityCounts as any;
+  const skillBreakdown = deepDiveSnapshot?.skillBreakdown as Record<string, number> || {};
 
-    // Fetch deep dive data if available
-    const deepDiveSnapshot = user.ghostSnapshots.find((s: any) => {
-      const ac = s.activityCounts as any;
-      return ac?.deepDive === true;
-    });
+  const topSkills = Object.entries(skillBreakdown)
+    .filter(([, v]) => (v as number) > 0)
+    .sort(([, a], [, b]) => (b as number) - (a as number))
+    .slice(0, 5)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(', ');
 
-    const deepDiveData = deepDiveSnapshot?.activityCounts as any;
-    const skillBreakdown = deepDiveSnapshot?.skillBreakdown as Record<string, number> || {};
+  const recentActivity = user.activityLogs
+    .slice(0, 10)
+    .map((l: any) => `[${l.platform}] ${l.activityType}: ${l.description || ''} (+${l.xpAwarded} XP)`)
+    .join('\n');
 
-    // Build user stats summary
-    const topSkills = Object.entries(skillBreakdown)
-      .filter(([, v]) => (v as number) > 0)
-      .sort(([, a], [, b]) => (b as number) - (a as number))
-      .slice(0, 5)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(', ');
+  const unlockedNodes = user.dynamicNodes.map((n: any) => `${n.name} (${n.path})`).join(', ');
 
-    const recentActivity = user.activityLogs
-      .slice(0, 10)
-      .map((l: any) => `[${l.platform}] ${l.activityType}: ${l.description || ''} (+${l.xpAwarded} XP)`)
-      .join('\n');
-
-    const unlockedNodes = user.dynamicNodes.map((n: any) => `${n.name} (${n.path})`).join(', ');
-
-    const { text: badgeText } = await generateText({
-      model: groq(MODEL),
-      prompt: `You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
+  const { text: badgeText } = await generateText({
+    model: groq(MODEL),
+    prompt: `You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
 
 USER: ${user.name || user.email}
 GITHUB: ${user.githubHandle || 'none'}
@@ -126,31 +110,61 @@ rarity: legendary
 color: #f59e0b
 icon: <icon>
 category: <category>`,
-    });
+  });
 
-    // Parse badges
-    const badges = parseBadges(badgeText);
+  const badges = parseBadges(badgeText);
 
-    // Delete old AI badges and create new ones
-    await prisma.$transaction(async (tx) => {
-      await tx.badge.deleteMany({ where: { userId: user.id, generatedBy: 'ai' } });
-      for (const badge of badges) {
-        await tx.badge.create({
-          data: {
-            userId: user.id,
-            name: badge.name,
-            description: badge.description,
-            rarity: badge.rarity,
-            color: badge.color,
-            icon: badge.icon,
-            category: badge.category,
-            generatedBy: 'ai',
-          },
-        });
+  await prisma.$transaction(async (tx) => {
+    await tx.badge.deleteMany({ where: { userId: user.id, generatedBy: 'ai' } });
+    for (const badge of badges) {
+      await tx.badge.create({
+        data: {
+          userId: user.id,
+          name: badge.name,
+          description: badge.description,
+          rarity: badge.rarity,
+          color: badge.color,
+          icon: badge.icon,
+          category: badge.category,
+          generatedBy: 'ai',
+        },
+      });
+    }
+  });
+
+  return badges.length;
+}
+
+export async function POST(req: Request) {
+  try {
+    const authHeader = req.headers.get('authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const userId = body.userId;
+    if (!userId) {
+      return NextResponse.json({ error: 'userId required' }, { status: 400 });
+    }
+
+    if (userId === 'all') {
+      const users = await prisma.user.findMany({ select: { id: true } });
+      let totalBadges = 0;
+      for (const user of users) {
+        try {
+          const count = await generateBadgesForUser(user.id);
+          totalBadges += count;
+          console.log(`[Badges] Generated ${count} badges for user ${user.id}`);
+        } catch (err) {
+          console.error(`[Badges] Failed for user ${user.id}:`, err);
+        }
       }
-    });
+      return NextResponse.json({ success: true, usersProcessed: users.length, totalBadges });
+    }
 
-    return NextResponse.json({ success: true, badges: badges.length });
+    const count = await generateBadgesForUser(userId);
+    return NextResponse.json({ success: true, badges: count });
   } catch (error: any) {
     console.error('[Badges] Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

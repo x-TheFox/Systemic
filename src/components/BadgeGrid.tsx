@@ -25,7 +25,9 @@ const rarityStyles: Record<string, { border: string; glow: string; text: string;
 
 export function BadgeCard({ badge }: { badge: Badge }) {
   const style = rarityStyles[badge.rarity.toLowerCase()] || rarityStyles.common;
-  const Icon = iconMap[badge.icon] || Zap;
+  const isSvg = badge.icon?.startsWith('svg:');
+  const svgSrc = isSvg ? `/badges/${badge.icon.slice(4)}.svg` : null;
+  const Icon = !isSvg ? iconMap[badge.icon] || Zap : null;
 
   return (
     <div
@@ -34,10 +36,14 @@ export function BadgeCard({ badge }: { badge: Badge }) {
     >
       <div className="flex items-start gap-3">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-lg shrink-0"
+          className="flex h-10 w-10 items-center justify-center rounded-lg shrink-0 overflow-hidden"
           style={{ background: `linear-gradient(135deg, ${badge.color}30, ${badge.color}10)`, border: `1px solid ${badge.color}40` }}
         >
-          <Icon className="h-5 w-5" style={{ color: badge.color }} />
+          {isSvg && svgSrc ? (
+            <img src={svgSrc} alt={badge.name} className="h-8 w-8 object-contain" />
+          ) : (
+            <Icon className="h-5 w-5" style={{ color: badge.color }} />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
