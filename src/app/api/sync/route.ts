@@ -101,7 +101,7 @@ async function syncUser(user: any) {
         if (existing) continue;
 
         const diff = await fetchPRDiff(pr.url, process.env.GITHUB_TOKEN);
-        let xp = XP_TABLE.GITHUB.PR_COMPLEX_BASE;
+        let xp: number = XP_TABLE.GITHUB.PR_COMPLEX_BASE;
         let category = 'Backend';
         let justification = 'Default scoring';
 
