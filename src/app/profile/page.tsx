@@ -418,7 +418,7 @@ export default function ProfilePage() {
       {selectedBadge && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedBadge(null)}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#0a0a12]/95 backdrop-blur-xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#0a0a12]/95 backdrop-blur-xl p-5 sm:p-7" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setSelectedBadge(null)}
               className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors z-10"

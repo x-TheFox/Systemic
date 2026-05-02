@@ -41,12 +41,12 @@ export function BadgeCard({ badge }: { badge: Badge }) {
   if (isWeekly && svgInfo) {
     return (
       <div
-        className={`relative p-5 rounded-xl border ${style.border} bg-gradient-to-br ${style.bg} backdrop-blur-sm transition-all hover:scale-[1.02] hover:shadow-xl ${style.glow}`}
+        className={`relative p-5 sm:p-6 rounded-xl border ${style.border} bg-gradient-to-br ${style.bg} backdrop-blur-sm transition-all hover:scale-[1.02] hover:shadow-xl ${style.glow}`}
         style={{ boxShadow: svgInfo.shadow }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
           <div
-            className="relative flex-shrink-0 h-20 w-20 rounded-xl overflow-hidden ring-2 ring-white/10 animate-pulse"
+            className="relative flex-shrink-0 h-16 w-16 sm:h-20 sm:w-20 rounded-xl overflow-hidden ring-2 ring-white/10 animate-pulse"
             style={{ boxShadow: svgInfo.shadow }}
           >
             <img
@@ -56,13 +56,13 @@ export function BadgeCard({ badge }: { badge: Badge }) {
             />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg font-bold text-white truncate">{badge.name}</span>
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <span className="text-base sm:text-lg font-bold text-white">{badge.name}</span>
               <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full border font-bold ${style.border} ${style.text}`}>
                 {badge.rarity}
               </span>
             </div>
-            <p className="text-sm text-white/50 leading-snug">{badge.description}</p>
+            <p className="text-sm text-white/50 leading-relaxed">{badge.description}</p>
           </div>
         </div>
       </div>
@@ -71,24 +71,24 @@ export function BadgeCard({ badge }: { badge: Badge }) {
 
   return (
     <div
-      className={`relative p-4 rounded-xl border ${style.border} bg-gradient-to-br ${style.bg} backdrop-blur-sm transition-all hover:scale-[1.02] hover:shadow-lg ${style.glow}`}
+      className={`relative p-3 sm:p-4 rounded-xl border ${style.border} bg-gradient-to-br ${style.bg} backdrop-blur-sm transition-all hover:scale-[1.02] hover:shadow-lg ${style.glow}`}
       style={{ boxShadow: `0 0 20px ${badge.color}15` }}
     >
       <div className="flex items-start gap-3">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-lg shrink-0"
+          className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg shrink-0"
           style={{ background: `linear-gradient(135deg, ${badge.color}30, ${badge.color}10)`, border: `1px solid ${badge.color}40` }}
         >
-          <Icon className="h-5 w-5" style={{ color: badge.color }} />
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: badge.color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-sm font-bold text-white truncate">{badge.name}</span>
+          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+            <span className="text-sm font-bold text-white">{badge.name}</span>
             <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${style.border} ${style.text}`}>
               {badge.rarity}
             </span>
           </div>
-          <p className="text-xs text-white/40 leading-snug">{badge.description}</p>
+          <p className="text-xs text-white/40 leading-relaxed">{badge.description}</p>
         </div>
       </div>
     </div>
