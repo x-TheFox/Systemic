@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model User {
+  id             String           @id @default(cuid())
+  clerkId        String           @unique
+  email          String           @unique
+  githubHandle   String?
+  leetcodeHandle String?
+  hackerrankHandle String?
+  codeforcesHandle String?
+  xp             Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  activityLogs   ActivityLog[]
+  skillTreeState SkillTreeState?
+  achievements   Achievement[]
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform    String   // 'GITHUB', 'LEETCODE', 'HACKERRANK', 'CODEFORCES'
+  activityType String  // 'COMMIT', 'PR', 'PROBLEM_SOLVED', 'CONTEST'
+  description String?
+  xpAwarded   Int      @default(0)
+  metadata    Json?    // AI classifications, diff complexity, etc.
+  timestamp   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model SkillTreeState {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unlockedNodes String[] // Array of node IDs unlocked
+  currentGrind  String?  // The path they are focusing on, e.g., 'Frontend Wizard'
+  updatedAt     DateTime @updatedAt
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  badgeUrl    String?
+  earnedAt    DateTime @default(now())
+
+  @@index([userId])
+}
