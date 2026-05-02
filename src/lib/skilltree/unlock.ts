@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { SKILL_TREE_NODES, type SkillNode } from './definitions';
+import { SKILL_TREE_NODES, SKILL_TREE_EDGES, type SkillNode } from './definitions';
 
 export interface UnlockCheck {
   unlocked: boolean;
@@ -37,6 +37,7 @@ export async function checkNodeUnlock(userId: string, nodeId: string): Promise<U
         break;
 
       case 'leetcode_difficulty':
+      case 'leetcode_hard':
         current = user.leetcodeHard;
         met = current >= req.value;
         progress['leetcode_hard'] = { current, required: req.value };
@@ -154,5 +155,3 @@ async function getSkillXP(userId: string, platform: string): Promise<number> {
 
   return logs.reduce((sum, log) => sum + log.xpAwarded, 0);
 }
-
-import { SKILL_TREE_EDGES } from './definitions';

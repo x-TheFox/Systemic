@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ClerkProvider } from '@clerk/nextjs';
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -27,9 +29,12 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className={cn("font-sans", geistSans.variable, geistMono.variable)}>
-        <body className="antialiased">
-          {children}
+      <html lang="en" className={cn("font-sans dark", geistSans.variable, geistMono.variable)}>
+        <body className="antialiased bg-gray-950 text-white">
+          <TooltipProvider>
+            {children}
+            <Toaster />
+          </TooltipProvider>
         </body>
       </html>
     </ClerkProvider>

@@ -11,7 +11,7 @@ export interface SkillNode {
 }
 
 export interface NodeRequirement {
-  type: 'leetcode_difficulty' | 'leetcode_tags' | 'github_prs' | 'github_commits' | 'codeforces_rating' | 'codeforces_solved' | 'hackerrank_badges' | 'total_xp' | 'skill_xp';
+  type: 'leetcode_difficulty' | 'leetcode_hard' | 'leetcode_tags' | 'github_prs' | 'github_commits' | 'codeforces_rating' | 'codeforces_solved' | 'hackerrank_badges' | 'total_xp' | 'skill_xp';
   value: number;
   tags?: string[];
   platform?: string;
