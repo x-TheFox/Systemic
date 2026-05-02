@@ -210,6 +210,21 @@ Be thorough, specific, and honest. Don't flatter — identify real strengths AND
       });
     });
 
+    // Trigger badge generation asynchronously
+    try {
+      const cronSecret = process.env.CRON_SECRET;
+      if (cronSecret) {
+        fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/badges`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cronSecret}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.id }),
+        }).catch(() => {});
+      }
+    } catch {}
+
     return NextResponse.json({
       success: true,
       archetype: analysis.archetype,

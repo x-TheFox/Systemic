@@ -51,6 +51,7 @@ model User {
   achievements   Achievement[]
   ghostSnapshots GhostSnapshot[]
   dynamicNodes   DynamicSkillNode[]
+  badges         Badge[]
 
   @@index([xp])
   @@index([clerkId])
@@ -158,4 +159,21 @@ model WeeklyReport {
   @@index([year])
   @@index([weekNumber])
   @@unique([weekNumber, year])
+}
+
+model Badge {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String   // e.g., "Cache Commander"
+  description String   // e.g., "Built a distributed cache in C++ with 96 commits"
+  rarity      String   // common | rare | epic | legendary
+  color       String   // hex color for the badge glow
+  icon        String   // lucide icon name
+  category    String   // skill | grind | social | special
+  generatedBy String   // 'ai' or 'system'
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([rarity])
 }

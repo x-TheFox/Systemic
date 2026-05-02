@@ -18,33 +18,38 @@ async function getOrCreateUser(clerkId: string, email: string, name: string | nu
   });
 }
 
+const userInclude = {
+  activityLogs: { orderBy: { timestamp: 'desc' as const }, take: 50 },
+  skillTreeState: true,
+  achievements: { orderBy: { earnedAt: 'desc' as const } },
+  ghostSnapshots: { orderBy: [{ year: 'desc' as const }, { weekNumber: 'desc' as const }], take: 10 },
+  badges: { orderBy: { createdAt: 'desc' as const } },
+  dynamicNodes: true,
+};
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const userIdParam = searchParams.get('userId');
     const clerkIdParam = searchParams.get('clerkId');
+    const githubHandle = searchParams.get('githubHandle');
 
     let dbUser;
 
-    if (clerkIdParam) {
+    if (githubHandle) {
+      dbUser = await prisma.user.findFirst({
+        where: { githubHandle },
+        include: userInclude,
+      });
+    } else if (clerkIdParam) {
       dbUser = await prisma.user.findUnique({
         where: { clerkId: clerkIdParam },
-        include: {
-          activityLogs: { orderBy: { timestamp: 'desc' }, take: 50 },
-          skillTreeState: true,
-          achievements: { orderBy: { earnedAt: 'desc' } },
-          ghostSnapshots: { orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }], take: 10 },
-        },
+        include: userInclude,
       });
     } else if (userIdParam) {
       dbUser = await prisma.user.findUnique({
         where: { id: userIdParam },
-        include: {
-          activityLogs: { orderBy: { timestamp: 'desc' }, take: 50 },
-          skillTreeState: true,
-          achievements: { orderBy: { earnedAt: 'desc' } },
-          ghostSnapshots: { orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }], take: 10 },
-        },
+        include: userInclude,
       });
     } else {
       const user = await currentUser();
@@ -61,12 +66,7 @@ export async function GET(req: Request) {
 
       dbUser = await prisma.user.findUnique({
         where: { id: dbUser.id },
-        include: {
-          activityLogs: { orderBy: { timestamp: 'desc' }, take: 50 },
-          skillTreeState: true,
-          achievements: { orderBy: { earnedAt: 'desc' } },
-          ghostSnapshots: { orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }], take: 10 },
-        },
+        include: userInclude,
       });
     }
 

@@ -40,3 +40,4 @@ prisma/migrations/20260502103631_init/migration.sql
 prisma/migrations/migration_lock.toml
 prisma/migrations/20260502124033_add_weekly_report/migration.sql
 prisma/migrations/20260502125405_add_user_title/migration.sql
+prisma/migrations/20260502130156_add_badges/migration.sql
