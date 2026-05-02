@@ -34,15 +34,15 @@ interface LeaderboardUser {
   badges?: WeeklyBadge[];
 }
 
-const podiumConfig: Record<number, { src: string; label: string; color: string; ring: string; shadow: string; pulse: boolean; bgGlow: string; border: string }> = {
-  1: { src: '/badges/mvp.svg', label: 'MVP', color: '#f59e0b', ring: 'ring-2 ring-yellow-500/60', shadow: '0 0 40px rgba(245,158,11,0.5), 0 0 80px rgba(245,158,11,0.2)', pulse: true, bgGlow: 'from-yellow-500/10 via-yellow-500/5', border: 'border-yellow-500/30' },
-  2: { src: '/badges/2nd.svg', label: '2ND', color: '#a855f7', ring: 'ring-2 ring-purple-500/60', shadow: '0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.15)', pulse: true, bgGlow: 'from-purple-500/10 via-purple-500/5', border: 'border-purple-500/30' },
-  3: { src: '/badges/3rd.svg', label: '3RD', color: '#3b82f6', ring: 'ring-2 ring-blue-500/60', shadow: '0 0 25px rgba(59,130,246,0.35), 0 0 50px rgba(59,130,246,0.1)', pulse: false, bgGlow: 'from-blue-500/10 via-blue-500/5', border: 'border-blue-500/30' },
+const podiumConfig: Record<number, { src: string; title: string; subtitle: string; color: string; ring: string; shadow: string; border: string; nameColor: string }> = {
+  1: { src: '/badges/mvp.svg', title: 'THE HONORED ONE', subtitle: '1ST PLACE', color: '#f59e0b', ring: 'ring-2 ring-yellow-500/80', shadow: '0 0 40px rgba(245,158,11,0.5), 0 0 80px rgba(245,158,11,0.2)', border: 'border-yellow-500/40', nameColor: 'text-yellow-400' },
+  2: { src: '/badges/2nd.svg', title: 'SILVER RUNNER', subtitle: '2ND PLACE', color: '#a855f7', ring: 'ring-2 ring-purple-500/80', shadow: '0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.15)', border: 'border-purple-500/40', nameColor: 'text-purple-400' },
+  3: { src: '/badges/3rd.svg', title: 'BRONZE CHALLENGER', subtitle: '3RD PLACE', color: '#3b82f6', ring: 'ring-2 ring-blue-500/80', shadow: '0 0 25px rgba(59,130,246,0.35), 0 0 50px rgba(59,130,246,0.1)', border: 'border-blue-500/40', nameColor: 'text-blue-400' },
 };
 
-const bottomBadgeConfig: Record<string, { src: string; label: string; color: string; bg: string; ring: string; shadow: string; pulse: boolean }> = {
-  'svg:last1': { src: '/badges/last1.svg', label: 'THE LURKER', color: '#6b7280', bg: 'from-gray-500/10 via-gray-500/5 to-transparent', ring: 'ring-1 ring-gray-500/40', shadow: '0 0 15px rgba(107,114,128,0.25)', pulse: false },
-  'svg:last2': { src: '/badges/last2.svg', label: 'THE PENULTIMATE', color: '#6b7280', bg: 'from-gray-500/10 via-gray-500/5 to-transparent', ring: 'ring-1 ring-gray-500/40', shadow: '0 0 15px rgba(107,114,128,0.25)', pulse: false },
+const bottomBadgeConfig: Record<string, { src: string; label: string; color: string; border: string; shadow: string }> = {
+  'svg:last1': { src: '/badges/last1.svg', label: 'THE LURKER', color: '#6b7280', border: 'border-gray-500/30', shadow: '0 0 15px rgba(107,114,128,0.25)' },
+  'svg:last2': { src: '/badges/last2.svg', label: 'THE PENULTIMATE', color: '#6b7280', border: 'border-gray-500/30', shadow: '0 0 15px rgba(107,114,128,0.25)' },
 };
 
 export function LeaderboardTable() {
@@ -87,13 +87,6 @@ export function LeaderboardTable() {
   const top3 = users.slice(0, 3);
   const bottom2 = users.length >= 4 ? users.slice(-2) : [];
   const middleUsers = users.length >= 4 ? users.slice(3, -2) : users.slice(3);
-  const bottomBadgeUserIds = new Set<string>();
-
-  for (const u of bottom2) {
-    if (u.badges && u.badges.length > 0) {
-      bottomBadgeUserIds.add(u.id);
-    }
-  }
 
   function getBottomBadge(user: LeaderboardUser) {
     if (!user.badges || user.badges.length === 0) return null;
@@ -118,39 +111,53 @@ export function LeaderboardTable() {
             // @ts-expect-error dynamic wrapper
             <Wrapper key={user.id} {...wrapperProps} className="block">
               <div
-                className={`relative flex flex-col items-center p-6 rounded-2xl bg-gradient-to-b ${cfg.bgGlow} to-transparent border ${cfg.border} backdrop-blur-sm transition-all hover:scale-[1.02] cursor-pointer`}
+                className={`relative flex flex-col items-center p-6 pb-8 rounded-2xl bg-gradient-to-b from-white/[0.06] to-white/[0.02] border ${cfg.border} backdrop-blur-sm transition-all hover:scale-[1.02] cursor-pointer`}
                 style={{ boxShadow: cfg.shadow }}
               >
                 {rank === 1 && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-lg font-black text-yellow-400 animate-pulse drop-shadow-lg">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl drop-shadow-lg">
                     👑
                   </div>
                 )}
-                <div className={`relative mb-3 ${cfg.pulse ? 'animate-pulse' : ''}`}>
-                  <div className={`h-24 w-24 rounded-2xl overflow-hidden ${cfg.ring}`} style={{ boxShadow: cfg.shadow }}>
-                    <img src={cfg.src} alt={`Rank ${rank}`} className="h-full w-full object-contain p-2" />
+
+                <div className={`h-32 w-32 rounded-2xl overflow-hidden ${cfg.ring} mb-3`} style={{ boxShadow: cfg.shadow }}>
+                  <img src={cfg.src} alt={cfg.title} className="h-full w-full object-contain" />
+                </div>
+
+                <div className="text-center mb-2">
+                  <div className={`text-xs font-black tracking-[0.2em] ${cfg.nameColor} opacity-80`}>
+                    {cfg.title}
+                  </div>
+                  <div className="text-[10px] text-white/30 tracking-wider">
+                    {cfg.subtitle}
                   </div>
                 </div>
-                <Avatar className="h-12 w-12 border-2 border-white/20 mb-2">
+
+                <Avatar className="h-11 w-11 border-2 border-white/15 mb-2">
                   <AvatarImage src={user.imageUrl || undefined} />
                   <AvatarFallback className="bg-gradient-to-br from-purple-600 to-cyan-600 text-white text-sm font-bold">
                     {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
+
                 <div className="text-center">
-                  <div className="text-white font-bold text-sm truncate max-w-[160px]">
+                  <div className="text-white font-bold text-base truncate max-w-[180px]">
                     {user.name || user.email.split('@')[0]}
                   </div>
                   {user.title && (
-                    <div className="text-amber-300 text-[10px] font-semibold tracking-wide mt-0.5">{user.title}</div>
+                    <span className="inline-block mt-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gradient-to-r from-amber-500/20 to-amber-500/5 border border-amber-500/30 text-amber-300">
+                      {user.title}
+                    </span>
                   )}
                   {!user.title && user.skillTreeState?.currentGrind && (
-                    <div className="text-purple-400 text-[10px] mt-0.5">{user.skillTreeState.currentGrind}</div>
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] border border-purple-500/30 text-purple-400 bg-purple-500/10">
+                      {user.skillTreeState.currentGrind}
+                    </span>
                   )}
-                  <div className="text-white font-bold text-xl mt-1">
-                    {user.xp.toLocaleString()} <span className="text-purple-400 text-xs">XP</span>
+                  <div className="text-white font-bold text-2xl mt-2">
+                    {user.xp.toLocaleString()} <span className="text-purple-400 text-sm font-medium">XP</span>
                   </div>
-                  <div className="text-white/25 text-[10px]">
+                  <div className="text-white/30 text-[11px] mt-0.5">
                     {user.totalCommits} commits · {user.totalPRs} PRs · {user.leetcodeHard}H
                   </div>
                 </div>
@@ -214,8 +221,8 @@ export function LeaderboardTable() {
       {/* Bottom — Last 2 */}
       {bottom2.length > 0 && (
         <>
-          <div className="text-[10px] uppercase tracking-widest text-white/15 text-center">The Shadows Below</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="text-[10px] uppercase tracking-[0.25em] text-white/15 text-center">The Shadows Below</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {bottom2.map((user) => {
               const badgeInfo = getBottomBadge(user);
               const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : '#';
@@ -226,11 +233,16 @@ export function LeaderboardTable() {
               return (
                 // @ts-expect-error dynamic wrapper
                 <Wrapper key={user.id} {...wrapperProps} className="block">
-                  <div className="relative flex flex-col items-center p-5 rounded-xl bg-gradient-to-b from-gray-500/10 via-gray-500/5 to-transparent border border-gray-500/20 backdrop-blur-sm transition-all hover:scale-[1.01] cursor-pointer">
+                  <div className="relative flex flex-col items-center p-6 pb-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.06] backdrop-blur-sm transition-all hover:scale-[1.01] cursor-pointer">
                     {badgeInfo && (
-                      <div className={`h-16 w-16 rounded-xl overflow-hidden ${badgeInfo.ring} mb-2`} style={{ boxShadow: badgeInfo.shadow }}>
-                        <img src={badgeInfo.src} alt={badgeInfo.label} className="h-full w-full object-contain p-1" />
-                      </div>
+                      <>
+                        <div className={`h-24 w-24 rounded-xl overflow-hidden ${badgeInfo.border} mb-2`} style={{ boxShadow: badgeInfo.shadow }}>
+                          <img src={badgeInfo.src} alt={badgeInfo.label} className="h-full w-full object-contain" />
+                        </div>
+                        <div className="text-[10px] font-black tracking-[0.2em] text-gray-400/70 mb-2">
+                          {badgeInfo.label}
+                        </div>
+                      </>
                     )}
                     <Avatar className="h-10 w-10 border border-white/10 mb-2">
                       <AvatarImage src={user.imageUrl || undefined} />
@@ -239,14 +251,16 @@ export function LeaderboardTable() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="text-center">
-                      <div className="text-white/70 text-sm font-medium truncate max-w-[140px]">
+                      <div className="text-white/70 text-sm font-medium truncate max-w-[160px]">
                         {user.name || user.email.split('@')[0]}
                       </div>
                       {user.title && (
-                        <div className="text-amber-300/60 text-[10px] mt-0.5">{user.title}</div>
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] border border-amber-500/20 text-amber-300/50 bg-amber-500/10">
+                          {user.title}
+                        </span>
                       )}
-                      <div className="text-white/40 font-bold text-lg mt-1">
-                        {user.xp.toLocaleString()} <span className="text-purple-400/60 text-[10px]">XP</span>
+                      <div className="text-white/50 font-bold text-xl mt-1">
+                        {user.xp.toLocaleString()} <span className="text-purple-400/50 text-[10px]">XP</span>
                       </div>
                     </div>
                   </div>
