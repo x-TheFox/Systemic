@@ -36,3 +36,5 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+prisma/migrations/20260502103631_init/migration.sql
+prisma/migrations/migration_lock.toml
