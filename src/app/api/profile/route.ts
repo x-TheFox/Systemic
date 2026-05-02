@@ -25,6 +25,7 @@ const userInclude = {
   ghostSnapshots: { orderBy: [{ year: 'desc' as const }, { weekNumber: 'desc' as const }], take: 10 },
   badges: { orderBy: { createdAt: 'desc' as const } },
   dynamicNodes: true,
+  pastTitles: { orderBy: { createdAt: 'desc' as const }, take: 20 },
 };
 
 export async function GET(req: Request) {

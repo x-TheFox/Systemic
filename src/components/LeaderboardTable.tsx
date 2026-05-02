@@ -159,7 +159,7 @@ export function LeaderboardTable() {
                   {user.name || user.email.split('@')[0]}
                 </span>
                 {user.title && (
-                  <Badge variant="outline" className="text-[9px] border-amber-500/30 text-amber-400 bg-amber-500/10">
+                  <Badge variant="outline" className="text-[9px] border-amber-500/40 text-amber-300 bg-amber-500/15 font-semibold tracking-wide">
                     {user.title}
                   </Badge>
                 )}

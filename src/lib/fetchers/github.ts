@@ -10,6 +10,7 @@ interface GitHubMetrics {
     url: string;
     diff?: string;
     mergedAt: string;
+    createdAt: string;
   }>;
 }
 
@@ -20,19 +21,22 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
     return { commits: 0, prs: 0, mergedPRs: 0, languageDistribution: {}, recentPRs: [] };
   }
 
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
   const query = `
-    query($login: String!) {
+    query($login: String!, $since: DateTime!) {
       user(login: $login) {
         contributionsCollection {
           totalCommitContributions
           restrictedContributionsCount
         }
-        pullRequests(first: 50, states: [MERGED, OPEN], orderBy: {field: CREATED_AT, direction: DESC}) {
+        pullRequests(first: 25, states: [MERGED, OPEN], orderBy: {field: CREATED_AT, direction: DESC}) {
           totalCount
           nodes {
             title
             url
             mergedAt
+            createdAt
             additions
             deletions
             files(first: 1) {
@@ -67,7 +71,7 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ query, variables: { login: handle } }),
+      body: JSON.stringify({ query, variables: { login: handle, since: thirtyDaysAgo } }),
     });
 
     if (!response.ok) {
@@ -84,8 +88,21 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
     const commits = (user.contributionsCollection?.totalCommitContributions || 0) +
                     (user.contributionsCollection?.restrictedContributionsCount || 0);
 
-    const prs = user.pullRequests?.totalCount || 0;
-    const mergedPRs = user.pullRequests?.nodes?.filter((pr: any) => pr != null && pr.mergedAt != null).length || 0;
+    const totalCount = user.pullRequests?.totalCount || 0;
+    const allNodes = user.pullRequests?.nodes?.filter((pr: any) => pr != null) || [];
+    const mergedCount = allNodes.filter((pr: any) => pr.mergedAt != null).length;
+
+    const recentPRs = allNodes
+      .filter((pr: any) => {
+        const created = new Date(pr.createdAt);
+        return created >= new Date(thirtyDaysAgo);
+      })
+      .map((pr: any) => ({
+        title: pr.title,
+        url: pr.url,
+        mergedAt: pr.mergedAt,
+        createdAt: pr.createdAt,
+      }));
 
     const languageDistribution: Record<string, number> = {};
     let totalSize = 0;
@@ -98,20 +115,19 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
       });
     });
 
-    // Normalize to percentages
     if (totalSize > 0) {
       for (const key in languageDistribution) {
         languageDistribution[key] = Math.round((languageDistribution[key] / totalSize) * 100);
       }
     }
 
-    const recentPRs = user.pullRequests?.nodes?.filter((pr: any) => pr != null).map((pr: any) => ({
-      title: pr.title,
-      url: pr.url,
-      mergedAt: pr.mergedAt,
-    })) || [];
-
-    return { commits, prs, mergedPRs, languageDistribution, recentPRs };
+    return {
+      commits,
+      prs: totalCount,
+      mergedPRs: mergedCount,
+      languageDistribution,
+      recentPRs,
+    };
   } catch (error) {
     console.error('GitHub fetch error:', error);
     return { commits: 0, prs: 0, mergedPRs: 0, languageDistribution: {}, recentPRs: [] };
@@ -122,7 +138,6 @@ export async function fetchPRDiff(prUrl: string, token?: string): Promise<string
   const authToken = token || process.env.GITHUB_TOKEN;
   if (!authToken) return '';
 
-  // Extract owner, repo, and PR number from URL
   const match = prUrl.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
   if (!match) return '';
 

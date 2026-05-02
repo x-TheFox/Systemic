@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink, Brain } from 'lucide-react';
+import { ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink, Brain, X, Crown, Sparkles, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { BadgeGrid } from '@/components/BadgeGrid';
+import { BadgeGrid, BadgeCard } from '@/components/BadgeGrid';
 
 const platformIcons: Record<string, any> = {
   githubHandle: <Code2 className="h-4 w-4" />,
@@ -18,6 +18,14 @@ const platformIcons: Record<string, any> = {
   codeforcesHandle: <Trophy className="h-4 w-4" />,
   hackerrankHandle: <Zap className="h-4 w-4" />,
 };
+
+interface PastTitle {
+  id: string;
+  title: string;
+  weekNumber: number;
+  year: number;
+  createdAt: string;
+}
 
 export default function ProfilePage() {
   const { user: clerkUser, isLoaded } = useUser();
@@ -27,6 +35,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState<any>(null);
 
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [formData, setFormData] = useState({
@@ -55,7 +64,6 @@ export default function ProfilePage() {
         const data = await res.json();
         setProfile(data.user);
 
-        // Check if this is the logged-in user's own profile
         const own = clerkUser?.id === data.user?.clerkId;
         setIsOwnProfile(own);
 
@@ -142,6 +150,10 @@ export default function ProfilePage() {
     );
   }
 
+  const pastTitles: PastTitle[] = profile.pastTitles || [];
+  const weeklyBadges = (profile.badges || []).filter((b: any) => b.category === 'weekly_leaderboard');
+  const aiBadges = (profile.badges || []).filter((b: any) => b.category !== 'weekly_leaderboard');
+
   return (
     <main className="min-h-screen p-4 md:p-8">
       <div className="mx-auto max-w-4xl space-y-6">
@@ -152,11 +164,22 @@ export default function ProfilePage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div className="flex-1">
+          <Avatar className="h-14 w-14 border-2 border-purple-500/40 flex-shrink-0">
+            <img src={profile.imageUrl || ''} alt="" className="h-full w-full rounded-full object-cover" />
+            <div className="h-full w-full rounded-full bg-gradient-to-br from-purple-600 to-cyan-600 flex items-center justify-center text-white text-xl font-bold">
+              {(profile.name || profile.email).charAt(0).toUpperCase()}
+            </div>
+          </Avatar>
+          <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold gradient-text">{profile.name || profile.email}</h1>
-            {profile.title && (
-              <p className="text-sm text-purple-400 mt-0.5">{profile.title}</p>
-            )}
+            {profile.title ? (
+              <div className="flex items-center gap-2 mt-1">
+                <Sparkles className="h-4 w-4 text-amber-400" />
+                <span className="text-base font-semibold text-amber-400 tracking-wide">{profile.title}</span>
+              </div>
+            ) : profile.skillTreeState?.currentGrind ? (
+              <p className="text-sm text-purple-400 mt-0.5">{profile.skillTreeState.currentGrind}</p>
+            ) : null}
           </div>
           {profile.githubHandle && (
             <a href={`https://github.com/${profile.githubHandle}`} target="_blank" rel="noopener noreferrer">
@@ -168,17 +191,81 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* AI Badges */}
+        {/* Past Titles */}
+        {pastTitles.length > 0 && (
+          <div className="glass-card p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-white/40" />
+              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Title History</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {pastTitles.slice(0, 8).map((pt: PastTitle) => (
+                <div
+                  key={pt.id}
+                  className="px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-sm text-white/50 hover:text-white/70 hover:border-white/20 transition-all cursor-default"
+                  title={`Week ${pt.weekNumber}, ${pt.year}`}
+                >
+                  {pt.title}
+                </div>
+              ))}
+              {pastTitles.length > 8 && (
+                <div className="px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.06] text-sm text-white/30">
+                  +{pastTitles.length - 8} more
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Badges with modal trigger */}
         {profile.badges && profile.badges.length > 0 && (
           <div className="glass-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Trophy className="h-5 w-5 text-amber-400" />
-              <h2 className="text-lg font-semibold text-white">Badges</h2>
-              <Badge variant="outline" className="text-[9px] border-amber-500/30 text-amber-400 bg-amber-500/10 ml-auto">
-                AI-FORGED
-              </Badge>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-amber-400" />
+                <h2 className="text-lg font-semibold text-white">Badges</h2>
+                <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/10 ml-2">
+                  {profile.badges.length}
+                </Badge>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedBadge(profile.badges[0])}
+                className="border-white/10 hover:bg-white/5 text-white/60 hover:text-white text-xs"
+              >
+                View All
+              </Button>
             </div>
-            <BadgeGrid badges={profile.badges} />
+            {/* Show top 2 weekly + top 2 AI badges inline */}
+            <div className="space-y-2">
+              {weeklyBadges.slice(0, 2).map((badge: any) => (
+                <div
+                  key={badge.id}
+                  className="cursor-pointer hover:scale-[1.01] transition-transform"
+                  onClick={() => setSelectedBadge(badge)}
+                >
+                  <BadgeCard badge={badge} />
+                </div>
+              ))}
+              {aiBadges.slice(0, 2).map((badge: any) => (
+                <div
+                  key={badge.id}
+                  className="cursor-pointer hover:scale-[1.01] transition-transform"
+                  onClick={() => setSelectedBadge(badge)}
+                >
+                  <BadgeCard badge={badge} />
+                </div>
+              ))}
+              {(weeklyBadges.length + aiBadges.length > 4) && (
+                <button
+                  onClick={() => setSelectedBadge(profile.badges[0])}
+                  className="w-full py-2 text-center text-xs text-white/30 hover:text-white/50 transition-colors"
+                >
+                  +{weeklyBadges.length + aiBadges.length - 4} more badges — tap to see all
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -310,6 +397,31 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Badge Modal */}
+      {selectedBadge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedBadge(null)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto glass-card p-6 rounded-2xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedBadge(null)}
+              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-5">
+              <Crown className="h-5 w-5 text-amber-400" />
+              <h2 className="text-lg font-semibold text-white">All Badges</h2>
+              <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/10">
+                {profile.badges.length}
+              </Badge>
+            </div>
+
+            <BadgeGrid badges={profile.badges} />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -56,6 +56,28 @@ async function generateTitleForUser(userId: string): Promise<number> {
 
   if (!user) return 0;
 
+  // Archive current title before overwriting
+  if (user.title) {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const weekNumber = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+
+    // Only archive if not already archived for this week
+    const existing = await prisma.pastTitle.findFirst({
+      where: { userId: user.id, weekNumber, year: now.getFullYear() },
+    });
+    if (!existing) {
+      await prisma.pastTitle.create({
+        data: {
+          userId: user.id,
+          title: user.title,
+          weekNumber,
+          year: now.getFullYear(),
+        },
+      });
+    }
+  }
+
   const deepDiveSnapshot = user.ghostSnapshots.find((s: any) => {
     const ac = s.activityCounts as any;
     return ac?.deepDive === true;
@@ -116,10 +138,14 @@ export async function GET(req: Request) {
 
     const user = await prisma.user.findFirst({
       where: { githubHandle },
-      select: { title: true, name: true },
+      select: { title: true, name: true, pastTitles: { orderBy: { createdAt: 'desc' }, take: 10 } } },
     });
 
-    return NextResponse.json({ title: user?.title || null, name: user?.name || null });
+    return NextResponse.json({
+      title: user?.title || null,
+      name: user?.name || null,
+      pastTitles: user?.pastTitles || [],
+    });
   } catch (error: any) {
     console.error('Title GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

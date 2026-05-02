@@ -250,76 +250,26 @@ export async function POST(req: Request) {
     if (weeklyBadges.length > 0) {
       await Promise.all(weeklyBadges);
     }
-    if (sortedUsers.length > 1) {
-      const [secondId] = sortedUsers[1];
-      weeklyBadges.push(
-        prisma.badge.create({
+
+    // Archive current titles to past titles before weekly title regeneration
+    const usersWithTitles = await prisma.user.findMany({
+      where: { title: { not: null } },
+      select: { id: true, title: true },
+    });
+    for (const u of usersWithTitles) {
+      const existing = await prisma.pastTitle.findFirst({
+        where: { userId: u.id, weekNumber, year },
+      });
+      if (!existing) {
+        await prisma.pastTitle.create({
           data: {
-            userId: secondId,
-            name: 'Silver Runner',
-            description: `Claimed 2nd place in Week ${weekNumber}. So close to glory.`,
-            rarity: 'epic',
-            color: '#a855f7',
-            icon: 'svg:2nd',
-            category: 'weekly_leaderboard',
-            generatedBy: 'weekly',
+            userId: u.id,
+            title: u.title!,
+            weekNumber,
+            year,
           },
-        })
-      );
-    }
-    if (sortedUsers.length > 2) {
-      const [thirdId] = sortedUsers[2];
-      weeklyBadges.push(
-        prisma.badge.create({
-          data: {
-            userId: thirdId,
-            name: 'Bronze Challenger',
-            description: `Secured 3rd place in Week ${weekNumber}. Rising star.`,
-            rarity: 'rare',
-            color: '#3b82f6',
-            icon: 'svg:3rd',
-            category: 'weekly_leaderboard',
-            generatedBy: 'weekly',
-          },
-        })
-      );
-    }
-    if (sortedUsers.length > 1) {
-      const [last2Id] = sortedUsers[sortedUsers.length - 2];
-      weeklyBadges.push(
-        prisma.badge.create({
-          data: {
-            userId: last2Id,
-            name: 'The Penultimate',
-            description: `Second to last in Week ${weekNumber}. The shadows remember you.`,
-            rarity: 'common',
-            color: '#6b7280',
-            icon: 'svg:last2',
-            category: 'weekly_leaderboard',
-            generatedBy: 'weekly',
-          },
-        })
-      );
-    }
-    if (sortedUsers.length > 0) {
-      const [last1Id] = sortedUsers[sortedUsers.length - 1];
-      weeklyBadges.push(
-        prisma.badge.create({
-          data: {
-            userId: last1Id,
-            name: 'The Lurker',
-            description: `Last place in Week ${weekNumber}. The ghost watches from below.`,
-            rarity: 'common',
-            color: '#6b7280',
-            icon: 'svg:last1',
-            category: 'weekly_leaderboard',
-            generatedBy: 'weekly',
-          },
-        })
-      );
-    }
-    if (weeklyBadges.length > 0) {
-      await Promise.all(weeklyBadges);
+        });
+      }
     }
 
     // Upsert into WeeklyReport
