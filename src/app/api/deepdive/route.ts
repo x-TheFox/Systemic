@@ -4,6 +4,7 @@ import { deepDiveGitHub } from '@/lib/fetchers/github-deepdive';
 import { generateInitialTreeFromDeepDive } from '@/lib/ai/skillTreeGenerator';
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
+export const dynamic = 'force-dynamic';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 const MODEL = 'openai/gpt-oss-120b';
