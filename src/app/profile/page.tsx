@@ -403,15 +403,15 @@ export default function ProfilePage() {
       {selectedBadge && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedBadge(null)}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto glass-card p-6 rounded-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#0a0a12]/95 backdrop-blur-xl p-6" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setSelectedBadge(null)}
-              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors z-10"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center gap-2 mb-5">
+            <div className="flex items-center gap-2 mb-5 sticky top-0 bg-[#0a0a12]/95 backdrop-blur-xl pb-3 -mt-1 pt-1 z-[1]">
               <Crown className="h-5 w-5 text-amber-400" />
               <h2 className="text-lg font-semibold text-white">All Badges</h2>
               <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/10">
