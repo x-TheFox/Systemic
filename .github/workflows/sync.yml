@@ -1,0 +1,21 @@
+name: Systemics Sync Engine
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Sync API
+        run: |
+          curl -X POST "${{ secrets.VERCEL_URL }}/api/sync" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail
+        env:
+          VERCEL_URL: ${{ secrets.VERCEL_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
