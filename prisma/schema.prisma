@@ -33,6 +33,9 @@ model User {
   codeforcesSolved Int @default(0)
   hackerrankBadges Int @default(0)
 
+  // AI-generated leaderboard title/badge
+  title String?
+
   // Deduplication: last successful sync timestamp per platform
   lastSyncedGitHub     DateTime?
   lastSyncedLeetCode   DateTime?
@@ -133,4 +136,26 @@ model GhostSnapshot {
   @@index([weekNumber])
   @@index([year])
   @@unique([userId, weekNumber, year])
+}
+
+model WeeklyReport {
+  id            String   @id @default(cuid())
+  weekNumber    Int
+  year          Int
+  content       String   // AI-generated post-mortem markdown
+  mvpName       String?
+  mvpUserId     String?
+  mvpXp         Int      @default(0)
+  lurkerName    String?
+  lurkerUserId  String?
+  lurkerXp      Int      @default(0)
+  totalXP       Int      @default(0)
+  participants  Int      @default(0)
+  rankings      Json     // [{ name, xp, activities, platforms }]
+  published     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([year])
+  @@index([weekNumber])
+  @@unique([weekNumber, year])
 }

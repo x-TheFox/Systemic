@@ -6,7 +6,7 @@ import { fetchLeetCodeMetrics } from '@/lib/fetchers/leetcode';
 import { fetchCodeforcesMetrics } from '@/lib/fetchers/codeforces';
 import { fetchHackerRankMetrics } from '@/lib/fetchers/hackerrank';
 import { evaluatePRComplexity } from '@/lib/ai/groq';
-import { calculateGitHubXP, calculateLeetCodeXP, calculateCodeforcesXP, calculateHackerRankXP } from '@/lib/xp/normalize';
+import { XP_TABLE } from '@/lib/xp/normalize';
 import { triggerMilestone } from '@/lib/pusher/server';
 import { createWeeklySnapshot } from '@/lib/ai/ghost';
 import { generatePersonalizedSkillTree, generateInitialTreeFromDeepDive, generateInitialSkillTree } from '@/lib/ai/skillTreeGenerator';
@@ -42,16 +42,29 @@ export async function POST(req: Request) {
 
 async function syncUser(user: any) {
   const activities: any[] = [];
-  let totalXP = 0;
-  let totalCommits = 0;
-  let totalPRs = 0;
-  let leetcodeEasy = 0;
-  let leetcodeMedium = 0;
-  let leetcodeHard = 0;
-  let codeforcesRating = 0;
-  let codeforcesSolved = 0;
-  let hackerrankBadges = 0;
+  let totalDeltaXP = 0;
   const now = new Date();
+  const dateSlug = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+  // Store previous stats for delta calculation
+  const prevCommits = user.totalCommits;
+  const prevPRs = user.totalPRs;
+  const prevLeetcodeEasy = user.leetcodeEasy;
+  const prevLeetcodeMedium = user.leetcodeMedium;
+  const prevLeetcodeHard = user.leetcodeHard;
+  const prevCodeforcesRating = user.codeforcesRating;
+  const prevCodeforcesSolved = user.codeforcesSolved;
+  const prevHackerrankBadges = user.hackerrankBadges;
+
+  // Current stats (to be updated on user)
+  let totalCommits = prevCommits;
+  let totalPRs = prevPRs;
+  let leetcodeEasy = prevLeetcodeEasy;
+  let leetcodeMedium = prevLeetcodeMedium;
+  let leetcodeHard = prevLeetcodeHard;
+  let codeforcesRating = prevCodeforcesRating;
+  let codeforcesSolved = prevCodeforcesSolved;
+  let hackerrankBadges = prevHackerrankBadges;
 
   const isFirstSync = !user.lastSyncedGitHub && !user.lastSyncedLeetCode && !user.lastSyncedCodeforces && !user.lastSyncedHackerRank;
   let deepDiveResult: any = null;
@@ -63,15 +76,32 @@ async function syncUser(user: any) {
       totalCommits = ghMetrics.commits;
       totalPRs = ghMetrics.mergedPRs;
 
+      // Delta commits XP
+      const deltaCommits = Math.max(0, totalCommits - prevCommits);
+      if (deltaCommits > 0) {
+        const commitXP = deltaCommits * XP_TABLE.GITHUB.COMMIT;
+        totalDeltaXP += commitXP;
+        activities.push({
+          userId: user.id,
+          platform: 'GITHUB',
+          activityType: 'COMMIT',
+          description: `${deltaCommits} new commits (total: ${totalCommits})`,
+          xpAwarded: commitXP,
+          externalId: `github-commits-${user.id}-${dateSlug}`,
+          metadata: { deltaCommits, totalCommits, languages: ghMetrics.languageDistribution },
+        });
+      }
+
+      // Individual PRs (deduped by PR URL)
       const prScores: number[] = [];
-      for (const pr of ghMetrics.recentPRs.slice(0, 5)) {
+      for (const pr of ghMetrics.recentPRs.slice(0, 10)) {
         const existing = await prisma.activityLog.findUnique({
           where: { userId_externalId: { userId: user.id, externalId: pr.url } },
         });
         if (existing) continue;
 
         const diff = await fetchPRDiff(pr.url, process.env.GITHUB_TOKEN);
-        let xp = 30;
+        let xp = XP_TABLE.GITHUB.PR_COMPLEX_BASE;
         let category = 'Backend';
         let justification = 'Default scoring';
 
@@ -85,6 +115,7 @@ async function syncUser(user: any) {
         }
 
         prScores.push(xp);
+        totalDeltaXP += xp;
         activities.push({
           userId: user.id,
           platform: 'GITHUB',
@@ -93,20 +124,6 @@ async function syncUser(user: any) {
           xpAwarded: xp,
           externalId: pr.url,
           metadata: { category, justification, url: pr.url },
-        });
-      }
-
-      const ghXP = calculateGitHubXP(ghMetrics.commits, ghMetrics.mergedPRs, prScores);
-      totalXP += ghXP;
-
-      if (ghMetrics.commits > 0) {
-        activities.push({
-          userId: user.id,
-          platform: 'GITHUB',
-          activityType: 'COMMIT',
-          description: `${ghMetrics.commits} commits`,
-          xpAwarded: ghMetrics.commits * 5,
-          metadata: { languages: ghMetrics.languageDistribution },
         });
       }
 
@@ -132,17 +149,28 @@ async function syncUser(user: any) {
       leetcodeMedium = lcMetrics.solved.medium;
       leetcodeHard = lcMetrics.solved.hard;
 
-      const lcXP = calculateLeetCodeXP(lcMetrics.solved, lcMetrics.rating);
-      totalXP += lcXP;
+      const deltaEasy = Math.max(0, leetcodeEasy - prevLeetcodeEasy);
+      const deltaMedium = Math.max(0, leetcodeMedium - prevLeetcodeMedium);
+      const deltaHard = Math.max(0, leetcodeHard - prevLeetcodeHard);
+      const deltaRatingMilestone = Math.max(0, Math.floor(lcMetrics.rating / 100) - Math.floor(user.leetcodeRating || 0 / 100));
 
-      activities.push({
-        userId: user.id,
-        platform: 'LEETCODE',
-        activityType: 'PROBLEM_SOLVED',
-        description: `Solved ${lcMetrics.solved.total} problems (Rating: ${lcMetrics.rating})`,
-        xpAwarded: lcXP,
-        metadata: { solved: lcMetrics.solved, rating: lcMetrics.rating },
-      });
+      const lcXP = (deltaEasy * XP_TABLE.LEETCODE.EASY) +
+                   (deltaMedium * XP_TABLE.LEETCODE.MEDIUM) +
+                   (deltaHard * XP_TABLE.LEETCODE.HARD) +
+                   (deltaRatingMilestone * XP_TABLE.LEETCODE.CONTEST_RATING_MILESTONE);
+
+      if (lcXP > 0) {
+        totalDeltaXP += lcXP;
+        activities.push({
+          userId: user.id,
+          platform: 'LEETCODE',
+          activityType: 'PROBLEM_SOLVED',
+          description: `+${deltaEasy}E / +${deltaMedium}M / +${deltaHard}H (Rating: ${lcMetrics.rating})`,
+          xpAwarded: lcXP,
+          externalId: `leetcode-${user.id}-${dateSlug}`,
+          metadata: { solved: lcMetrics.solved, rating: lcMetrics.rating, delta: { easy: deltaEasy, medium: deltaMedium, hard: deltaHard } },
+        });
+      }
     } catch (err) {
       console.error('LeetCode sync error for', user.leetcodeHandle, err);
     }
@@ -155,17 +183,31 @@ async function syncUser(user: any) {
       codeforcesRating = cfMetrics.rating;
       codeforcesSolved = cfMetrics.solvedCount;
 
-      const cfXP = calculateCodeforcesXP(cfMetrics.solvedCount, cfMetrics.rating, cfMetrics.rank);
-      totalXP += cfXP;
+      const deltaSolved = Math.max(0, codeforcesSolved - prevCodeforcesSolved);
+      const deltaRatingMilestone = Math.max(0, Math.floor(codeforcesRating / 100) - Math.floor(prevCodeforcesRating / 100));
 
-      activities.push({
-        userId: user.id,
-        platform: 'CODEFORCES',
-        activityType: 'CONTEST',
-        description: `Rating: ${cfMetrics.rating}, Solved: ${cfMetrics.solvedCount}`,
-        xpAwarded: cfXP,
-        metadata: { rank: cfMetrics.rank, maxRating: cfMetrics.maxRating },
-      });
+      let cfXP = (deltaSolved * XP_TABLE.CODEFORCES.PROBLEM_SOLVED) +
+                 (deltaRatingMilestone * XP_TABLE.CODEFORCES.RATING_MILESTONE);
+
+      // Rank up bonus (one-time per rank)
+      const prevRankBonus = XP_TABLE.CODEFORCES.RANK_UP_BONUS[user.codeforcesRank?.toLowerCase()] || 0;
+      const newRankBonus = XP_TABLE.CODEFORCES.RANK_UP_BONUS[cfMetrics.rank?.toLowerCase()] || 0;
+      if (newRankBonus > prevRankBonus) {
+        cfXP += newRankBonus - prevRankBonus;
+      }
+
+      if (cfXP > 0) {
+        totalDeltaXP += cfXP;
+        activities.push({
+          userId: user.id,
+          platform: 'CODEFORCES',
+          activityType: 'CONTEST',
+          description: `Rating: ${cfMetrics.rating}, Solved: ${cfMetrics.solvedCount} (+${deltaSolved})`,
+          xpAwarded: cfXP,
+          externalId: `codeforces-${user.id}-${dateSlug}`,
+          metadata: { rank: cfMetrics.rank, maxRating: cfMetrics.maxRating, deltaSolved, deltaRatingMilestone },
+        });
+      }
     } catch (err) {
       console.error('Codeforces sync error for', user.codeforcesHandle, err);
     }
@@ -177,17 +219,21 @@ async function syncUser(user: any) {
       const hrMetrics = await fetchHackerRankMetrics(user.hackerrankHandle);
       hackerrankBadges = hrMetrics.badges;
 
-      const hrXP = calculateHackerRankXP(hrMetrics.badges, hrMetrics.certificates, hrMetrics.stars);
-      totalXP += hrXP;
+      const deltaBadges = Math.max(0, hackerrankBadges - prevHackerrankBadges);
+      const hrXP = (deltaBadges * XP_TABLE.HACKERRANK.BADGE) +
+                   (hrMetrics.certificates * XP_TABLE.HACKERRANK.CERTIFICATE) +
+                   (hrMetrics.stars * XP_TABLE.HACKERRANK.STAR);
 
-      if (hrMetrics.badges > 0) {
+      if (hrXP > 0) {
+        totalDeltaXP += hrXP;
         activities.push({
           userId: user.id,
           platform: 'HACKERRANK',
           activityType: 'BADGE',
-          description: `${hrMetrics.badges} badges earned`,
+          description: `${deltaBadges} new badges (total: ${hackerrankBadges})`,
           xpAwarded: hrXP,
-          metadata: { badges: hrMetrics.badges, certificates: hrMetrics.certificates },
+          externalId: `hackerrank-${user.id}-${dateSlug}`,
+          metadata: { badges: hackerrankBadges, certificates: hrMetrics.certificates, stars: hrMetrics.stars, deltaBadges },
         });
       }
     } catch (err) {
@@ -195,11 +241,34 @@ async function syncUser(user: any) {
     }
   }
 
+  // ---------- RESET INFLATED XP (one-time fix) ----------
+  // If stored XP is way higher than it should be from current stats, recalculate base
+  const prLogs = await prisma.activityLog.findMany({
+    where: { userId: user.id, platform: 'GITHUB', activityType: 'PR' },
+  });
+  const prXP = prLogs.reduce((sum, l) => sum + l.xpAwarded, 0);
+  const baseXP = (totalCommits * XP_TABLE.GITHUB.COMMIT) +
+                 (leetcodeEasy * XP_TABLE.LEETCODE.EASY) +
+                 (leetcodeMedium * XP_TABLE.LEETCODE.MEDIUM) +
+                 (leetcodeHard * XP_TABLE.LEETCODE.HARD) +
+                 (codeforcesSolved * XP_TABLE.CODEFORCES.PROBLEM_SOLVED) +
+                 (hackerrankBadges * XP_TABLE.HACKERRANK.BADGE) +
+                 prXP;
+
+  // If current XP is more than 2x the base, it's inflated — reset to base + delta
+  let finalXP = user.xp;
+  if (user.xp > baseXP * 2 && baseXP > 0) {
+    console.log(`[Sync] Resetting inflated XP for ${user.email}: ${user.xp} → ${baseXP + totalDeltaXP}`);
+    finalXP = baseXP + totalDeltaXP;
+  } else {
+    finalXP = user.xp + totalDeltaXP;
+  }
+
   // ---------- UPDATE USER ----------
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      xp: { increment: totalXP },
+      xp: finalXP,
       totalCommits,
       totalPRs,
       leetcodeEasy,
@@ -231,14 +300,12 @@ async function syncUser(user: any) {
     where: { userId: user.id },
   });
 
-  // INITIAL TREE - Generate from deep dive if available, otherwise defaults
   if (currentDynamicNodes.length === 0) {
     let initialNodes;
-
     if (deepDiveResult) {
       try {
         initialNodes = await generateInitialTreeFromDeepDive(deepDiveResult, {
-          totalXP: totalXP || 0,
+          totalXP: totalDeltaXP || 0,
           totalCommits,
           totalPRs,
           leetcodeEasy,
@@ -247,7 +314,6 @@ async function syncUser(user: any) {
           codeforcesRating,
           codeforcesSolved,
         });
-        console.log(`Generated personalized tree from deep dive: ${initialNodes.length} nodes for ${user.email}`);
       } catch (err) {
         console.error('Deep dive tree generation failed, using defaults:', err);
         initialNodes = await generateInitialSkillTree();
@@ -277,7 +343,7 @@ async function syncUser(user: any) {
     }
   }
 
-  // GROW TREE - Try to add nodes based on recent activity
+  // GROW TREE
   try {
     const recentLogs = await prisma.activityLog.findMany({
       where: { userId: user.id },
@@ -397,7 +463,7 @@ async function syncUser(user: any) {
     const reqs = node.requirements as Record<string, number>;
     let met = true;
     for (const [key, val] of Object.entries(reqs)) {
-      if (val === 0) continue; // 0 means not required
+      if (val === 0) continue;
       let current = 0;
       if (key === 'total_xp') current = freshUser.xp;
       else if (key === 'leetcode_hard') current = freshUser.leetcodeHard;
@@ -452,14 +518,14 @@ async function syncUser(user: any) {
     });
   }
 
-  // ---------- SAVE DEEP DIVE DATA TO GHOST SNAPSHOT ----------
+  // ---------- SAVE DEEP DIVE DATA ----------
   if (deepDiveResult && isFirstSync) {
     await prisma.ghostSnapshot.create({
       data: {
         userId: user.id,
         weekNumber: 0,
         year: new Date().getFullYear(),
-        totalXP: totalXP,
+        totalXP: finalXP,
         skillBreakdown: deepDiveResult.skillSignals,
         activityCounts: {
           deepDive: true,
@@ -470,4 +536,6 @@ async function syncUser(user: any) {
       },
     }).catch(() => {});
   }
+
+  console.log(`[Sync] ${user.email}: +${totalDeltaXP} delta XP (commits: +${totalCommits - prevCommits}, PRs processed)`);
 }

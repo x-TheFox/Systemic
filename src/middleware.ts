@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/ghost',
   '/api/sync',
   '/api/weekly',
+  '/api/weekly/latest',
   '/api/deepdive',
   '/api/pulse',
 ]);

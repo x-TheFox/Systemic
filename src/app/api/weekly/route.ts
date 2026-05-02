@@ -12,6 +12,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const weekNumber = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+    const year = now.getFullYear();
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     const logs = await prisma.activityLog.findMany({
@@ -48,33 +52,57 @@ export async function POST(req: Request) {
     const sortedUsers = Object.entries(userStats).sort((a, b) => b[1].xpGained - a[1].xpGained);
     const mvp = sortedUsers[0];
     const lurker = sortedUsers[sortedUsers.length - 1];
+    const totalXP = sortedUsers.reduce((sum, [, s]) => sum + s.xpGained, 0);
+
+    const rankings = sortedUsers.map(([id, stats]) => ({
+      id,
+      name: stats.name,
+      xp: stats.xpGained,
+      activities: stats.activities,
+      platforms: Array.from(stats.platforms),
+    }));
 
     const activityData = JSON.stringify({
-      week: new Date().toISOString(),
+      week: now.toISOString(),
       totalParticipants: sortedUsers.length,
-      totalXP: sortedUsers.reduce((sum, [, s]) => sum + s.xpGained, 0),
+      totalXP,
       mvp: mvp ? { name: mvp[1].name, xp: mvp[1].xpGained } : null,
       lurker: lurker ? { name: lurker[1].name, xp: lurker[1].xpGained } : null,
-      rankings: sortedUsers.map(([id, stats]) => ({
-        id,
-        name: stats.name,
-        xp: stats.xpGained,
-        activities: stats.activities,
-        platforms: Array.from(stats.platforms),
-      })),
+      rankings,
     });
 
     const postMortem = await generateWeeklyPostMortem(activityData);
 
-    // Store in database
-    await prisma.activityLog.create({
-      data: {
-        userId: mvp?.[0] || 'system',
-        platform: 'SYSTEM',
-        activityType: 'CONTEST',
-        description: 'Weekly Post-Mortem',
-        xpAwarded: 0,
-        metadata: { type: 'weekly-report', content: postMortem, week: new Date().toISOString() },
+    // Upsert into WeeklyReport
+    await prisma.weeklyReport.upsert({
+      where: { weekNumber_year: { weekNumber, year } },
+      update: {
+        content: postMortem,
+        mvpName: mvp?.[1].name || null,
+        mvpUserId: mvp?.[0] || null,
+        mvpXp: mvp?.[1].xpGained || 0,
+        lurkerName: lurker?.[1].name || null,
+        lurkerUserId: lurker?.[0] || null,
+        lurkerXp: lurker?.[1].xpGained || 0,
+        totalXP,
+        participants: sortedUsers.length,
+        rankings: rankings as any,
+        published: true,
+      },
+      create: {
+        weekNumber,
+        year,
+        content: postMortem,
+        mvpName: mvp?.[1].name || null,
+        mvpUserId: mvp?.[0] || null,
+        mvpXp: mvp?.[1].xpGained || 0,
+        lurkerName: lurker?.[1].name || null,
+        lurkerUserId: lurker?.[0] || null,
+        lurkerXp: lurker?.[1].xpGained || 0,
+        totalXP,
+        participants: sortedUsers.length,
+        rankings: rankings as any,
+        published: true,
       },
     });
 
@@ -100,9 +128,27 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, postMortem, rankings: sortedUsers.map(([id, s]) => ({ id, ...s })) });
+    return NextResponse.json({ success: true, postMortem, rankings });
   } catch (error: any) {
     console.error('Weekly report error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 50);
+
+    const reports = await prisma.weeklyReport.findMany({
+      where: { published: true },
+      orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }],
+      take: limit,
+    });
+
+    return NextResponse.json({ reports });
+  } catch (error: any) {
+    console.error('Weekly GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

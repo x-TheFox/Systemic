@@ -6,6 +6,7 @@ import { SkillRadar } from '@/components/SkillRadar';
 import { SkillTree } from '@/components/SkillTree';
 import { PulseFeed } from '@/components/PulseFeed';
 import { LeaderboardTable } from '@/components/LeaderboardTable';
+import { WeeklyAnnouncement } from '@/components/WeeklyAnnouncement';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, Trophy, Zap, GitBranch, Brain, BarChart3 } from 'lucide-react';
@@ -52,6 +53,9 @@ export default function Home() {
           <StatCard icon={<Activity className="h-5 w-5" />} label="Active" value={stats ? 'Now' : '—'} color="green" />
         </div>
       )}
+
+      {/* Weekly Post-Mortem Announcement */}
+      <WeeklyAnnouncement />
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
