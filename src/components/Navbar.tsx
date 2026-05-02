@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import { Trophy, LayoutDashboard, User, Zap } from "lucide-react";
+import { Trophy, LayoutDashboard, User } from "lucide-react";
+import Image from "next/image";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -23,8 +24,8 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-cyan-500 shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/40 transition-shadow">
-            <Zap className="h-5 w-5 text-white" />
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/40 transition-shadow">
+            <Image src="/icon.svg" alt="Systemics" width={36} height={36} className="object-contain" priority />
           </div>
           <span className="text-xl font-bold tracking-tight">
             <span className="gradient-text">Systemics</span>
