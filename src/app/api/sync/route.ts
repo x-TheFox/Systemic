@@ -73,8 +73,18 @@ async function syncUser(user: any) {
   if (user.githubHandle) {
     try {
       const ghMetrics = await fetchGitHubMetrics(user.githubHandle, process.env.GITHUB_TOKEN);
-      totalCommits = ghMetrics.commits;
-      totalPRs = ghMetrics.mergedPRs;
+      // Never let stats regress — if API returns 0, keep the previous value
+      totalCommits = Math.max(ghMetrics.commits, 0);
+      totalPRs = Math.max(ghMetrics.mergedPRs, 0);
+      // If API returns fewer than we already have, keep the higher value
+      if (totalCommits < prevCommits && prevCommits > 0) {
+        console.log(`[Sync] GitHub returned ${totalCommits} commits but we had ${prevCommits} — keeping previous value`);
+        totalCommits = prevCommits;
+      }
+      if (totalPRs < prevPRs && prevPRs > 0) {
+        console.log(`[Sync] GitHub returned ${totalPRs} PRs but we had ${prevPRs} — keeping previous value`);
+        totalPRs = prevPRs;
+      }
 
       // Delta commits XP
       const deltaCommits = Math.max(0, totalCommits - prevCommits);
@@ -241,28 +251,10 @@ async function syncUser(user: any) {
     }
   }
 
-  // ---------- RESET INFLATED XP (one-time fix) ----------
-  // If stored XP is way higher than it should be from current stats, recalculate base
-  const prLogs = await prisma.activityLog.findMany({
-    where: { userId: user.id, platform: 'GITHUB', activityType: 'PR' },
-  });
-  const prXP = prLogs.reduce((sum, l) => sum + l.xpAwarded, 0);
-  const baseXP = (totalCommits * XP_TABLE.GITHUB.COMMIT) +
-                 (leetcodeEasy * XP_TABLE.LEETCODE.EASY) +
-                 (leetcodeMedium * XP_TABLE.LEETCODE.MEDIUM) +
-                 (leetcodeHard * XP_TABLE.LEETCODE.HARD) +
-                 (codeforcesSolved * XP_TABLE.CODEFORCES.PROBLEM_SOLVED) +
-                 (hackerrankBadges * XP_TABLE.HACKERRANK.BADGE) +
-                 prXP;
-
-  // If current XP is more than 2x the base, it's inflated — reset to base + delta
-  let finalXP = user.xp;
-  if (user.xp > baseXP * 2 && baseXP > 0) {
-    console.log(`[Sync] Resetting inflated XP for ${user.email}: ${user.xp} → ${baseXP + totalDeltaXP}`);
-    finalXP = baseXP + totalDeltaXP;
-  } else {
-    finalXP = user.xp + totalDeltaXP;
-  }
+  // ---------- CALCULATE FINAL XP ----------
+  // XP only ever goes UP: current XP + delta. Never regress.
+  // GitHub stats (commits, PRs) update the stored totals but XP doesn't go down.
+  const finalXP = user.xp + totalDeltaXP;
 
   // ---------- UPDATE USER ----------
   await prisma.user.update({

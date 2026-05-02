@@ -1,4 +1,5 @@
 const GITHUB_GRAPHQL_ENDPOINT = 'https://api.github.com/graphql';
+const GITHUB_REST_ENDPOINT = 'https://api.github.com';
 
 interface GitHubMetrics {
   commits: number;
@@ -22,18 +23,16 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Query total counts separately from recent PRs for AI scoring
-  // This ensures ALL PRs are accounted for in totals, while only recent PRs are evaluated for XP
-  const query = `
-    query($login: String!, $since: DateTime!) {
+  // GraphQL for commits, languages, and recent PRs
+  const gqlQuery = `
+    query($login: String!) {
       user(login: $login) {
         contributionsCollection {
           totalCommitContributions
           restrictedContributionsCount
         }
-        totalOpenPRs: pullRequests(states: [OPEN], first: 0) { totalCount }
-        totalMergedPRs: pullRequests(states: [MERGED], first: 0) { totalCount }
-        recentPRs: pullRequests(first: 25, states: [MERGED, OPEN], orderBy: {field: CREATED_AT, direction: DESC}) {
+        pullRequests(first: 25, states: [MERGED, OPEN], orderBy: {field: CREATED_AT, direction: DESC}) {
+          totalCount
           nodes {
             title
             url
@@ -42,13 +41,6 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
             additions
             deletions
             changedFiles
-            files(first: 1) {
-              nodes {
-                additions
-                deletions
-                path
-              }
-            }
           }
         }
         repositories(first: 100, isFork: false, ownerAffiliations: OWNER) {
@@ -67,75 +59,95 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
     }
   `;
 
-  try {
-    const response = await fetch(GITHUB_GRAPHQL_ENDPOINT, {
+  // REST for total merged PR count (GraphQL aliases on connections are unreliable)
+  const restUrl = `${GITHUB_REST_ENDPOINT}/search/issues?q=type:pr+author:${handle}+is:merged&per_page=1`;
+
+  let totalMergedPRs = 0;
+  let commits = 0;
+  let prsFromGQL = 0;
+  let recentPRs: GitHubMetrics['recentPRs'] = [];
+  const languageDistribution: Record<string, number> = {};
+
+  // Fetch both in parallel
+  const [gqlResponse, restResponse] = await Promise.all([
+    fetch(GITHUB_GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ query, variables: { login: handle, since: thirtyDaysAgo } }),
-    });
+      body: JSON.stringify({ query: gqlQuery, variables: { login: handle } }),
+    }),
+    fetch(restUrl, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    }),
+  ]);
 
-    if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`);
-    }
-
-    const data = await response.json();
+  // Process GraphQL
+  if (gqlResponse.ok) {
+    const data = await gqlResponse.json();
     const user = data?.data?.user;
+    if (user) {
+      commits = (user.contributionsCollection?.totalCommitContributions || 0) +
+                (user.contributionsCollection?.restrictedContributionsCount || 0);
+      prsFromGQL = user.pullRequests?.totalCount || 0;
 
-    if (!user) {
-      return { commits: 0, prs: 0, mergedPRs: 0, languageDistribution: {}, recentPRs: [] };
-    }
+      const allRecentNodes = (user.pullRequests?.nodes || []).filter((pr: any) => pr != null);
+      recentPRs = allRecentNodes
+        .filter((pr: any) => new Date(pr.createdAt) >= new Date(thirtyDaysAgo))
+        .map((pr: any) => ({
+          title: pr.title,
+          url: pr.url,
+          mergedAt: pr.mergedAt,
+          createdAt: pr.createdAt,
+        }));
 
-    const commits = (user.contributionsCollection?.totalCommitContributions || 0) +
-                    (user.contributionsCollection?.restrictedContributionsCount || 0);
-
-    // Use totalCount from dedicated queries — this accounts for ALL PRs, not just the first 25
-    const totalMerged = user.totalMergedPRs?.totalCount || 0;
-    const totalOpen = user.totalOpenPRs?.totalCount || 0;
-    const mergedPRs = totalMerged;
-    const prs = totalMerged + totalOpen;
-
-    // Only include PRs created in the last 30 days for AI evaluation
-    const allRecentNodes = (user.recentPRs?.nodes || []).filter((pr: any) => pr != null);
-    const recentPRs = allRecentNodes
-      .filter((pr: any) => new Date(pr.createdAt) >= new Date(thirtyDaysAgo))
-      .map((pr: any) => ({
-        title: pr.title,
-        url: pr.url,
-        mergedAt: pr.mergedAt,
-        createdAt: pr.createdAt,
-      }));
-
-    const languageDistribution: Record<string, number> = {};
-    let totalSize = 0;
-    user.repositories?.nodes?.forEach((repo: any) => {
-      repo.languages?.edges?.forEach((edge: any) => {
-        const name = edge.node.name;
-        const size = edge.size;
-        languageDistribution[name] = (languageDistribution[name] || 0) + size;
-        totalSize += size;
+      let totalSize = 0;
+      user.repositories?.nodes?.forEach((repo: any) => {
+        repo.languages?.edges?.forEach((edge: any) => {
+          const name = edge.node.name;
+          const size = edge.size;
+          languageDistribution[name] = (languageDistribution[name] || 0) + size;
+          totalSize += size;
+        });
       });
-    });
 
-    if (totalSize > 0) {
-      for (const key in languageDistribution) {
-        languageDistribution[key] = Math.round((languageDistribution[key] / totalSize) * 100);
+      if (totalSize > 0) {
+        for (const key in languageDistribution) {
+          languageDistribution[key] = Math.round((languageDistribution[key] / totalSize) * 100);
+        }
       }
     }
-
-    return {
-      commits,
-      prs,
-      mergedPRs,
-      languageDistribution,
-      recentPRs,
-    };
-  } catch (error) {
-    console.error('GitHub fetch error:', error);
-    return { commits: 0, prs: 0, mergedPRs: 0, languageDistribution: {}, recentPRs: [] };
+  } else {
+    console.error('GitHub GraphQL error:', gqlResponse.status);
   }
+
+  // Process REST — get total merged PRs from search API
+  if (restResponse.ok) {
+    const restData = await restResponse.json();
+    totalMergedPRs = restData?.total_count || 0;
+  } else {
+    console.error('GitHub REST search error:', restResponse.status);
+    // Fallback: use GraphQL count if REST fails
+    totalMergedPRs = prsFromGQL;
+  }
+
+  // Ensure mergedPRs is never less than recent PRs we know are merged
+  const recentMerged = recentPRs.filter(pr => pr.mergedAt != null).length;
+  if (totalMergedPRs < recentMerged && recentMerged > 0) {
+    totalMergedPRs = recentMerged;
+  }
+
+  return {
+    commits,
+    prs: prsFromGQL,
+    mergedPRs: totalMergedPRs,
+    languageDistribution,
+    recentPRs,
+  };
 }
 
 export async function fetchPRDiff(prUrl: string, token?: string): Promise<string> {
