@@ -7,37 +7,70 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id             String           @id @default(cuid())
-  clerkId        String           @unique
-  email          String           @unique
-  githubHandle   String?
-  leetcodeHandle String?
-  hackerrankHandle String?
-  codeforcesHandle String?
-  xp             Int              @default(0)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                 String   @id @default(cuid())
+  clerkId            String   @unique
+  email              String   @unique
+  name               String?
+  imageUrl           String?
+  githubHandle       String?
+  leetcodeHandle     String?
+  hackerrankHandle   String?
+  codeforcesHandle   String?
+  xp                 Int      @default(0)
+
+  // Aggregated stats for fast leaderboard queries
+  totalCommits     Int @default(0)
+  totalPRs         Int @default(0)
+  leetcodeEasy     Int @default(0)
+  leetcodeMedium   Int @default(0)
+  leetcodeHard     Int @default(0)
+  codeforcesRating Int @default(0)
+  codeforcesSolved Int @default(0)
+  hackerrankBadges Int @default(0)
+
+  // Deduplication: last successful sync timestamp per platform
+  lastSyncedGitHub     DateTime?
+  lastSyncedLeetCode   DateTime?
+  lastSyncedCodeforces DateTime?
+  lastSyncedHackerRank DateTime?
+  lastGhostSnapshotAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   activityLogs   ActivityLog[]
   skillTreeState SkillTreeState?
   achievements   Achievement[]
+  ghostSnapshots GhostSnapshot[]
+  dynamicNodes   DynamicSkillNode[]
+
+  @@index([xp])
+  @@index([clerkId])
 }
 
 model ActivityLog {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  platform    String   // 'GITHUB', 'LEETCODE', 'HACKERRANK', 'CODEFORCES'
-  activityType String  // 'COMMIT', 'PR', 'PROBLEM_SOLVED', 'CONTEST'
-  description String?
-  xpAwarded   Int      @default(0)
-  metadata    Json?    // AI classifications, diff complexity, etc.
-  timestamp   DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform     String // 'GITHUB', 'LEETCODE', 'HACKERRANK', 'CODEFORCES'
+  activityType String // 'COMMIT', 'PR', 'PROBLEM_SOLVED', 'CONTEST', 'BADGE'
+  description  String?
+  xpAwarded    Int      @default(0)
+  metadata     Json? // AI classifications, diff complexity, problem tags, etc.
+  timestamp    DateTime @default(now())
+
+  // Deduplication: external ID from the platform (PR URL, submission ID, etc.)
+  externalId String?
 
   @@index([userId])
+  @@index([platform])
+  @@index([timestamp])
+  @@unique([userId, externalId])
 }
 
 model SkillTreeState {
@@ -45,8 +78,31 @@ model SkillTreeState {
   userId        String   @unique
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   unlockedNodes String[] // Array of node IDs unlocked
-  currentGrind  String?  // The path they are focusing on, e.g., 'Frontend Wizard'
+  currentGrind  String? // The path they are focusing on, e.g., 'Frontend Wizard'
+  progress      Json? // Map of nodeId -> progress percentage
   updatedAt     DateTime @updatedAt
+}
+
+model DynamicSkillNode {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nodeId      String   // stable AI-generated ID
+  name        String
+  description String
+  path        String   // the "grind path" this node belongs to
+  tier        Int
+  positionX   Int
+  positionY   Int
+  requirements Json    // flexible requirement object
+  xpReward    Int
+  parentIds   String[] // references to other DynamicSkillNode.nodeId
+  unlocked    Boolean  @default(false)
+  generatedBy String   // 'ai' or 'system'
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@unique([userId, nodeId])
 }
 
 model Achievement {
@@ -56,7 +112,25 @@ model Achievement {
   title       String
   description String
   badgeUrl    String?
+  xpBonus     Int      @default(0)
   earnedAt    DateTime @default(now())
 
   @@index([userId])
+}
+
+model GhostSnapshot {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekNumber     Int
+  year           Int
+  totalXP        Int
+  skillBreakdown Json // { Frontend: 120, Backend: 98, ... }
+  activityCounts Json // { GITHUB: { commits: 10, prs: 2 }, LEETCODE: { easy: 5, ... } }
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([weekNumber])
+  @@index([year])
+  @@unique([userId, weekNumber, year])
 }
