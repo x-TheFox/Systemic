@@ -261,12 +261,11 @@ export default function ProfilePage() {
               </Button>
               <Button
                 onClick={triggerDeepDive}
-                disabled={deepDiving}
                 variant="outline"
                 className="w-full border-white/10 hover:bg-white/5 text-white/70 hover:text-white"
               >
-                <Brain className={`h-4 w-4 mr-2 ${deepDiving ? 'animate-pulse' : ''}`} />
-                {deepDiving ? 'Analyzing entire GitHub...' : 'Deep Dive (AI Research)'}
+                <Brain className="h-4 w-4 mr-2" />
+                Deep Dive (AI Research)
               </Button>
             </div>
           </div>
