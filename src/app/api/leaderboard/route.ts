@@ -27,6 +27,10 @@ export async function GET(req: Request) {
         codeforcesRating: true,
         codeforcesSolved: true,
         hackerrankBadges: true,
+        tryhackmePoints: true,
+        tryhackmeRank: true,
+        tryhackmeBadges: true,
+        tryhackmeRooms: true,
         createdAt: true,
         skillTreeState: {
           select: { currentGrind: true },

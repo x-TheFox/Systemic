@@ -32,6 +32,11 @@ model User {
   codeforcesRating Int @default(0)
   codeforcesSolved Int @default(0)
   hackerrankBadges Int @default(0)
+  tryhackmeHandle String?
+  tryhackmePoints Int @default(0)
+  tryhackmeRank   Int @default(0)
+  tryhackmeBadges Int @default(0)
+  tryhackmeRooms  Int @default(0)
 
   // AI-generated leaderboard title/badge
   title String?
@@ -44,6 +49,7 @@ model User {
   lastSyncedLeetCode   DateTime?
   lastSyncedCodeforces DateTime?
   lastSyncedHackerRank DateTime?
+  lastSyncedTryHackMe DateTime?
   lastGhostSnapshotAt  DateTime?
 
   createdAt DateTime @default(now())
@@ -64,7 +70,7 @@ model ActivityLog {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  platform     String // 'GITHUB', 'LEETCODE', 'HACKERRANK', 'CODEFORCES'
+  platform     String // 'GITHUB', 'LEETCODE', 'HACKERRANK', 'CODEFORCES', 'TRYHACKME'
   activityType String // 'COMMIT', 'PR', 'PROBLEM_SOLVED', 'CONTEST', 'BADGE'
   description  String?
   xpAwarded    Int      @default(0)

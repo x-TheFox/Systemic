@@ -81,6 +81,24 @@ export async function checkNodeUnlock(userId: string, nodeId: string): Promise<U
         progress['hackerrank_badges'] = { current, required: req.value };
         break;
 
+      case 'tryhackme_points':
+        current = user.tryhackmePoints;
+        met = current >= req.value;
+        progress['tryhackme_points'] = { current, required: req.value };
+        break;
+
+      case 'tryhackme_badges':
+        current = user.tryhackmeBadges;
+        met = current >= req.value;
+        progress['tryhackme_badges'] = { current, required: req.value };
+        break;
+
+      case 'tryhackme_rooms':
+        current = user.tryhackmeRooms;
+        met = current >= req.value;
+        progress['tryhackme_rooms'] = { current, required: req.value };
+        break;
+
       case 'skill_xp': {
         const skillXP = await getSkillXP(userId, req.platform || '');
         current = skillXP;

@@ -103,6 +103,8 @@ TOTAL XP: ${user.xp}
 COMMITS: ${user.totalCommits} | PRs: ${user.totalPRs}
 LEETCODE: ${user.leetcodeEasy}E / ${user.leetcodeMedium}M / ${user.leetcodeHard}H
 CODEFORCES: Rating ${user.codeforcesRating}
+HACKERRANK: ${user.hackerrankBadges} badges
+TRYHACKME: ${user.tryhackmePoints}pts | Rank: ${user.tryhackmeRank}
 TOP SKILLS: ${topSkills}
 ARCHETYPE: ${deepDiveData?.archetype || 'Unknown'}
 GRIND PATH: ${deepDiveData?.grindPath || 'Unknown'}

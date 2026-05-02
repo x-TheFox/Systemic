@@ -32,7 +32,7 @@ export function PulseFeed() {
   useEffect(() => {
     async function loadHistory() {
       try {
-        const res = await fetch('/api/pulse?limit=30');
+        const res = await fetch('/api/pulse');
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         if (data.events) setEvents(data.events);
@@ -66,7 +66,7 @@ export function PulseFeed() {
           userName: data.userName,
           xp: data.xp,
         };
-        setEvents(prev => [event, ...prev].slice(0, 50));
+        setEvents(prev => [event, ...prev]);
       });
     });
 

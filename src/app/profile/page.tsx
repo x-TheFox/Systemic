@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink, Brain, X, Crown, Sparkles, Clock } from 'lucide-react';
+import { ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink, Brain, X, Crown, Sparkles, Clock, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { BadgeGrid, BadgeCard } from '@/components/BadgeGrid';
@@ -18,6 +18,15 @@ const platformIcons: Record<string, any> = {
   leetcodeHandle: <Code2 className="h-4 w-4" />,
   codeforcesHandle: <Trophy className="h-4 w-4" />,
   hackerrankHandle: <Zap className="h-4 w-4" />,
+  tryhackmeHandle: <Shield className="h-4 w-4" />,
+};
+
+const platformLabels: Record<string, string> = {
+  githubHandle: 'GitHub',
+  leetcodeHandle: 'LeetCode',
+  codeforcesHandle: 'Codeforces',
+  hackerrankHandle: 'HackerRank',
+  tryhackmeHandle: 'TryHackMe',
 };
 
 interface PastTitle {
@@ -44,6 +53,7 @@ export default function ProfilePage() {
     leetcodeHandle: '',
     codeforcesHandle: '',
     hackerrankHandle: '',
+    tryhackmeHandle: '',
     name: '',
   });
 
@@ -73,6 +83,7 @@ export default function ProfilePage() {
           leetcodeHandle: data.user.leetcodeHandle || '',
           codeforcesHandle: data.user.codeforcesHandle || '',
           hackerrankHandle: data.user.hackerrankHandle || '',
+          tryhackmeHandle: data.user.tryhackmeHandle || '',
           name: data.user.name || '',
         });
       } catch (err) {
@@ -278,6 +289,10 @@ export default function ProfilePage() {
             <StatCard label="Commits" value={profile?.totalCommits || 0} icon="📝" color="cyan" />
             <StatCard label="PRs" value={profile?.totalPRs || 0} icon="🔀" color="green" />
             <StatCard label="LC Hard" value={profile?.leetcodeHard || 0} icon="🧠" color="pink" />
+            <StatCard label="CF Rating" value={profile?.codeforcesRating || 0} icon="🏆" color="amber" />
+            <StatCard label="HR Badges" value={profile?.hackerrankBadges || 0} icon="⚡" color="yellow" />
+            <StatCard label="THM Points" value={profile?.tryhackmePoints || 0} icon="🛡" color="emerald" />
+            <StatCard label="THM Rank" value={profile?.tryhackmeRank || 0} icon="⚔" color="red" />
           </div>
         </div>
 
@@ -307,7 +322,7 @@ export default function ProfilePage() {
                     placeholder="Your name"
                   />
                 </div>
-                {Object.entries({ githubHandle: 'GitHub', leetcodeHandle: 'LeetCode', codeforcesHandle: 'Codeforces', hackerrankHandle: 'HackerRank' }).map(([key, label]) => (
+                {Object.entries(platformLabels).map(([key, label]) => (
                   <div key={key}>
                     <label className="text-sm text-white/50 mb-1 block">{label}</label>
                     <Input
@@ -321,7 +336,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {Object.entries({ githubHandle: 'GitHub', leetcodeHandle: 'LeetCode', codeforcesHandle: 'Codeforces', hackerrankHandle: 'HackerRank' }).map(([key, label]) => (
+                {Object.entries(platformLabels).map(([key, label]) => (
                   <div key={key} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                     <div className="text-purple-400">{platformIcons[key]}</div>
                     <div className="flex-1 min-w-0">
@@ -433,6 +448,10 @@ function StatCard({ label, value, icon, color }: { label: string; value: number;
     cyan: 'from-cyan-500/20 to-cyan-500/5 border-cyan-500/20 text-cyan-400',
     green: 'from-green-500/20 to-green-500/5 border-green-500/20 text-green-400',
     pink: 'from-pink-500/20 to-pink-500/5 border-pink-500/20 text-pink-400',
+    amber: 'from-amber-500/20 to-amber-500/5 border-amber-500/20 text-amber-400',
+    yellow: 'from-yellow-500/20 to-yellow-500/5 border-yellow-500/20 text-yellow-400',
+    emerald: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20 text-emerald-400',
+    red: 'from-red-500/20 to-red-500/5 border-red-500/20 text-red-400',
   };
   const cls = colorClasses[color] || colorClasses.purple;
 

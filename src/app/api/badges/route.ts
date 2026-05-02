@@ -43,6 +43,14 @@ async function generateBadgesForUser(userId: string): Promise<number> {
 
   const unlockedNodes = user.dynamicNodes.map((n: any) => `${n.name} (${n.path})`).join(', ');
 
+  const existingBadgeNames = user.badges
+    .filter((b: any) => b.generatedBy === 'ai')
+    .map((b: any) => b.name);
+
+  const existingBadgeText = existingBadgeNames.length > 0
+    ? `\nEXISTING BADGES (DO NOT repeat these — generate NEW unique badges):\n${existingBadgeNames.map((n: string) => `- ${n}`).join('\n')}`
+    : '';
+
   const { text: badgeText } = await generateText({
     model: groq(MODEL),
     prompt: `You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
@@ -54,6 +62,8 @@ COMMITS: ${user.totalCommits} | PRs: ${user.totalPRs}
 LEETCODE: ${user.leetcodeEasy}E / ${user.leetcodeMedium}M / ${user.leetcodeHard}H
 CODEFORCES: Rating ${user.codeforcesRating} | Solved: ${user.codeforcesSolved}
 HACKERRANK: ${user.hackerrankBadges} badges
+TRYHACKME: ${user.tryhackmePoints}pts | Rank: ${user.tryhackmeRank} | ${user.tryhackmeBadges} badges | ${user.tryhackmeRooms} rooms
+${existingBadgeText}
 
 SKILL SIGNALS:
 ${topSkills}
@@ -70,13 +80,14 @@ GRIND PATH: ${deepDiveData?.grindPath || 'Unknown'}
 RULES:
 1. Generate EXACTLY 4 badges — no more, no less
 2. Each badge must be UNIQUE to this developer's actual skills
-3. Names must be HYPE and GAMING-STYLE (e.g., "Cache Commander", "DOM Dominator", "Pipeline Warlord")
-4. Rarity distribution: 1 common, 1 rare, 1 epic, 1 legendary
-5. Common = basic skill recognition, Rare = notable achievement, Epic = mastery, Legendary = once-in-a-gang feat
-6. Colors: common=#6b7280 gray, rare=#3b82f6 blue, epic=#a855f7 purple, legendary=#f59e0b gold
-7. Icons: pick simple lucide-react icon names (e.g., "Zap", "Shield", "Cpu", "Flame", "Target", "Code", "Database", "Globe")
-8. Categories: skill | grind | social | special
-9. Descriptions must reference ACTUAL repos, languages, or stats — no generic fluff
+3. IMPORTANT: Do NOT generate any badge that shares a name with an EXISTING badge listed above — each badge name must be completely new and different
+4. Names must be HYPE and GAMING-STYLE (e.g., "Cache Commander", "DOM Dominator", "Pipeline Warlord")
+5. Rarity distribution: 1 common, 1 rare, 1 epic, 1 legendary
+6. Common = basic skill recognition, Rare = notable achievement, Epic = mastery, Legendary = once-in-a-gang feat
+7. Colors: common=#6b7280 gray, rare=#3b82f6 blue, epic=#a855f7 purple, legendary=#f59e0b gold
+8. Icons: pick simple lucide-react icon names (e.g., "Zap", "Shield", "Cpu", "Flame", "Target", "Code", "Database", "Globe")
+9. Categories: skill | grind | social | special
+10. Descriptions must reference ACTUAL repos, languages, or stats — no generic fluff
 
 OUTPUT FORMAT (exactly this format, no markdown code blocks):
 BADGE 1
@@ -114,25 +125,26 @@ category: <category>`,
 
   const badges = parseBadges(badgeText);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.badge.deleteMany({ where: { userId: user.id, generatedBy: 'ai' } });
-    for (const badge of badges) {
-      await tx.badge.create({
-        data: {
-          userId: user.id,
-          name: badge.name,
-          description: badge.description,
-          rarity: badge.rarity,
-          color: badge.color,
-          icon: badge.icon,
-          category: badge.category,
-          generatedBy: 'ai',
-        },
-      });
-    }
-  });
+  const newBadges = badges.filter(
+    (b: any) => !existingBadgeNames.some((existing: string) => existing.toLowerCase() === b.name.toLowerCase())
+  );
 
-  return badges.length;
+  for (const badge of newBadges) {
+    await prisma.badge.create({
+      data: {
+        userId: user.id,
+        name: badge.name,
+        description: badge.description,
+        rarity: badge.rarity,
+        color: badge.color,
+        icon: badge.icon,
+        category: badge.category,
+        generatedBy: 'ai',
+      },
+    });
+  }
+
+  return newBadges.length;
 }
 
 export async function POST(req: Request) {

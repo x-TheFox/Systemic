@@ -105,8 +105,11 @@ export function BadgeGrid({ badges }: { badges: Badge[] }) {
     );
   }
 
-  const weeklyBadges = badges.filter(b => b.category === 'weekly_leaderboard');
-  const aiBadges = badges.filter(b => b.category !== 'weekly_leaderboard');
+  const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, common: 1 };
+  const sortByRarity = (a: Badge, b: Badge) => (rarityOrder[b.rarity.toLowerCase()] || 0) - (rarityOrder[a.rarity.toLowerCase()] || 0);
+
+  const weeklyBadges = badges.filter(b => b.category === 'weekly_leaderboard').sort(sortByRarity);
+  const aiBadges = badges.filter(b => b.category !== 'weekly_leaderboard').sort(sortByRarity);
 
   return (
     <div className="space-y-5">

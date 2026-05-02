@@ -6,9 +6,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const limit = parseInt(searchParams.get('limit') || '0') || 500;
 
-    // Fetch recent activity logs
     const activityLogs = await prisma.activityLog.findMany({
       orderBy: { timestamp: 'desc' },
       take: limit,
@@ -17,7 +16,6 @@ export async function GET(req: Request) {
       },
     });
 
-    // Fetch recent achievements
     const achievements = await prisma.achievement.findMany({
       orderBy: { earnedAt: 'desc' },
       take: limit,
@@ -26,7 +24,6 @@ export async function GET(req: Request) {
       },
     });
 
-    // Fetch recently unlocked nodes (order by createdAt since DynamicSkillNode has no updatedAt)
     const unlockedNodes = await prisma.dynamicSkillNode.findMany({
       where: { unlocked: true },
       orderBy: { createdAt: 'desc' },
@@ -36,7 +33,6 @@ export async function GET(req: Request) {
       },
     });
 
-    // Merge and sort by time
     const events = [
       ...activityLogs.map((log) => ({
         id: `log-${log.id}`,
@@ -65,10 +61,9 @@ export async function GET(req: Request) {
       })),
     ];
 
-    // Sort by timestamp desc and limit
     events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    return NextResponse.json({ events: events.slice(0, limit) });
+    return NextResponse.json({ events });
   } catch (error: any) {
     console.error('Pulse GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -31,7 +31,7 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
           totalCommitContributions
           restrictedContributionsCount
         }
-        pullRequests(first: 25, states: [MERGED, OPEN], orderBy: {field: CREATED_AT, direction: DESC}) {
+        pullRequests(first: 50, states: [MERGED, OPEN], orderBy: {field: CREATED_AT, direction: DESC}) {
           totalCount
           nodes {
             title

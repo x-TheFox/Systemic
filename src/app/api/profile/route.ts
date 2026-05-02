@@ -90,7 +90,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { githubHandle, leetcodeHandle, codeforcesHandle, hackerrankHandle, name } = body;
+    const { githubHandle, leetcodeHandle, codeforcesHandle, hackerrankHandle, tryhackmeHandle, name } = body;
 
     await getOrCreateUser(
       user.id,
@@ -106,6 +106,7 @@ export async function PUT(req: Request) {
         ...(leetcodeHandle !== undefined && { leetcodeHandle }),
         ...(codeforcesHandle !== undefined && { codeforcesHandle }),
         ...(hackerrankHandle !== undefined && { hackerrankHandle }),
+        ...(tryhackmeHandle !== undefined && { tryhackmeHandle }),
         ...(name !== undefined && { name }),
       },
     });

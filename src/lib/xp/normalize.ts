@@ -33,6 +33,12 @@ export const XP_TABLE = {
     CERTIFICATE: 100,
     STAR: 10,
   },
+  TRYHACKME: {
+    POINT_MILESTONE: 2,
+    BADGE: 20,
+    ROOM_COMPLETED: 10,
+    RANK_MILESTONE: 50,
+  },
 } as const;
 
 export function calculateLeetCodeXP(solved: { easy: number; medium: number; hard: number }, rating: number): number {
