@@ -92,9 +92,9 @@ async function syncUser(user: any) {
         });
       }
 
-      // Individual PRs (deduped by PR URL)
+      // Individual PRs (deduped by PR URL — process ALL, skip already-logged)
       const prScores: number[] = [];
-      for (const pr of ghMetrics.recentPRs.slice(0, 10)) {
+      for (const pr of ghMetrics.recentPRs) {
         const existing = await prisma.activityLog.findUnique({
           where: { userId_externalId: { userId: user.id, externalId: pr.url } },
         });

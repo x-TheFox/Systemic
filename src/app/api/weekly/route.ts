@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateWeeklyPostMortem } from '@/lib/ai/groq';
 import { triggerMilestone } from '@/lib/pusher/server';
+import { sendDiscordWebhook } from '@/lib/discord';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,13 +117,7 @@ export async function POST(req: Request) {
     // Optionally send to Discord
     if (process.env.DISCORD_WEBHOOK_URL) {
       try {
-        await fetch(process.env.DISCORD_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: `## Systemics Weekly Post-Mortem\n\n${postMortem.slice(0, 1900)}`,
-          }),
-        });
+        await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, postMortem);
       } catch (e) {
         console.error('Discord webhook failed:', e);
       }
