@@ -28,7 +28,6 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
 
-  const [deepDiving, setDeepDiving] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [formData, setFormData] = useState({
     githubHandle: '',
@@ -109,7 +108,7 @@ export default function ProfilePage() {
   }
 
   async function triggerDeepDive() {
-    setDeepDiving(true);
+    toast.info('Deep dive started. Analyzing your entire GitHub history...');
     try {
       const res = await fetch('/api/deepdive', {
         method: 'POST',
@@ -124,8 +123,6 @@ export default function ProfilePage() {
       toast.success(`Deep dive complete! Archetype: ${data.archetype}`);
     } catch {
       toast.error('Deep dive failed. Try again later.');
-    } finally {
-      setDeepDiving(false);
     }
   }
 
