@@ -138,7 +138,11 @@ export async function GET(req: Request) {
 
     const user = await prisma.user.findFirst({
       where: { githubHandle },
-      select: { title: true, name: true, pastTitles: { orderBy: { createdAt: 'desc' }, take: 10 } } },
+      select: {
+        title: true,
+        name: true,
+        pastTitles: { orderBy: { createdAt: 'desc' }, take: 10 },
+      },
     });
 
     return NextResponse.json({

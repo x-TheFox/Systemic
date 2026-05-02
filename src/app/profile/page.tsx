@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink, Brain, X, Crown, Sparkles, Clock } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { BadgeGrid, BadgeCard } from '@/components/BadgeGrid';
 
@@ -165,10 +166,10 @@ export default function ProfilePage() {
             </Button>
           </Link>
           <Avatar className="h-14 w-14 border-2 border-purple-500/40 flex-shrink-0">
-            <img src={profile.imageUrl || ''} alt="" className="h-full w-full rounded-full object-cover" />
-            <div className="h-full w-full rounded-full bg-gradient-to-br from-purple-600 to-cyan-600 flex items-center justify-center text-white text-xl font-bold">
+            <AvatarImage src={profile.imageUrl || undefined} />
+            <AvatarFallback className="bg-gradient-to-br from-purple-600 to-cyan-600 text-white text-xl font-bold">
               {(profile.name || profile.email).charAt(0).toUpperCase()}
-            </div>
+            </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold gradient-text">{profile.name || profile.email}</h1>

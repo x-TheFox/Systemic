@@ -8,8 +8,7 @@ interface GitHubMetrics {
   recentPRs: Array<{
     title: string;
     url: string;
-    diff?: string;
-    mergedAt: string;
+    mergedAt: string | null;
     createdAt: string;
   }>;
 }
@@ -23,6 +22,8 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
+  // Query total counts separately from recent PRs for AI scoring
+  // This ensures ALL PRs are accounted for in totals, while only recent PRs are evaluated for XP
   const query = `
     query($login: String!, $since: DateTime!) {
       user(login: $login) {
@@ -30,8 +31,9 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
           totalCommitContributions
           restrictedContributionsCount
         }
-        pullRequests(first: 25, states: [MERGED, OPEN], orderBy: {field: CREATED_AT, direction: DESC}) {
-          totalCount
+        totalOpenPRs: pullRequests(states: [OPEN], first: 0) { totalCount }
+        totalMergedPRs: pullRequests(states: [MERGED], first: 0) { totalCount }
+        recentPRs: pullRequests(first: 25, states: [MERGED, OPEN], orderBy: {field: CREATED_AT, direction: DESC}) {
           nodes {
             title
             url
@@ -39,6 +41,7 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
             createdAt
             additions
             deletions
+            changedFiles
             files(first: 1) {
               nodes {
                 additions
@@ -88,15 +91,16 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
     const commits = (user.contributionsCollection?.totalCommitContributions || 0) +
                     (user.contributionsCollection?.restrictedContributionsCount || 0);
 
-    const totalCount = user.pullRequests?.totalCount || 0;
-    const allNodes = user.pullRequests?.nodes?.filter((pr: any) => pr != null) || [];
-    const mergedCount = allNodes.filter((pr: any) => pr.mergedAt != null).length;
+    // Use totalCount from dedicated queries — this accounts for ALL PRs, not just the first 25
+    const totalMerged = user.totalMergedPRs?.totalCount || 0;
+    const totalOpen = user.totalOpenPRs?.totalCount || 0;
+    const mergedPRs = totalMerged;
+    const prs = totalMerged + totalOpen;
 
-    const recentPRs = allNodes
-      .filter((pr: any) => {
-        const created = new Date(pr.createdAt);
-        return created >= new Date(thirtyDaysAgo);
-      })
+    // Only include PRs created in the last 30 days for AI evaluation
+    const allRecentNodes = (user.recentPRs?.nodes || []).filter((pr: any) => pr != null);
+    const recentPRs = allRecentNodes
+      .filter((pr: any) => new Date(pr.createdAt) >= new Date(thirtyDaysAgo))
       .map((pr: any) => ({
         title: pr.title,
         url: pr.url,
@@ -123,8 +127,8 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
 
     return {
       commits,
-      prs: totalCount,
-      mergedPRs: mergedCount,
+      prs,
+      mergedPRs,
       languageDistribution,
       recentPRs,
     };
