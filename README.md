@@ -1,7 +1,7 @@
 # Systemics
 
 <p align="center">
-  <img src="/icon.svg" alt="Systemics" width="64" height="64"><br>
+  <img src="icon/icon.png" alt="Systemics" width="64" height="64"><br>
   <img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js" alt="Next.js 14">
   <img src="https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/Prisma-5.22-2D3748?logo=prisma" alt="Prisma">
