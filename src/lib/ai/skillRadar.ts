@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma';
-import { categorizeActivity } from './groq';
 
 export interface SkillRadarData {
   subject: string;
@@ -33,8 +32,7 @@ export async function generateSkillRadar(userId: string): Promise<SkillRadarData
   for (let i = 0; i < uncategorizedLogs.length; i += BATCH_SIZE) {
     const batch = uncategorizedLogs.slice(i, i + BATCH_SIZE);
     try {
-      const descriptions = batch.map((l) => `[${l.platform}] ${l.description}`).join('\n');
-      // For now, use a simple heuristic to avoid expensive Groq calls on every page load
+      // Use simple heuristic to avoid expensive Groq calls on every page load
       // We only call Groq for truly ambiguous cases
       batch.forEach((log) => {
         const platform = log.platform;

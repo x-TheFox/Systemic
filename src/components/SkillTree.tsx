@@ -6,6 +6,7 @@ import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Lock, Sparkles } from 'lucide-react';
 
 interface SkillTreeNodeData {
   label: string;
@@ -17,14 +18,16 @@ interface SkillTreeNodeData {
   generatedBy?: string;
 }
 
-const pathColors: Record<string, string> = {
-  'Frontend Wizard': '#3b82f6',
-  'Systems Engineer': '#ef4444',
-  'Data Scientist': '#22c55e',
-  'Core': '#a855f7',
-  'Fullstack Legend': '#f59e0b',
-  'DevOps Architect': '#06b6d4',
+const pathColors: Record<string, { bg: string; border: string; glow: string }> = {
+  'Frontend Wizard': { bg: '#3b82f6', border: '#3b82f6', glow: '0 0 20px #3b82f640' },
+  'Systems Engineer': { bg: '#ef4444', border: '#ef4444', glow: '0 0 20px #ef444440' },
+  'Data Scientist': { bg: '#22c55e', border: '#22c55e', glow: '0 0 20px #22c55e40' },
+  'Core': { bg: '#a855f7', border: '#a855f7', glow: '0 0 20px #a855f740' },
+  'Fullstack Legend': { bg: '#f59e0b', border: '#f59e0b', glow: '0 0 20px #f59e0b40' },
+  'DevOps Architect': { bg: '#06b6d4', border: '#06b6d4', glow: '0 0 20px #06b6d440' },
 };
+
+const defaultPathStyle = { bg: '#6b7280', border: '#374151', glow: 'none' };
 
 export function SkillTree() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -36,31 +39,42 @@ export function SkillTree() {
     async function loadTree() {
       try {
         const res = await fetch('/api/skilltree');
-        if (!res.ok) throw new Error('Failed to load');
+        if (!res.ok) throw new Error('Failed');
         const data = await res.json();
 
-        const flowNodes = (data.nodes || []).map((node: any) => ({
-          id: node.id,
-          position: node.position,
-          data: {
-            label: node.name,
-            description: node.description,
-            status: node.status,
-            path: node.path,
-            xpReward: node.xpReward,
-            requirements: node.requirements,
-            generatedBy: node.generatedBy,
-          },
-          style: {
-            background: node.status === 'unlocked' ? pathColors[node.path] || '#333' : '#1f2937',
-            color: '#fff',
-            border: node.status === 'available' ? `2px solid ${pathColors[node.path] || '#a855f7'}` : '1px solid #374151',
-            borderRadius: '8px',
-            padding: '10px',
-            width: 180,
-            opacity: node.status === 'locked' ? 0.5 : 1,
-          },
-        }));
+        const colors = { ...pathColors };
+
+        const flowNodes = (data.nodes || []).map((node: any) => {
+          const style = colors[node.path] || defaultPathStyle;
+          const isUnlocked = node.status === 'unlocked';
+          const isAvailable = node.status === 'available';
+
+          return {
+            id: node.id,
+            position: node.position,
+            data: {
+              label: node.name,
+              description: node.description,
+              status: node.status,
+              path: node.path,
+              xpReward: node.xpReward,
+              requirements: node.requirements,
+              generatedBy: node.generatedBy,
+            },
+            style: {
+              background: isUnlocked ? `linear-gradient(135deg, ${style.bg}40, ${style.bg}20)` : '#111118',
+              color: '#fff',
+              border: isAvailable ? `2px solid ${style.border}` : isUnlocked ? `1px solid ${style.border}80` : '1px solid #1f2937',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              width: 180,
+              fontSize: '12px',
+              fontWeight: isUnlocked ? 600 : 400,
+              opacity: node.status === 'locked' ? 0.4 : 1,
+              boxShadow: isUnlocked ? style.glow : 'none',
+            },
+          };
+        });
 
         setNodes(flowNodes);
         setEdges(data.edges || []);
@@ -71,27 +85,19 @@ export function SkillTree() {
         setLoading(false);
       }
     }
-
     loadTree();
   }, [setNodes, setEdges]);
 
   const onConnect = useCallback((params: any) => setEdges((eds: any) => addEdge(params, eds)), [setEdges]);
-
   const onNodeClick = useCallback((_event: any, node: Node) => {
     setSelectedNode(node.data as unknown as SkillTreeNodeData);
   }, []);
 
-  if (loading) {
-    return (
-      <div className="w-full h-[500px] flex items-center justify-center">
-        <Skeleton className="w-full h-full rounded-xl" />
-      </div>
-    );
-  }
+  if (loading) return <Skeleton className="w-full h-[500px] rounded-xl" />;
 
   return (
-    <div className="flex gap-4">
-      <div className="flex-1 h-[500px] bg-gray-900 rounded-xl border border-gray-800">
+    <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex-1 h-[500px] rounded-xl overflow-hidden border border-white/[0.06] bg-[#08080c]">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -100,44 +106,62 @@ export function SkillTree() {
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           fitView
+          proOptions={{ hideAttribution: true }}
         >
-          <Controls />
-          <MiniMap nodeStrokeWidth={3} zoomable pannable />
-          <Background gap={12} size={1} />
+          <Controls className="bg-[#111118] border-white/10 [&>button]:bg-[#111118] [&>button]:border-white/10 [&>button]:text-white" />
+          <MiniMap
+            nodeStrokeWidth={3}
+            zoomable
+            pannable
+            className="bg-[#111118] border-white/10"
+            nodeColor={(n) => {
+              const style = pathColors[(n.data as any)?.path] || defaultPathStyle;
+              return style.bg;
+            }}
+          />
+          <Background gap={24} size={1} color="rgba(255,255,255,0.03)" />
         </ReactFlow>
       </div>
 
       {selectedNode && (
-        <Card className="w-80 bg-gray-900 border-gray-800">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg text-white">{selectedNode.label}</CardTitle>
-              <Badge
-                variant={selectedNode.status === 'unlocked' ? 'default' : selectedNode.status === 'available' ? 'secondary' : 'outline'}
-                style={{ backgroundColor: selectedNode.status === 'unlocked' ? pathColors[selectedNode.path] : undefined }}
-              >
-                {selectedNode.status}
-              </Badge>
+        <Card className="w-full lg:w-80 glass-card shrink-0">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-2">
+              <CardTitle className="text-base text-white">{selectedNode.label}</CardTitle>
+              <div className="flex items-center gap-1.5">
+                {selectedNode.generatedBy === 'ai' && (
+                  <Badge variant="outline" className="text-[9px] border-purple-500/40 text-purple-400 bg-purple-500/10">
+                    <Sparkles className="h-2.5 w-2.5 mr-0.5" />AI
+                  </Badge>
+                )}
+                <Badge
+                  variant={selectedNode.status === 'unlocked' ? 'default' : selectedNode.status === 'available' ? 'secondary' : 'outline'}
+                  className={`text-[10px] ${
+                    selectedNode.status === 'unlocked' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                    selectedNode.status === 'available' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' :
+                    'bg-white/5 text-white/30 border-white/10'
+                  }`}
+                >
+                  {selectedNode.status === 'locked' && <Lock className="h-2.5 w-2.5 mr-0.5" />}
+                  {selectedNode.status}
+                </Badge>
+              </div>
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-xs text-gray-400">{selectedNode.path}</p>
-              {selectedNode.generatedBy === 'ai' && (
-                <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-400/30">AI Generated</Badge>
-              )}
-            </div>
+            <p className="text-[10px] text-white/30">{selectedNode.path}</p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-gray-300">{selectedNode.description}</p>
+          <CardContent className="space-y-4 pt-0">
+            <p className="text-sm text-white/50 leading-relaxed">{selectedNode.description}</p>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">XP Reward</span>
-              <span className="text-purple-400 font-semibold">+{selectedNode.xpReward} XP</span>
+              <span className="text-white/30">Reward</span>
+              <span className="text-purple-400 font-bold">+{selectedNode.xpReward} XP</span>
             </div>
-            {selectedNode.requirements && (
-              <div className="space-y-2">
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Requirements</p>
+            {selectedNode.requirements && Object.keys(selectedNode.requirements).length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-white/20 uppercase tracking-widest">Requirements</p>
                 {Object.entries(selectedNode.requirements).map(([key, val]) => (
-                  <div key={key} className="text-xs text-gray-400">
-                    {key}: {val as number}
+                  <div key={key} className="flex justify-between text-xs">
+                    <span className="text-white/40">{key.replace(/_/g, ' ')}</span>
+                    <span className="text-white/60">{val as number}</span>
                   </div>
                 ))}
               </div>

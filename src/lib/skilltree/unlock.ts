@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { SKILL_TREE_NODES, SKILL_TREE_EDGES, type SkillNode } from './definitions';
+import { SKILL_TREE_NODES, SKILL_TREE_EDGES } from './definitions';
 
 export interface UnlockCheck {
   unlocked: boolean;

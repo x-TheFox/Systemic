@@ -2,14 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+
+const platformIcons: Record<string, any> = {
+  githubHandle: <Code2 className="h-4 w-4" />,
+  leetcodeHandle: <Code2 className="h-4 w-4" />,
+  codeforcesHandle: <Trophy className="h-4 w-4" />,
+  hackerrankHandle: <Zap className="h-4 w-4" />,
+};
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
@@ -26,6 +32,7 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
+    if (!isLoaded || !user) return;
     async function loadProfile() {
       try {
         const res = await fetch('/api/profile');
@@ -39,15 +46,15 @@ export default function ProfilePage() {
           hackerrankHandle: data.user.hackerrankHandle || '',
           name: data.user.name || '',
         });
-      } catch {
-        toast.error('Failed to load profile');
+      } catch (err) {
+        console.error('Profile load error:', err);
+        toast.error('Failed to load profile. Try refreshing.');
       } finally {
         setLoading(false);
       }
     }
-
-    if (isLoaded) loadProfile();
-  }, [isLoaded]);
+    loadProfile();
+  }, [isLoaded, user]);
 
   async function handleSave() {
     try {
@@ -56,13 +63,11 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-
       if (!res.ok) throw new Error('Failed to save');
-      
       const data = await res.json();
       setProfile(data.user);
       setEditing(false);
-      toast.success('Profile updated');
+      toast.success('Profile updated!');
     } catch {
       toast.error('Failed to save profile');
     }
@@ -76,9 +81,9 @@ export default function ProfilePage() {
         headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ''}` },
       });
       if (!res.ok) throw new Error('Sync failed');
-      toast.success('Sync triggered! Refresh to see updates.');
+      toast.success('Sync triggered! This may take a minute. Refresh to see changes.');
     } catch {
-      toast.error('Sync failed. Make sure CRON_SECRET is set.');
+      toast.error('Sync failed. Try again later.');
     } finally {
       setSyncing(false);
     }
@@ -86,166 +91,143 @@ export default function ProfilePage() {
 
   if (!isLoaded || loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-950">
-        <Skeleton className="w-96 h-96" />
-      </main>
+      <main className="min-h-screen flex items-center justify-center"><Skeleton className="w-96 h-96 rounded-2xl" /></main>
     );
   }
 
   if (!user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-950 text-white">
-        <p>Please sign in to view your profile.</p>
+      <main className="min-h-screen flex items-center justify-center text-white/60">
+        Please sign in to view your profile.
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 md:p-8 bg-gray-950 text-white">
-      <div className="w-full max-w-2xl space-y-6">
+    <main className="min-h-screen p-4 md:p-8">
+      <div className="mx-auto max-w-2xl space-y-6">
         <div className="flex items-center gap-4">
           <Link href="/">
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="border-white/10 hover:bg-white/5">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-            Profile
-          </h1>
+          <h1 className="text-3xl font-bold gradient-text">Profile</h1>
         </div>
 
-        <Card className="bg-gray-900 border-gray-800">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-gray-200">Platform Handles</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => editing ? handleSave() : setEditing(true)}>
-                {editing ? 'Save' : 'Edit'}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {editing ? (
-              <>
-                <div>
-                  <label className="text-sm text-gray-400">Display Name</label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="bg-gray-800 border-gray-700 mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">GitHub</label>
-                  <Input
-                    value={formData.githubHandle}
-                    onChange={(e) => setFormData({ ...formData, githubHandle: e.target.value })}
-                    className="bg-gray-800 border-gray-700 mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">LeetCode</label>
-                  <Input
-                    value={formData.leetcodeHandle}
-                    onChange={(e) => setFormData({ ...formData, leetcodeHandle: e.target.value })}
-                    className="bg-gray-800 border-gray-700 mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Codeforces</label>
-                  <Input
-                    value={formData.codeforcesHandle}
-                    onChange={(e) => setFormData({ ...formData, codeforcesHandle: e.target.value })}
-                    className="bg-gray-800 border-gray-700 mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">HackerRank</label>
-                  <Input
-                    value={formData.hackerrankHandle}
-                    onChange={(e) => setFormData({ ...formData, hackerrankHandle: e.target.value })}
-                    className="bg-gray-800 border-gray-700 mt-1"
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Name</span>
-                  <span>{profile?.name || 'Not set'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">GitHub</span>
-                  <span>{profile?.githubHandle || 'Not linked'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">LeetCode</span>
-                  <span>{profile?.leetcodeHandle || 'Not linked'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Codeforces</span>
-                  <span>{profile?.codeforcesHandle || 'Not linked'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">HackerRank</span>
-                  <span>{profile?.hackerrankHandle || 'Not linked'}</span>
-                </div>
+        {/* Platform Handles */}
+        <div className="glass-card p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Platform Handles</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => editing ? handleSave() : setEditing(true)}
+              className="border-white/10 hover:bg-white/5"
+            >
+              {editing ? 'Save' : 'Edit'}
+            </Button>
+          </div>
+
+          {editing ? (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-white/50 mb-1 block">Display Name</label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="bg-white/5 border-white/10 focus:border-purple-500"
+                  placeholder="Your name"
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
+              {Object.entries({ githubHandle: 'GitHub', leetcodeHandle: 'LeetCode', codeforcesHandle: 'Codeforces', hackerrankHandle: 'HackerRank' }).map(([key, label]) => (
+                <div key={key}>
+                  <label className="text-sm text-white/50 mb-1 block">{label}</label>
+                  <Input
+                    value={(formData as any)[key]}
+                    onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                    className="bg-white/5 border-white/10 focus:border-purple-500"
+                    placeholder={`Your ${label} username`}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {Object.entries({ githubHandle: 'GitHub', leetcodeHandle: 'LeetCode', codeforcesHandle: 'Codeforces', hackerrankHandle: 'HackerRank' }).map(([key, label]) => (
+                <div key={key} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <div className="text-purple-400">{platformIcons[key]}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider text-white/30">{label}</p>
+                    <p className="text-sm font-medium truncate">{(profile as any)?.[key] || <span className="text-white/20 italic">Not linked</span>}</p>
+                  </div>
+                  {(profile as any)?.[key] && <ExternalLink className="h-3 w-3 text-white/20" />}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Stats */}
-        <Card className="bg-gray-900 border-gray-800">
-          <CardHeader>
-            <CardTitle className="text-gray-200">Stats</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Total XP" value={profile?.xp || 0} />
-              <StatCard label="Commits" value={profile?.totalCommits || 0} />
-              <StatCard label="PRs" value={profile?.totalPRs || 0} />
-              <StatCard label="LeetCode Hard" value={profile?.leetcodeHard || 0} />
-            </div>
-            <div className="mt-4">
-              <Button onClick={triggerSync} disabled={syncing} className="w-full">
-                {syncing ? 'Syncing...' : 'Sync Now'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Stats</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard label="Total XP" value={profile?.xp || 0} icon="⚡" color="purple" />
+            <StatCard label="Commits" value={profile?.totalCommits || 0} icon="📝" color="cyan" />
+            <StatCard label="PRs" value={profile?.totalPRs || 0} icon="🔀" color="green" />
+            <StatCard label="LC Hard" value={profile?.leetcodeHard || 0} icon="🧠" color="pink" />
+          </div>
+          <div className="mt-4">
+            <Button
+              onClick={triggerSync}
+              disabled={syncing}
+              className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white border-0 shadow-lg shadow-purple-500/20"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync Now'}
+            </Button>
+          </div>
+        </div>
 
         {/* Achievements */}
         {profile?.achievements?.length > 0 && (
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-gray-200">Achievements</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="glass-card p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Achievements</h2>
+            <div className="space-y-2">
               {profile.achievements.map((ach: any) => (
-                <div key={ach.id} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
-                  <Badge variant="outline">🏆</Badge>
-                  <div>
-                    <p className="text-sm font-medium">{ach.title}</p>
-                    <p className="text-xs text-gray-400">{ach.description}</p>
+                <div key={ach.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <div className="text-xl">🏆</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white">{ach.title}</p>
+                    <p className="text-xs text-white/40">{ach.description}</p>
                   </div>
                   {ach.xpBonus > 0 && (
-                    <span className="ml-auto text-purple-400 text-xs">+{ach.xpBonus} XP</span>
+                    <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 text-xs">+{ach.xpBonus} XP</Badge>
                   )}
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     </main>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value, icon, color }: { label: string; value: number; icon: string; color: string }) {
+  const colorClasses: Record<string, string> = {
+    purple: 'from-purple-500/20 to-purple-500/5 border-purple-500/20 text-purple-400',
+    cyan: 'from-cyan-500/20 to-cyan-500/5 border-cyan-500/20 text-cyan-400',
+    green: 'from-green-500/20 to-green-500/5 border-green-500/20 text-green-400',
+    pink: 'from-pink-500/20 to-pink-500/5 border-pink-500/20 text-pink-400',
+  };
+  const cls = colorClasses[color] || colorClasses.purple;
+
   return (
-    <div className="bg-gray-800 p-4 rounded-lg text-center">
-      <div className="text-2xl font-bold text-purple-400">{value}</div>
-      <div className="text-xs text-gray-400 mt-1">{label}</div>
+    <div className={`p-4 rounded-xl bg-gradient-to-b ${cls} border text-center`}>
+      <div className="text-xl mb-1">{icon}</div>
+      <div className="text-2xl font-bold">{value.toLocaleString()}</div>
+      <div className="text-[10px] uppercase tracking-wider text-white/40 mt-1">{label}</div>
     </div>
   );
 }
