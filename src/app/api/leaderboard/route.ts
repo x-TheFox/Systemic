@@ -16,6 +16,8 @@ export async function GET(req: Request) {
         name: true,
         email: true,
         imageUrl: true,
+        githubHandle: true,
+        title: true,
         xp: true,
         totalCommits: true,
         totalPRs: true,

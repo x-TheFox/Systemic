@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ExternalLink } from 'lucide-react';
 
 interface LeaderboardUser {
   id: string;
   name: string | null;
   email: string;
   imageUrl: string | null;
+  githubHandle: string | null;
+  title: string | null;
   xp: number;
   totalCommits: number;
   totalPRs: number;
@@ -69,10 +73,12 @@ export function LeaderboardTable() {
     <div className="space-y-3">
       {users.map((user, index) => {
         const style = rankStyles[index + 1] || 'from-white/[0.03] to-transparent border-white/[0.06]';
-        return (
+        const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : '#';
+        const isClickable = !!user.githubHandle;
+
+        const RowContent = (
           <div
-            key={user.id}
-            className={`flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r ${style} backdrop-blur-sm transition-all hover:scale-[1.01]`}
+            className={`flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r ${style} backdrop-blur-sm transition-all hover:scale-[1.01] ${isClickable ? 'cursor-pointer' : ''}`}
           >
             <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
               index === 0 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
@@ -95,10 +101,18 @@ export function LeaderboardTable() {
                 <span className="text-white font-medium truncate text-sm">
                   {user.name || user.email.split('@')[0]}
                 </span>
-                {user.skillTreeState?.currentGrind && (
+                {user.title && (
+                  <Badge variant="outline" className="text-[9px] border-amber-500/30 text-amber-400 bg-amber-500/10">
+                    {user.title}
+                  </Badge>
+                )}
+                {user.skillTreeState?.currentGrind && !user.title && (
                   <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/10">
                     {user.skillTreeState.currentGrind}
                   </Badge>
+                )}
+                {isClickable && (
+                  <ExternalLink className="h-3 w-3 text-white/20" />
                 )}
               </div>
               <Progress value={(user.xp / maxXP) * 100} className="h-1.5 bg-white/5" />
@@ -112,6 +126,16 @@ export function LeaderboardTable() {
             </div>
           </div>
         );
+
+        if (isClickable) {
+          return (
+            <Link key={user.id} href={profileUrl} className="block">
+              {RowContent}
+            </Link>
+          );
+        }
+
+        return <div key={user.id}>{RowContent}</div>;
       })}
     </div>
   );
