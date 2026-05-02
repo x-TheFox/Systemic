@@ -34,15 +34,15 @@ interface LeaderboardUser {
   badges?: WeeklyBadge[];
 }
 
-const rankBadgeMap: Record<number, { src: string; glow: string; ring: string }> = {
-  1: { src: '/badges/mvp.svg', glow: 'shadow-[0_0_24px_rgba(245,158,11,0.5)]', ring: 'ring-yellow-500/50' },
-  2: { src: '/badges/2nd.svg', glow: 'shadow-[0_0_20px_rgba(168,85,247,0.4)]', ring: 'ring-purple-500/50' },
-  3: { src: '/badges/3rd.svg', glow: 'shadow-[0_0_18px_rgba(59,130,246,0.4)]', ring: 'ring-blue-500/50' },
+const rankBadgeConfig: Record<number, { src: string; label: string; color: string; bg: string; ring: string; shadow: string; pulse: boolean }> = {
+  1: { src: '/badges/mvp.svg', label: 'MVP', color: '#f59e0b', bg: 'from-yellow-500/20 via-yellow-500/10 to-transparent', ring: 'ring-2 ring-yellow-500/60', shadow: '0 0 30px rgba(245,158,11,0.4), 0 0 60px rgba(245,158,11,0.15)', pulse: true },
+  2: { src: '/badges/2nd.svg', label: '2ND', color: '#a855f7', bg: 'from-purple-500/20 via-purple-500/10 to-transparent', ring: 'ring-2 ring-purple-500/60', shadow: '0 0 25px rgba(168,85,247,0.35), 0 0 50px rgba(168,85,247,0.1)', pulse: true },
+  3: { src: '/badges/3rd.svg', label: '3RD', color: '#3b82f6', bg: 'from-blue-500/20 via-blue-500/10 to-transparent', ring: 'ring-2 ring-blue-500/60', shadow: '0 0 20px rgba(59,130,246,0.3), 0 0 40px rgba(59,130,246,0.1)', pulse: false },
 };
 
-const bottomBadgeMap: Record<string, { src: string; glow: string; ring: string }> = {
-  'svg:last2': { src: '/badges/last2.svg', glow: 'shadow-[0_0_14px_rgba(107,114,128,0.3)]', ring: 'ring-gray-500/40' },
-  'svg:last1': { src: '/badges/last1.svg', glow: 'shadow-[0_0_14px_rgba(107,114,128,0.3)]', ring: 'ring-gray-500/40' },
+const bottomBadgeConfig: Record<string, { src: string; color: string; bg: string; ring: string; shadow: string; pulse: boolean }> = {
+  'svg:last1': { src: '/badges/last1.svg', color: '#6b7280', bg: 'from-gray-500/10 via-gray-500/5 to-transparent', ring: 'ring-1 ring-gray-500/40', shadow: '0 0 10px rgba(107,114,128,0.2)', pulse: false },
+  'svg:last2': { src: '/badges/last2.svg', color: '#6b7280', bg: 'from-gray-500/10 via-gray-500/5 to-transparent', ring: 'ring-1 ring-gray-500/40', shadow: '0 0 10px rgba(107,114,128,0.2)', pulse: false },
 };
 
 export function LeaderboardTable() {
@@ -85,16 +85,11 @@ export function LeaderboardTable() {
 
   const maxXP = Math.max(...users.map(u => u.xp), 1);
 
-  function getBadgeForUser(user: LeaderboardUser, index: number) {
-    const rank = index + 1;
-    if (rank >= 1 && rank <= 3 && rankBadgeMap[rank]) {
-      return rankBadgeMap[rank];
-    }
+  function getBadgeForRank(user: LeaderboardUser, rank: number) {
+    if (rank >= 1 && rank <= 3) return rankBadgeConfig[rank];
     if (user.badges && user.badges.length > 0) {
-      const badgeIcon = user.badges[0].icon;
-      if (bottomBadgeMap[badgeIcon]) {
-        return bottomBadgeMap[badgeIcon];
-      }
+      const icon = user.badges[0].icon;
+      if (bottomBadgeConfig[icon]) return bottomBadgeConfig[icon];
     }
     return null;
   }
@@ -104,37 +99,54 @@ export function LeaderboardTable() {
       {users.map((user, index) => {
         const rank = index + 1;
         const isTop3 = rank <= 3;
-        const style = isTop3
+        const badgeConfig = getBadgeForRank(user, rank);
+        const rankStyle = isTop3
           ? rankStyles[rank]
-          : 'from-white/[0.03] to-transparent border-white/[0.06]';
+          : (badgeConfig ? 'from-gray-500/10 to-transparent border-gray-500/20' : 'from-white/[0.03] to-transparent border-white/[0.06]');
         const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : '#';
         const isClickable = !!user.githubHandle;
-        const badgeInfo = getBadgeForUser(user, index);
 
         const RowContent = (
           <div
-            className={`flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r ${style} backdrop-blur-sm transition-all hover:scale-[1.01] ${isClickable ? 'cursor-pointer' : ''}`}
+            className={`flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r ${rankStyle} backdrop-blur-sm transition-all hover:scale-[1.01] ${isClickable ? 'cursor-pointer' : ''}`}
           >
-            {badgeInfo ? (
-              <div className={`relative flex-shrink-0 h-14 w-14 rounded-xl overflow-hidden ring-2 ${badgeInfo.ring} ${badgeInfo.glow} ${isTop3 ? 'animate-pulse' : ''}`}>
-                <img
-                  src={badgeInfo.src}
-                  alt={`Rank ${rank}`}
-                  className="h-full w-full object-contain"
-                />
+            {badgeConfig ? (
+              <div className="relative flex-shrink-0 group">
+                <div
+                  className={`relative h-16 w-16 rounded-xl overflow-hidden ${badgeConfig.ring} ${badgeConfig.pulse ? 'animate-pulse' : ''}`}
+                  style={{ boxShadow: badgeConfig.shadow }}
+                >
+                  <img
+                    src={badgeConfig.src}
+                    alt={`Rank ${rank}`}
+                    className="h-full w-full object-contain p-1 transition-transform group-hover:scale-110"
+                  />
+                </div>
+                {isTop3 && (
+                  <div
+                    className="absolute -top-2 -right-2 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border"
+                    style={{
+                      background: `${badgeConfig.color}20`,
+                      borderColor: `${badgeConfig.color}60`,
+                      color: badgeConfig.color,
+                    }}
+                  >
+                    {badgeConfig.label}
+                  </div>
+                )}
               </div>
             ) : (
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+              <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold flex-shrink-0 ${
                 rank === 1 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
                 rank === 2 ? 'bg-gray-400/20 text-gray-300 border border-gray-400/30' :
-                rank === 3 ? 'bg-amber-700/20 text-amber-500 border border-amber-700/30' :
+                rank === 3 ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
                 'bg-white/5 text-white/30'
               }`}>
                 {rank}
               </div>
             )}
 
-            <Avatar className={`h-10 w-10 border-2 ${isTop3 ? 'border-yellow-500/40' : 'border-white/10'}`}>
+            <Avatar className={`h-10 w-10 border-2 flex-shrink-0 ${isTop3 ? 'border-yellow-500/40' : 'border-white/10'}`}>
               <AvatarImage src={user.imageUrl || undefined} />
               <AvatarFallback className="bg-gradient-to-br from-purple-600 to-cyan-600 text-white text-sm">
                 {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
@@ -146,15 +158,6 @@ export function LeaderboardTable() {
                 <span className="text-white font-medium truncate text-sm">
                   {user.name || user.email.split('@')[0]}
                 </span>
-                {isTop3 && (
-                  <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-bold ${
-                    rank === 1 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                    rank === 2 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                    'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  }`}>
-                    {rank === 1 ? 'MVP' : rank === 2 ? '2ND' : '3RD'}
-                  </span>
-                )}
                 {user.title && (
                   <Badge variant="outline" className="text-[9px] border-amber-500/30 text-amber-400 bg-amber-500/10">
                     {user.title}
@@ -196,7 +199,7 @@ export function LeaderboardTable() {
 }
 
 const rankStyles: Record<number, string> = {
-  1: 'from-yellow-500/20 to-yellow-500/5 border-yellow-500/30',
-  2: 'from-purple-500/20 to-purple-500/5 border-purple-500/30',
-  3: 'from-blue-500/20 to-blue-500/5 border-blue-500/30',
+  1: 'from-yellow-500/20 via-yellow-500/10 to-transparent border-yellow-500/30',
+  2: 'from-purple-500/20 via-purple-500/10 to-transparent border-purple-500/30',
+  3: 'from-blue-500/20 via-blue-500/10 to-transparent border-blue-500/30',
 };
