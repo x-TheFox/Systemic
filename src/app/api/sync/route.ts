@@ -7,9 +7,8 @@ import { fetchHackerRankMetrics } from '@/lib/fetchers/hackerrank';
 import { evaluatePRComplexity } from '@/lib/ai/groq';
 import { calculateGitHubXP, calculateLeetCodeXP, calculateCodeforcesXP, calculateHackerRankXP } from '@/lib/xp/normalize';
 import { triggerMilestone } from '@/lib/pusher/server';
-import { checkNodeUnlock, getAvailableNodes } from '@/lib/skilltree/unlock';
 import { createWeeklySnapshot } from '@/lib/ai/ghost';
-import { SKILL_TREE_NODES } from '@/lib/skilltree/definitions';
+import { generatePersonalizedSkillTree, generateInitialSkillTree } from '@/lib/ai/skillTreeGenerator';
 
 export async function POST(req: Request) {
   try {
@@ -32,8 +31,9 @@ export async function POST(req: Request) {
       let codeforcesRating = 0;
       let codeforcesSolved = 0;
       let hackerrankBadges = 0;
+      const now = new Date();
 
-      // GitHub
+      // ---------- GITHUB ----------
       if (user.githubHandle) {
         const ghMetrics = await fetchGitHubMetrics(user.githubHandle, process.env.GITHUB_TOKEN);
         totalCommits = ghMetrics.commits;
@@ -41,32 +41,38 @@ export async function POST(req: Request) {
 
         const prScores: number[] = [];
         for (const pr of ghMetrics.recentPRs.slice(0, 5)) {
+          // Deduplication: skip if we've already logged this PR
+          const existing = await prisma.activityLog.findUnique({
+            where: { userId_externalId: { userId: user.id, externalId: pr.url } },
+          });
+          if (existing) continue;
+
           const diff = await fetchPRDiff(pr.url, process.env.GITHUB_TOKEN);
+          let xp = 30;
+          let category = 'Backend';
+          let justification = 'Default scoring';
+
           if (diff) {
             try {
               const analysis = await evaluatePRComplexity(diff, pr.title);
-              prScores.push(analysis.xp);
-
-              activities.push({
-                userId: user.id,
-                platform: 'GITHUB',
-                activityType: 'PR',
-                description: pr.title,
-                xpAwarded: analysis.xp,
-                metadata: { category: analysis.category, justification: analysis.justification, url: pr.url },
-              });
+              xp = analysis.xp;
+              category = analysis.category;
+              justification = analysis.justification;
             } catch {
-              prScores.push(30);
-              activities.push({
-                userId: user.id,
-                platform: 'GITHUB',
-                activityType: 'PR',
-                description: pr.title,
-                xpAwarded: 30,
-                metadata: { url: pr.url },
-              });
+              // fallback already set
             }
           }
+
+          prScores.push(xp);
+          activities.push({
+            userId: user.id,
+            platform: 'GITHUB',
+            activityType: 'PR',
+            description: pr.title,
+            xpAwarded: xp,
+            externalId: pr.url,
+            metadata: { category, justification, url: pr.url },
+          });
         }
 
         const ghXP = calculateGitHubXP(ghMetrics.commits, ghMetrics.mergedPRs, prScores);
@@ -84,7 +90,7 @@ export async function POST(req: Request) {
         }
       }
 
-      // LeetCode
+      // ---------- LEETCODE ----------
       if (user.leetcodeHandle) {
         const lcMetrics = await fetchLeetCodeMetrics(user.leetcodeHandle);
         leetcodeEasy = lcMetrics.solved.easy;
@@ -104,7 +110,7 @@ export async function POST(req: Request) {
         });
       }
 
-      // Codeforces
+      // ---------- CODEFORCES ----------
       if (user.codeforcesHandle) {
         const cfMetrics = await fetchCodeforcesMetrics(user.codeforcesHandle);
         codeforcesRating = cfMetrics.rating;
@@ -123,7 +129,7 @@ export async function POST(req: Request) {
         });
       }
 
-      // HackerRank
+      // ---------- HACKERRANK ----------
       if (user.hackerrankHandle) {
         const hrMetrics = await fetchHackerRankMetrics(user.hackerrankHandle);
         hackerrankBadges = hrMetrics.badges;
@@ -143,7 +149,7 @@ export async function POST(req: Request) {
         }
       }
 
-      // Update user aggregated stats
+      // ---------- UPDATE USER ----------
       await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -156,64 +162,209 @@ export async function POST(req: Request) {
           codeforcesRating,
           codeforcesSolved,
           hackerrankBadges,
+          lastSyncedGitHub: user.githubHandle ? now : user.lastSyncedGitHub,
+          lastSyncedLeetCode: user.leetcodeHandle ? now : user.lastSyncedLeetCode,
+          lastSyncedCodeforces: user.codeforcesHandle ? now : user.lastSyncedCodeforces,
+          lastSyncedHackerRank: user.hackerrankHandle ? now : user.lastSyncedHackerRank,
         },
       });
 
-      // Create activity logs
+      // ---------- CREATE ACTIVITY LOGS ----------
       for (const activity of activities) {
         await prisma.activityLog.create({ data: activity });
       }
 
-      // Check skill tree unlocks
-      const availableNodes = await getAvailableNodes(user.id);
-      const state = await prisma.skillTreeState.findUnique({ where: { userId: user.id } });
-      const unlocked = new Set(state?.unlockedNodes || []);
-      const newlyUnlocked: string[] = [];
+      // ---------- AI SKILL TREE GROWTH ----------
+      const currentDynamicNodes = await prisma.dynamicSkillNode.findMany({
+        where: { userId: user.id },
+      });
 
-      for (const nodeId of availableNodes) {
-        if (unlocked.has(nodeId)) continue;
-        const check = await checkNodeUnlock(user.id, nodeId);
-        if (check.unlocked) {
-          newlyUnlocked.push(nodeId);
-          unlocked.add(nodeId);
-
-          const node = SKILL_TREE_NODES.find((n) => n.id === nodeId);
-          if (node) {
-            await prisma.achievement.create({
-              data: {
-                userId: user.id,
-                title: `Unlocked: ${node.name}`,
-                description: node.description,
-                xpBonus: node.xpReward,
-              },
-            });
-
-            await triggerMilestone('node-unlocked', {
+      // Initialize tree for new users
+      if (currentDynamicNodes.length === 0) {
+        const initialNodes = await generateInitialSkillTree();
+        for (const node of initialNodes) {
+          await prisma.dynamicSkillNode.create({
+            data: {
               userId: user.id,
-              userName: user.name || user.email,
-              message: `${user.name || user.email} unlocked ${node.name}!`,
-              xp: node.xpReward,
-            });
-          }
+              nodeId: node.nodeId,
+              name: node.name,
+              description: node.description,
+              path: node.path,
+              tier: node.tier,
+              positionX: node.positionX,
+              positionY: node.positionY,
+              requirements: node.requirements as any,
+              xpReward: node.xpReward,
+              parentIds: node.parentIds,
+              generatedBy: 'system',
+            },
+          });
         }
       }
 
-      if (newlyUnlocked.length > 0) {
-        await prisma.skillTreeState.upsert({
-          where: { userId: user.id },
-          update: { unlockedNodes: Array.from(unlocked) },
-          create: { userId: user.id, unlockedNodes: Array.from(unlocked) },
-        });
+      // Get recent activities for AI tree generation
+      const recentLogs = await prisma.activityLog.findMany({
+        where: { userId: user.id },
+        orderBy: { timestamp: 'desc' },
+        take: 20,
+      });
+
+      const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (!freshUser) continue;
+
+      // Calculate dominant skills
+      const skillXP: Record<string, number> = {};
+      for (const log of recentLogs) {
+        const cat = (log.metadata as any)?.category || 'Algo';
+        skillXP[cat] = (skillXP[cat] || 0) + log.xpAwarded;
+      }
+      const dominantSkills = Object.entries(skillXP)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([k]) => k);
+
+      // Try to grow the tree
+      const mappedCurrent = currentDynamicNodes.map((n) => ({
+        nodeId: n.nodeId,
+        name: n.name,
+        description: n.description,
+        path: n.path,
+        tier: n.tier,
+        positionX: n.positionX,
+        positionY: n.positionY,
+        requirements: n.requirements as Record<string, unknown>,
+        xpReward: n.xpReward,
+        parentIds: n.parentIds,
+        unlocked: n.unlocked,
+        justification: '',
+      }));
+
+      try {
+        const newNodes = await generatePersonalizedSkillTree(
+          user.id,
+          recentLogs.map((l) => ({
+            platform: l.platform,
+            activityType: l.activityType,
+            description: l.description || '',
+            xpAwarded: l.xpAwarded,
+            metadata: (l.metadata as Record<string, unknown>) || undefined,
+          })),
+          mappedCurrent,
+          {
+            totalXP: freshUser.xp,
+            totalCommits: freshUser.totalCommits,
+            totalPRs: freshUser.totalPRs,
+            leetcodeEasy: freshUser.leetcodeEasy,
+            leetcodeMedium: freshUser.leetcodeMedium,
+            leetcodeHard: freshUser.leetcodeHard,
+            codeforcesRating: freshUser.codeforcesRating,
+            codeforcesSolved: freshUser.codeforcesSolved,
+            dominantSkills,
+          }
+        );
+
+        for (const node of newNodes) {
+          await prisma.dynamicSkillNode.create({
+            data: {
+              userId: user.id,
+              nodeId: node.nodeId,
+              name: node.name,
+              description: node.description,
+              path: node.path,
+              tier: node.tier,
+              positionX: node.positionX,
+              positionY: node.positionY,
+              requirements: node.requirements as any,
+              xpReward: node.xpReward,
+              parentIds: node.parentIds,
+              generatedBy: 'ai',
+            },
+          });
+
+          await triggerMilestone('new-activity', {
+            userId: user.id,
+            userName: user.name || user.email,
+            message: `The Ghost revealed a new skill node: ${node.name}!`,
+            metadata: { type: 'ai-tree-growth', nodeId: node.nodeId },
+          });
+        }
+      } catch (err) {
+        console.warn('AI tree generation failed for user', user.id, err);
       }
 
-      // Create ghost snapshot
-      await createWeeklySnapshot(user.id);
+      // ---------- CHECK DYNAMIC NODE UNLOCKS ----------
+      const allNodes = await prisma.dynamicSkillNode.findMany({
+        where: { userId: user.id },
+      });
+      const unlockedIds = allNodes.filter((n) => n.unlocked).map((n) => n.nodeId);
+
+      for (const node of allNodes) {
+        if (node.unlocked) continue;
+
+        // Check parent prerequisites
+        const parentsUnlocked = node.parentIds.every((pid) => unlockedIds.includes(pid));
+        if (!parentsUnlocked) continue;
+
+        // Check stat requirements
+        const reqs = node.requirements as Record<string, number>;
+        let met = true;
+        for (const [key, val] of Object.entries(reqs)) {
+          let current = 0;
+          if (key === 'total_xp') current = freshUser.xp;
+          else if (key === 'leetcode_hard') current = freshUser.leetcodeHard;
+          else if (key === 'github_prs') current = freshUser.totalPRs;
+          else if (key === 'github_commits') current = freshUser.totalCommits;
+          else if (key === 'codeforces_rating') current = freshUser.codeforcesRating;
+          else if (key === 'codeforces_solved') current = freshUser.codeforcesSolved;
+          else if (key === 'hackerrank_badges') current = freshUser.hackerrankBadges;
+          else if (key.startsWith('skill_xp_')) {
+            const skill = key.replace('skill_xp_', '');
+            current = skillXP[skill] || 0;
+          }
+          if (current < val) { met = false; break; }
+        }
+
+        if (met) {
+          await prisma.dynamicSkillNode.update({
+            where: { id: node.id },
+            data: { unlocked: true },
+          });
+          unlockedIds.push(node.nodeId);
+
+          await prisma.achievement.create({
+            data: {
+              userId: user.id,
+              title: `Unlocked: ${node.name}`,
+              description: node.description,
+              xpBonus: node.xpReward,
+            },
+          });
+
+          await triggerMilestone('node-unlocked', {
+            userId: user.id,
+            userName: user.name || user.email,
+            message: `${user.name || user.email} unlocked ${node.name}!`,
+            xp: node.xpReward,
+          });
+        }
+      }
+
+      // ---------- GHOST SNAPSHOT (WEEKLY ONLY) ----------
+      const shouldSnapshot = !user.lastGhostSnapshotAt ||
+        (now.getTime() - user.lastGhostSnapshotAt.getTime()) > 6 * 24 * 60 * 60 * 1000; // ~6 days
+
+      if (shouldSnapshot) {
+        await createWeeklySnapshot(user.id);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastGhostSnapshotAt: now },
+        });
+      }
 
       results.push({
         userId: user.id,
         email: user.email,
         xpGained: totalXP,
-        newlyUnlocked,
         activities: activities.length,
       });
     }

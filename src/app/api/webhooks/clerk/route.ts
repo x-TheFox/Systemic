@@ -41,8 +41,8 @@ export async function POST(req: Request) {
 
   if (eventType === 'user.created') {
     const { id, email_addresses, first_name, last_name, image_url } = evt.data;
-    
-    await prisma.user.create({
+
+    const user = await prisma.user.create({
       data: {
         clerkId: id,
         email: email_addresses[0]?.email_address || '',
@@ -50,11 +50,20 @@ export async function POST(req: Request) {
         imageUrl: image_url,
       },
     });
+
+    // Initialize skill tree state
+    await prisma.skillTreeState.create({
+      data: {
+        userId: user.id,
+        unlockedNodes: [],
+        currentGrind: null,
+      },
+    });
   }
 
   if (eventType === 'user.updated') {
     const { id, email_addresses, first_name, last_name, image_url } = evt.data;
-    
+
     await prisma.user.update({
       where: { clerkId: id },
       data: {
@@ -67,7 +76,7 @@ export async function POST(req: Request) {
 
   if (eventType === 'user.deleted') {
     const { id } = evt.data;
-    
+
     await prisma.user.deleteMany({
       where: { clerkId: id },
     });

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkNodeUnlock, getAvailableNodes } from '@/lib/skilltree/unlock';
-import { SKILL_TREE_NODES, SKILL_TREE_EDGES } from '@/lib/skilltree/definitions';
+import { currentUser } from '@clerk/nextjs/server';
 
 export async function GET(req: Request) {
   try {
@@ -9,61 +8,54 @@ export async function GET(req: Request) {
     const userId = searchParams.get('userId');
 
     if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
+      // Try to get from authenticated user
+      const clerkUser = await currentUser();
+      if (!clerkUser) {
+        return NextResponse.json({ error: 'userId required' }, { status: 400 });
+      }
+      const dbUser = await prisma.user.findUnique({ where: { clerkId: clerkUser.id } });
+      if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return getSkillTreeForUser(dbUser.id);
     }
 
-    const state = await prisma.skillTreeState.findUnique({
-      where: { userId },
-    });
-
-    const unlocked = state?.unlockedNodes || [];
-    const available = await getAvailableNodes(userId);
-
-    const nodesWithStatus = SKILL_TREE_NODES.map((node) => ({
-      ...node,
-      status: unlocked.includes(node.id)
-        ? 'unlocked'
-        : available.includes(node.id)
-        ? 'available'
-        : 'locked',
-    }));
-
-    return NextResponse.json({
-      nodes: nodesWithStatus,
-      edges: SKILL_TREE_EDGES,
-      currentGrind: state?.currentGrind || null,
-      progress: state?.progress || {},
-    });
+    return getSkillTreeForUser(userId);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function POST(req: Request) {
-  try {
-    const { userId, nodeId } = await req.json();
+async function getSkillTreeForUser(userId: string) {
+  const nodes = await prisma.dynamicSkillNode.findMany({
+    where: { userId },
+    orderBy: [{ tier: 'asc' }, { createdAt: 'asc' }],
+  });
 
-    if (!userId || !nodeId) {
-      return NextResponse.json({ error: 'userId and nodeId required' }, { status: 400 });
-    }
+  const edges = nodes
+    .flatMap((node) =>
+      node.parentIds.map((parentId) => ({
+        id: `e-${parentId}-${node.nodeId}`,
+        source: parentId,
+        target: node.nodeId,
+      }))
+    )
+    .filter((edge) => nodes.some((n) => n.nodeId === edge.source));
 
-    const check = await checkNodeUnlock(userId, nodeId);
-    if (!check.unlocked) {
-      return NextResponse.json({ error: 'Requirements not met', missing: check.missing }, { status: 403 });
-    }
+  const state = await prisma.skillTreeState.findUnique({ where: { userId } });
 
-    const state = await prisma.skillTreeState.findUnique({ where: { userId } });
-    const unlocked = new Set(state?.unlockedNodes || []);
-    unlocked.add(nodeId);
-
-    await prisma.skillTreeState.upsert({
-      where: { userId },
-      update: { unlockedNodes: Array.from(unlocked) },
-      create: { userId, unlockedNodes: Array.from(unlocked) },
-    });
-
-    return NextResponse.json({ success: true, unlocked: Array.from(unlocked) });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  return NextResponse.json({
+    nodes: nodes.map((n) => ({
+      id: n.nodeId,
+      name: n.name,
+      description: n.description,
+      path: n.path,
+      tier: n.tier,
+      position: { x: n.positionX, y: n.positionY },
+      requirements: n.requirements,
+      xpReward: n.xpReward,
+      status: n.unlocked ? 'unlocked' : 'available',
+      generatedBy: n.generatedBy,
+    })),
+    edges,
+    currentGrind: state?.currentGrind || null,
+  });
 }

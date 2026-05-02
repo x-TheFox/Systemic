@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [formData, setFormData] = useState({
     githubHandle: '',
     leetcodeHandle: '',
@@ -64,6 +65,22 @@ export default function ProfilePage() {
       toast.success('Profile updated');
     } catch {
       toast.error('Failed to save profile');
+    }
+  }
+
+  async function triggerSync() {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ''}` },
+      });
+      if (!res.ok) throw new Error('Sync failed');
+      toast.success('Sync triggered! Refresh to see updates.');
+    } catch {
+      toast.error('Sync failed. Make sure CRON_SECRET is set.');
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -188,6 +205,11 @@ export default function ProfilePage() {
               <StatCard label="Commits" value={profile?.totalCommits || 0} />
               <StatCard label="PRs" value={profile?.totalPRs || 0} />
               <StatCard label="LeetCode Hard" value={profile?.leetcodeHard || 0} />
+            </div>
+            <div className="mt-4">
+              <Button onClick={triggerSync} disabled={syncing} className="w-full">
+                {syncing ? 'Syncing...' : 'Sync Now'}
+              </Button>
             </div>
           </CardContent>
         </Card>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge, type Node, type Edge } from '@xyflow/react';
+import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,10 +10,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface SkillTreeNodeData {
   label: string;
   description: string;
-  status: 'locked' | 'available' | 'unlocked';
+  status: string;
   path: string;
   xpReward: number;
-  requirements?: Array<{ type: string; value: number }>;
+  requirements?: Record<string, number>;
+  generatedBy?: string;
 }
 
 const pathColors: Record<string, string> = {
@@ -21,22 +22,24 @@ const pathColors: Record<string, string> = {
   'Systems Engineer': '#ef4444',
   'Data Scientist': '#22c55e',
   'Core': '#a855f7',
+  'Fullstack Legend': '#f59e0b',
+  'DevOps Architect': '#06b6d4',
 };
 
 export function SkillTree() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
   const [selectedNode, setSelectedNode] = useState<SkillTreeNodeData | null>(null);
 
   useEffect(() => {
     async function loadTree() {
       try {
-        const res = await fetch('/api/skilltree?userId=demo');
+        const res = await fetch('/api/skilltree');
         if (!res.ok) throw new Error('Failed to load');
         const data = await res.json();
 
-        const flowNodes = data.nodes.map((node: any) => ({
+        const flowNodes = (data.nodes || []).map((node: any) => ({
           id: node.id,
           position: node.position,
           data: {
@@ -46,6 +49,7 @@ export function SkillTree() {
             path: node.path,
             xpReward: node.xpReward,
             requirements: node.requirements,
+            generatedBy: node.generatedBy,
           },
           style: {
             background: node.status === 'unlocked' ? pathColors[node.path] || '#333' : '#1f2937',
@@ -71,7 +75,7 @@ export function SkillTree() {
     loadTree();
   }, [setNodes, setEdges]);
 
-  const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  const onConnect = useCallback((params: any) => setEdges((eds: any) => addEdge(params, eds)), [setEdges]);
 
   const onNodeClick = useCallback((_event: any, node: Node) => {
     setSelectedNode(node.data as unknown as SkillTreeNodeData);
@@ -115,7 +119,12 @@ export function SkillTree() {
                 {selectedNode.status}
               </Badge>
             </div>
-            <p className="text-xs text-gray-400">{selectedNode.path}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-xs text-gray-400">{selectedNode.path}</p>
+              {selectedNode.generatedBy === 'ai' && (
+                <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-400/30">AI Generated</Badge>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-300">{selectedNode.description}</p>
@@ -126,9 +135,9 @@ export function SkillTree() {
             {selectedNode.requirements && (
               <div className="space-y-2">
                 <p className="text-xs text-gray-500 uppercase tracking-wider">Requirements</p>
-                {selectedNode.requirements.map((req, i) => (
-                  <div key={i} className="text-xs text-gray-400">
-                    {req.type}: {req.value}
+                {Object.entries(selectedNode.requirements).map(([key, val]) => (
+                  <div key={key} className="text-xs text-gray-400">
+                    {key}: {val as number}
                   </div>
                 ))}
               </div>
