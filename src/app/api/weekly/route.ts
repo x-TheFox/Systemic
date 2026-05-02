@@ -146,12 +146,17 @@ export async function POST(req: Request) {
 
     const postMortem = await generateWeeklyPostMortem(activityData);
 
-    // Award weekly leaderboard badges to top 3 + bottom 2
+// Award weekly leaderboard badges to top 3 + bottom 2
+    // Avoid giving a user both a top badge and a bottom badge
     await prisma.badge.deleteMany({ where: { category: 'weekly_leaderboard' } });
 
+    const awardedUserIds = new Set<string>();
     const weeklyBadges = [];
+
+    // Top badges
     if (sortedUsers.length > 0) {
       const [mvpId] = sortedUsers[0];
+      awardedUserIds.add(mvpId);
       weeklyBadges.push(
         prisma.badge.create({
           data: {
@@ -166,6 +171,84 @@ export async function POST(req: Request) {
           },
         })
       );
+    }
+    if (sortedUsers.length > 1) {
+      const [secondId] = sortedUsers[1];
+      awardedUserIds.add(secondId);
+      weeklyBadges.push(
+        prisma.badge.create({
+          data: {
+            userId: secondId,
+            name: 'Silver Runner',
+            description: `Claimed 2nd place in Week ${weekNumber}. So close to glory.`,
+            rarity: 'epic',
+            color: '#a855f7',
+            icon: 'svg:2nd',
+            category: 'weekly_leaderboard',
+            generatedBy: 'weekly',
+          },
+        })
+      );
+    }
+    if (sortedUsers.length > 2) {
+      const [thirdId] = sortedUsers[2];
+      awardedUserIds.add(thirdId);
+      weeklyBadges.push(
+        prisma.badge.create({
+          data: {
+            userId: thirdId,
+            name: 'Bronze Challenger',
+            description: `Secured 3rd place in Week ${weekNumber}. Rising star.`,
+            rarity: 'rare',
+            color: '#3b82f6',
+            icon: 'svg:3rd',
+            category: 'weekly_leaderboard',
+            generatedBy: 'weekly',
+          },
+        })
+      );
+    }
+
+    // Bottom badges (only if at least 4 users so no overlap with top 3)
+    if (sortedUsers.length >= 4) {
+      const [last2Id] = sortedUsers[sortedUsers.length - 2];
+      if (!awardedUserIds.has(last2Id)) {
+        weeklyBadges.push(
+          prisma.badge.create({
+            data: {
+              userId: last2Id,
+              name: 'The Penultimate',
+              description: `Second to last in Week ${weekNumber}. The shadows remember you.`,
+              rarity: 'common',
+              color: '#6b7280',
+              icon: 'svg:last2',
+              category: 'weekly_leaderboard',
+              generatedBy: 'weekly',
+            },
+          })
+        );
+      }
+      const [last1Id] = sortedUsers[sortedUsers.length - 1];
+      if (!awardedUserIds.has(last1Id)) {
+        weeklyBadges.push(
+          prisma.badge.create({
+            data: {
+              userId: last1Id,
+              name: 'The Lurker',
+              description: `Last place in Week ${weekNumber}. The ghost watches from below.`,
+              rarity: 'common',
+              color: '#6b7280',
+              icon: 'svg:last1',
+              category: 'weekly_leaderboard',
+              generatedBy: 'weekly',
+            },
+          })
+        );
+      }
+    }
+
+    if (weeklyBadges.length > 0) {
+      await Promise.all(weeklyBadges);
     }
     if (sortedUsers.length > 1) {
       const [secondId] = sortedUsers[1];

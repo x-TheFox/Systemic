@@ -20,6 +20,14 @@ interface WeeklyReport {
   createdAt: string;
 }
 
+function renderInline(text: string): string {
+  return text
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<em><strong>$1</strong></em>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-white/10 text-purple-300 text-xs font-mono">$1</code>');
+}
+
 function MarkdownRender({ text }: { text: string }) {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
@@ -28,13 +36,52 @@ function MarkdownRender({ text }: { text: string }) {
   while (i < lines.length) {
     const line = lines[i];
 
+    // Table detection: | header | header |
+    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+        tableLines.push(lines[i].trim());
+        i++;
+      }
+
+      const dataRows = tableLines.filter(row => !row.match(/^\|[\s\-:|]+\|$/));
+      if (dataRows.length === 0) continue;
+
+      const headerCells = dataRows[0].split('|').filter(c => c.trim() !== '');
+      const bodyRows = dataRows.slice(1).map(row => row.split('|').filter(c => c.trim() !== ''));
+
+      elements.push(
+        <div key={`table-${i}`} className="overflow-x-auto my-3">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-white/10">
+                {headerCells.map((cell, ci) => (
+                  <th key={ci} className="px-3 py-2 text-left text-white/60 font-medium whitespace-nowrap" dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }} />
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {bodyRows.map((row, ri) => (
+                <tr key={ri} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="px-3 py-2 text-white/70 whitespace-nowrap" dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }} />
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
     // Headers
     if (line.startsWith('### ')) {
-      elements.push(<h3 key={i} className="text-lg font-bold text-white mt-4 mb-2">{line.slice(4)}</h3>);
+      elements.push(<h3 key={i} className="text-lg font-bold text-white mt-4 mb-2" dangerouslySetInnerHTML={{ __html: renderInline(line.slice(4)) }} />);
     } else if (line.startsWith('## ')) {
-      elements.push(<h2 key={i} className="text-xl font-bold text-white mt-5 mb-2">{line.slice(3)}</h2>);
+      elements.push(<h2 key={i} className="text-xl font-bold text-white mt-5 mb-2" dangerouslySetInnerHTML={{ __html: renderInline(line.slice(3)) }} />);
     } else if (line.startsWith('# ')) {
-      elements.push(<h1 key={i} className="text-2xl font-bold text-white mt-6 mb-3">{line.slice(2)}</h1>);
+      elements.push(<h1 key={i} className="text-2xl font-bold text-white mt-6 mb-3" dangerouslySetInnerHTML={{ __html: renderInline(line.slice(2)) }} />);
     }
     // Divider
     else if (line.trim() === '---') {
@@ -74,11 +121,19 @@ function MarkdownRender({ text }: { text: string }) {
     }
     // Blockquote
     else if (line.trim().startsWith('> ')) {
+      const quoteLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith('> ')) {
+        quoteLines.push(lines[i].trim().slice(2));
+        i++;
+      }
       elements.push(
         <blockquote key={i} className="border-l-2 border-purple-500/40 pl-3 my-2 text-sm text-white/50 italic">
-          {line.trim().slice(2)}
+          {quoteLines.map((ql, qi) => (
+            <p key={qi} dangerouslySetInnerHTML={{ __html: renderInline(ql) }} />
+          ))}
         </blockquote>
       );
+      continue;
     }
     // Empty line
     else if (line.trim() === '') {
@@ -94,14 +149,6 @@ function MarkdownRender({ text }: { text: string }) {
   }
 
   return <>{elements}</>;
-}
-
-function renderInline(text: string): string {
-  return text
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<em><strong>$1</strong></em>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-white/10 text-purple-300 text-xs font-mono">$1</code>');
 }
 
 export function WeeklyAnnouncement() {
@@ -142,7 +189,7 @@ export function WeeklyAnnouncement() {
   }
 
   const lines = report.content.split('\n');
-  const previewLines = lines.slice(0, 8);
+  const previewLines = lines.slice(0, 10);
 
   return (
     <div className="glass-card p-6 relative overflow-hidden">
