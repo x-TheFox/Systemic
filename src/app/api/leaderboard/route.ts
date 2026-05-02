@@ -31,6 +31,11 @@ export async function GET(req: Request) {
         skillTreeState: {
           select: { currentGrind: true },
         },
+        badges: {
+          where: { category: 'weekly_leaderboard' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
     });
 
