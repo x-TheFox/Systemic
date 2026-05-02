@@ -17,6 +17,7 @@ Systemics is a unified, AI-augmented competitive leaderboard built as a single N
 
 ```mermaid
 graph TB
+
     subgraph "Client"
         WEB[Browser]
         WEB --> DASH[Dashboard /]
@@ -30,13 +31,13 @@ graph TB
         PROF --> API1
 
         API1 --> AUTH[Clerk Middleware]
-        API1 --> SYNC[/api/sync POST]
-        API1 --> WEEKLY[/api/weekly POST]
-        API1 --> SKILL[/api/skilltree GET]
-        API1 --> RADAR[/api/radar GET]
-        API1 --> LEAD[/api/leaderboard GET]
-        API1 --> PROF_API[/api/profile GET/PUT]
-        API1 --> WEBHOOK[/api/webhooks/clerk POST]
+        API1 --> SYNC["/api/sync POST"]
+        API1 --> WEEKLY["/api/weekly POST"]
+        API1 --> SKILL["/api/skilltree GET"]
+        API1 --> RADAR["/api/radar GET"]
+        API1 --> LEAD["/api/leaderboard GET"]
+        API1 --> PROF_API["/api/profile GET/PUT"]
+        API1 --> WEBHOOK["/api/webhooks/clerk POST"]
     end
 
     subgraph "AI Layer"
