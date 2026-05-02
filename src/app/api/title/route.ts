@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { generateText } from 'ai';
-import { createGroq } from '@ai-sdk/groq';
-
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
-const MODEL = 'openai/gpt-oss-120b';
+import { groqGenerateText } from '@/lib/ai/groq-models';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,9 +89,7 @@ async function generateTitleForUser(userId: string): Promise<number> {
     .map(([k]) => k)
     .join(', ');
 
-  const { text: title } = await generateText({
-    model: groq(MODEL),
-    prompt: `You are the Title Master of Systemics, a competitive developer guild. You grant short, hype, one-line titles to developers based on their entire profile.
+  const title = await groqGenerateText(`You are the Title Master of Systemics, a competitive developer guild. You grant short, hype, one-line titles to developers based on their entire profile.
 
 USER: ${user.name || user.email}
 GITHUB: ${user.githubHandle || 'none'}
@@ -116,8 +110,7 @@ RULES:
 3. Must reference their actual dominant skill
 4. NO generic titles like "Developer" or "Coder"
 5. Gaming-style, memorable, slightly exaggerated
-6. Just output the title, nothing else — no quotes, no markdown, no explanation`,
-  });
+6. Just output the title, nothing else — no quotes, no markdown, no explanation`);
 
   const cleanTitle = title.trim().replace(/^["']|["']$/g, '').replace(/\*\*/g, '').slice(0, 50);
 

@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { generateText } from 'ai';
-import { createGroq } from '@ai-sdk/groq';
-
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
-const MODEL = 'openai/gpt-oss-120b';
+import { groqGenerateText } from '@/lib/ai/groq-models';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,9 +47,7 @@ async function generateBadgesForUser(userId: string): Promise<number> {
     ? `\nEXISTING BADGES (DO NOT repeat these — generate NEW unique badges):\n${existingBadgeNames.map((n: string) => `- ${n}`).join('\n')}`
     : '';
 
-  const { text: badgeText } = await generateText({
-    model: groq(MODEL),
-    prompt: `You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
+  const badgeText = await groqGenerateText(`You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
 
 USER: ${user.name || user.email}
 GITHUB: ${user.githubHandle || 'none'}
@@ -120,8 +114,7 @@ description: <description>
 rarity: legendary
 color: #f59e0b
 icon: <icon>
-category: <category>`,
-  });
+category: <category>`);
 
   const badges = parseBadges(badgeText);
 

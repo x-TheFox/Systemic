@@ -2,12 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { deepDiveGitHub } from '@/lib/fetchers/github-deepdive';
 import { generateInitialTreeFromDeepDive } from '@/lib/ai/skillTreeGenerator';
-import { generateText } from 'ai';
-import { createGroq } from '@ai-sdk/groq';
+import { groqGenerateText } from '@/lib/ai/groq-models';
 export const dynamic = 'force-dynamic';
-
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
-const MODEL = 'openai/gpt-oss-120b';
 
 export async function POST(req: Request) {
   try {
@@ -64,9 +60,7 @@ export async function POST(req: Request) {
       .map(([k, v]) => `- ${k}: ${v}`)
       .join('\n');
 
-    const { text: analysisText } = await generateText({
-      model: groq(MODEL),
-      prompt: `You are a senior technical recruiter who has just done a comprehensive analysis of a developer's entire GitHub history. Write a structured assessment in the EXACT format below.
+    const analysisText = await groqGenerateText(`You are a senior technical recruiter who has just done a comprehensive analysis of a developer's entire GitHub history. Write a structured assessment in the EXACT format below.
 
 GITHUB PROFILE:
 - Login: ${deepDive.user.login}
@@ -112,8 +106,7 @@ NOTABLE_PROJECTS:
 - <project 2 and why it's impressive>
 - <project 3 and why it's impressive>
 
-Be thorough, specific, and honest. Don't flatter — identify real strengths AND real gaps.`,
-    });
+Be thorough, specific, and honest. Don't flatter — identify real strengths AND real gaps.`);
 
     console.log(`[DeepDive] LLM analysis complete.`);
 

@@ -1,13 +1,6 @@
-import { generateObject } from 'ai';
-import { createGroq } from '@ai-sdk/groq';
+import { groqGenerateObject } from '@/lib/ai/groq-models';
 import { z } from 'zod';
 import type { DeepDiveResult } from '@/lib/fetchers/github-deepdive';
-
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
-});
-
-const MODEL = 'openai/gpt-oss-120b';
 
 export interface GeneratedNode {
   nodeId: string;
@@ -103,12 +96,9 @@ export async function generatePersonalizedSkillTree(
     unlocked: n.unlocked,
   }));
 
-  const { object } = await generateObject({
-    model: groq(MODEL),
-    schema: z.object({
+  const { object } = await groqGenerateObject(z.object({
       newNodes: z.array(nodeSchema).max(3).describe('0-3 new nodes. Empty array if nothing new.'),
-    }),
-    prompt: `You are the AI Architect of Systemics, a competitive developer skill tree.
+    }), `You are the AI Architect of Systemics, a competitive developer skill tree.
 
 Generate 0-3 NEW skill tree nodes for a specific user based on their activity and stats.
 
@@ -131,8 +121,7 @@ RULES:
 3. Requirements should be ACHIEVABLE but require real effort (1.5-3x their current stats)
 4. DO NOT duplicate existing node concepts
 5. Return EMPTY newNodes array if nothing new is warranted
-6. Position nodes to not overlap (spread X, increase Y per tier)`,
-  });
+6. Position nodes to not overlap (spread X, increase Y per tier)`);
 
   return object.newNodes;
 }
@@ -182,12 +171,9 @@ export async function generateInitialTreeFromDeepDive(
     .map(([k, v]) => `${k}: ${v}`)
     .join(', ');
 
-  const { object } = await generateObject({
-    model: groq(MODEL),
-    schema: z.object({
+  const { object } = await groqGenerateObject(z.object({
       nodes: z.array(deepDiveNodeSchema).min(5).max(15).describe('5-15 nodes forming a personalized skill tree for this user.'),
-    }),
-    prompt: `You are the AI Architect of Systemics, building a PERSONALIZED skill tree for a developer based on their ENTIRE GitHub history.
+    }), `You are the AI Architect of Systemics, building a PERSONALIZED skill tree for a developer based on their ENTIRE GitHub history.
 
 USER PROFILE:
 - Login: ${deepDive.user.login}
@@ -234,8 +220,7 @@ RULES:
 9. Position nodes so paths spread out horizontally (X) and deepen vertically (Y)
 10. Include at least one node per dominant skill area
 
-Create a tree that makes this developer say "damn, that AI really studied my whole GitHub"`,
-  });
+Create a tree that makes this developer say "damn, that AI really studied my whole GitHub"`);
 
   return object.nodes;
 }
@@ -304,19 +289,15 @@ export async function generateInitialSkillTree(): Promise<GeneratedNode[]> {
 export async function recommendNextPath(
   activities: Array<{ platform: string; description: string }>
 ): Promise<string> {
-  const { object } = await generateObject({
-    model: groq(MODEL),
-    schema: z.object({
+  const { object } = await groqGenerateObject(z.object({
       recommendedPath: z.enum(['Frontend Wizard', 'Systems Engineer', 'Data Scientist', 'Fullstack Legend', 'DevOps Architect']),
       reasoning: z.string(),
-    }),
-    prompt: `Based on this developer's recent activity, recommend their optimal grind path.
+    }), `Based on this developer's recent activity, recommend their optimal grind path.
 
 Activities:
 ${activities.slice(0, 10).map(a => `- ${a.platform}: ${a.description}`).join('\n')}
 
-Return the best matching path and a one-sentence reasoning.`,
-  });
+Return the best matching path and a one-sentence reasoning.`);
 
   return object.recommendedPath;
 }
