@@ -40,9 +40,9 @@ const rankBadgeConfig: Record<number, { src: string; label: string; color: strin
   3: { src: '/badges/3rd.svg', label: '3RD', color: '#3b82f6', bg: 'from-blue-500/20 via-blue-500/10 to-transparent', ring: 'ring-2 ring-blue-500/60', shadow: '0 0 20px rgba(59,130,246,0.3), 0 0 40px rgba(59,130,246,0.1)', pulse: false },
 };
 
-const bottomBadgeConfig: Record<string, { src: string; color: string; bg: string; ring: string; shadow: string; pulse: boolean }> = {
-  'svg:last1': { src: '/badges/last1.svg', color: '#6b7280', bg: 'from-gray-500/10 via-gray-500/5 to-transparent', ring: 'ring-1 ring-gray-500/40', shadow: '0 0 10px rgba(107,114,128,0.2)', pulse: false },
-  'svg:last2': { src: '/badges/last2.svg', color: '#6b7280', bg: 'from-gray-500/10 via-gray-500/5 to-transparent', ring: 'ring-1 ring-gray-500/40', shadow: '0 0 10px rgba(107,114,128,0.2)', pulse: false },
+const bottomBadgeConfig: Record<string, { src: string; label: string; color: string; bg: string; ring: string; shadow: string; pulse: boolean }> = {
+  'svg:last1': { src: '/badges/last1.svg', label: 'LAST', color: '#6b7280', bg: 'from-gray-500/10 via-gray-500/5 to-transparent', ring: 'ring-1 ring-gray-500/40', shadow: '0 0 10px rgba(107,114,128,0.2)', pulse: false },
+  'svg:last2': { src: '/badges/last2.svg', label: '2ND LAST', color: '#6b7280', bg: 'from-gray-500/10 via-gray-500/5 to-transparent', ring: 'ring-1 ring-gray-500/40', shadow: '0 0 10px rgba(107,114,128,0.2)', pulse: false },
 };
 
 export function LeaderboardTable() {
