@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { generateWeeklyPostMortem } from '@/lib/ai/groq';
 import { triggerMilestone } from '@/lib/pusher/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');

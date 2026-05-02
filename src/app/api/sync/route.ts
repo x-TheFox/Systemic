@@ -11,6 +11,8 @@ import { triggerMilestone } from '@/lib/pusher/server';
 import { createWeeklySnapshot } from '@/lib/ai/ghost';
 import { generatePersonalizedSkillTree, generateInitialTreeFromDeepDive, generateInitialSkillTree } from '@/lib/ai/skillTreeGenerator';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');

@@ -1,6 +1,8 @@
 import { generateSkillRadar } from '@/lib/ai/skillRadar';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { currentUser } from '@clerk/nextjs/server';
 
+
+export const dynamic = 'force-dynamic';
 async function getOrCreateUser(clerkId: string, email: string, name: string | null, imageUrl: string | null) {
   return prisma.user.upsert({
     where: { clerkId },
