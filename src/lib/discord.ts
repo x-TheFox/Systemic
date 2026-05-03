@@ -28,9 +28,10 @@ export function splitDiscordChunks(text: string, maxLength: number = 1900): stri
 export async function sendDiscordWebhook(url: string, content: string) {
   const chunks = splitDiscordChunks(content);
   for (let i = 0; i < chunks.length; i++) {
-    const part = chunks.length > 1
-      ? `\`\`\`md\n# Systemics Weekly Post-Mortem [${i + 1}/${chunks.length}]\n\n${chunks[i]}\n\`\`\``
-      : `\`\`\`md\n# Systemics Weekly Post-Mortem\n\n${chunks[i]}\n\`\`\``;
+    const header = chunks.length > 1
+      ? `# Systemics Weekly Post-Mortem [${i + 1}/${chunks.length}]\n\n`
+      : `# Systemics Weekly Post-Mortem\n\n`;
+    const part = header + chunks[i];
 
     await fetch(url, {
       method: 'POST',
