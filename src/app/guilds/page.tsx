@@ -65,8 +65,8 @@ export default function GuildsPage() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      if (!content.trim().startsWith("<svg")) {
-        toast.error("Invalid SVG file.");
+      if (!content.trim().match(/<svg[\s>]/i)) {
+        toast.error("Invalid SVG file — must contain a <svg> tag.");
         return;
       }
       setForm((prev) => ({ ...prev, iconUrl: content }));
@@ -202,7 +202,7 @@ export default function GuildsPage() {
                 {form.iconUrl ? (
                   <div className="flex items-center gap-3 p-3 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06]">
                     <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                      {form.iconUrl.trim().startsWith("<svg") ? (
+                      {form.iconUrl.trim().match(/<svg[\s>]/i) ? (
                         <div dangerouslySetInnerHTML={{ __html: form.iconUrl }} className="h-6 w-6" />
                       ) : (
                         <img src={form.iconUrl} alt="Preview" className="h-full w-full object-cover" />
@@ -258,7 +258,7 @@ export default function GuildsPage() {
                   <div className="flex-shrink-0">
                     {guild.iconUrl ? (
                       <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                        {guild.iconUrl.trim().startsWith('<svg') ? (
+                        {guild.iconUrl.trim().match(/<svg[\s>]/i) ? (
                           <div dangerouslySetInnerHTML={{ __html: guild.iconUrl }} className="h-6 w-6" />
                         ) : (
                           <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-cover" />
