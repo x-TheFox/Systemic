@@ -12,18 +12,40 @@ jobs:
     steps:
       - name: Sync all users (one per request)
         run: |
-          set -e
+          set -euo pipefail
+
           BASE_URL="${{ secrets.VERCEL_URL }}"
           AUTH="Bearer ${{ secrets.CRON_SECRET }}"
 
-          echo "=== Fetching user list ==="
-          USERS_JSON=$(curl -s -X POST "${BASE_URL}/api/sync" \
-            -H "Authorization: ${AUTH}" \
-            -H "Content-Type: application/json")
+          # Validate env
+          if [ -z "$BASE_URL" ]; then
+            echo "ERROR: VERCEL_URL secret is not set"
+            exit 1
+          fi
 
-          echo "Users response: $USERS_JSON"
+          # Ensure BASE_URL starts with https://
+          case "$BASE_URL" in
+            http://*|https://*) ;;
+            *) BASE_URL="https://$BASE_URL" ;;
+          esac
+
+          echo "=== Base URL: $BASE_URL ==="
+          echo "=== Fetching user list ==="
+
+          # Fetch user list with timeouts and fail-on-error
+          USERS_JSON=$(curl -sS --fail --max-time 30 --connect-timeout 10 \
+            -X POST "${BASE_URL}/api/sync" \
+            -H "Authorization: ${AUTH}" \
+            -H "Content-Type: application/json") || {
+              echo "ERROR: Failed to fetch user list"
+              exit 1
+            }
+
+          echo "Users response length: ${#USERS_JSON} chars"
 
           COUNT=$(echo "$USERS_JSON" | jq -r '.count // 0')
+
+          echo "User count: $COUNT"
 
           if [ "$COUNT" -eq 0 ]; then
             echo "No users to sync."
@@ -32,16 +54,32 @@ jobs:
 
           echo "=== Syncing $COUNT users one-by-one ==="
 
-          echo "$USERS_JSON" | jq -r '.users[].id' | while read -r USER_ID; do
-            echo "→ Syncing user $USER_ID..."
-            RESPONSE=$(curl -s -X POST "${BASE_URL}/api/sync?userId=${USER_ID}" \
-              -H "Authorization: ${AUTH}" \
-              -H "Content-Type: application/json")
-            echo "  Response: $RESPONSE"
-            sleep 2  # brief pause between users
-          done
+          # Extract user IDs into a temp file to avoid subshell issues
+          echo "$USERS_JSON" | jq -r '.users[]?.id // empty' > /tmp/user_ids.txt
 
-          echo "=== Sync complete ==="
+          SYNCED=0
+          FAILED=0
+
+          while IFS= read -r USER_ID || [ -n "$USER_ID" ]; do
+            [ -z "$USER_ID" ] && continue
+
+            echo "→ [$((SYNCED + FAILED + 1))/$COUNT] Syncing user $USER_ID..."
+
+            RESPONSE=$(curl -sS --fail --max-time 90 --connect-timeout 15 \
+              -X POST "${BASE_URL}/api/sync?userId=${USER_ID}" \
+              -H "Authorization: ${AUTH}" \
+              -H "Content-Type: application/json" 2>&1) && {
+                echo "  OK: $(echo "$RESPONSE" | jq -r '.email // .userId // "unknown"' 2>/dev/null || echo "response received")"
+                SYNCED=$((SYNCED + 1))
+              } || {
+                echo "  FAILED: $RESPONSE"
+                FAILED=$((FAILED + 1))
+              }
+
+            sleep 2
+          done < /tmp/user_ids.txt
+
+          echo "=== Sync complete: $SYNCED succeeded, $FAILED failed ==="
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

@@ -12,11 +12,32 @@ jobs:
     steps:
       - name: Generate Titles for All Users
         run: |
-          curl -X POST "${{ secrets.VERCEL_URL }}/api/title" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          set -euo pipefail
+
+          BASE_URL="${{ secrets.VERCEL_URL }}"
+          AUTH="Bearer ${{ secrets.CRON_SECRET }}"
+
+          if [ -z "$BASE_URL" ]; then
+            echo "ERROR: VERCEL_URL secret is not set"
+            exit 1
+          fi
+
+          case "$BASE_URL" in
+            http://*|https://*) ;;
+            *) BASE_URL="https://$BASE_URL" ;;
+          esac
+
+          echo "=== Base URL: $BASE_URL ==="
+          echo "=== Generating titles ==="
+
+          curl -sS --fail --max-time 60 --connect-timeout 10 \
+            -X POST "${BASE_URL}/api/title" \
+            -H "Authorization: ${AUTH}" \
             -H "Content-Type: application/json" \
-            -d '{"userId":"all"}' \
-            --fail
+            -d '{"userId":"all"}'
+
+          echo ""
+          echo "=== Done ==="
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

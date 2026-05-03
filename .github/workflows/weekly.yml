@@ -12,31 +12,82 @@ jobs:
     steps:
       - name: Trigger Weekly Post-Mortem API
         run: |
-          curl -X POST "${{ secrets.VERCEL_URL }}/api/weekly" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            --fail
+          set -euo pipefail
+
+          BASE_URL="${{ secrets.VERCEL_URL }}"
+          AUTH="Bearer ${{ secrets.CRON_SECRET }}"
+
+          if [ -z "$BASE_URL" ]; then
+            echo "ERROR: VERCEL_URL secret is not set"
+            exit 1
+          fi
+
+          case "$BASE_URL" in
+            http://*|https://*) ;;
+            *) BASE_URL="https://$BASE_URL" ;;
+          esac
+
+          echo "=== Base URL: $BASE_URL ==="
+          echo "=== Triggering weekly report ==="
+
+          curl -sS --fail --max-time 60 --connect-timeout 10 \
+            -X POST "${BASE_URL}/api/weekly" \
+            -H "Authorization: ${AUTH}" \
+            -H "Content-Type: application/json"
+
+          echo ""
+          echo "=== Weekly report triggered ==="
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
       - name: Process Badge Queue After Weekly
         run: |
-          curl -X POST "${{ secrets.VERCEL_URL }}/api/badges/process-queue" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            --fail || true
+          set -euo pipefail
+
+          BASE_URL="${{ secrets.VERCEL_URL }}"
+          AUTH="Bearer ${{ secrets.CRON_SECRET }}"
+
+          case "$BASE_URL" in
+            http://*|https://*) ;;
+            *) BASE_URL="https://$BASE_URL" ;;
+          esac
+
+          echo "=== Processing badge queue ==="
+
+          curl -sS --fail --max-time 60 --connect-timeout 10 \
+            -X POST "${BASE_URL}/api/badges/process-queue" \
+            -H "Authorization: ${AUTH}" \
+            -H "Content-Type: application/json" || true
+
+          echo ""
+          echo "=== Done ==="
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
       - name: Refresh Titles After Weekly
         run: |
-          curl -X POST "${{ secrets.VERCEL_URL }}/api/title" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          set -euo pipefail
+
+          BASE_URL="${{ secrets.VERCEL_URL }}"
+          AUTH="Bearer ${{ secrets.CRON_SECRET }}"
+
+          case "$BASE_URL" in
+            http://*|https://*) ;;
+            *) BASE_URL="https://$BASE_URL" ;;
+          esac
+
+          echo "=== Refreshing titles ==="
+
+          curl -sS --fail --max-time 60 --connect-timeout 10 \
+            -X POST "${BASE_URL}/api/title" \
+            -H "Authorization: ${AUTH}" \
             -H "Content-Type: application/json" \
-            -d '{"userId":"all"}' \
-            --fail || true
+            -d '{"userId":"all"}' || true
+
+          echo ""
+          echo "=== Done ==="
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

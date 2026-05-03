@@ -12,10 +12,31 @@ jobs:
     steps:
       - name: Process Pending Badge Queue
         run: |
-          curl -X POST "${{ secrets.VERCEL_URL }}/api/badges/process-queue" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            --fail
+          set -euo pipefail
+
+          BASE_URL="${{ secrets.VERCEL_URL }}"
+          AUTH="Bearer ${{ secrets.CRON_SECRET }}"
+
+          if [ -z "$BASE_URL" ]; then
+            echo "ERROR: VERCEL_URL secret is not set"
+            exit 1
+          fi
+
+          case "$BASE_URL" in
+            http://*|https://*) ;;
+            *) BASE_URL="https://$BASE_URL" ;;
+          esac
+
+          echo "=== Base URL: $BASE_URL ==="
+          echo "=== Processing badge queue ==="
+
+          curl -sS --fail --max-time 60 --connect-timeout 10 \
+            -X POST "${BASE_URL}/api/badges/process-queue" \
+            -H "Authorization: ${AUTH}" \
+            -H "Content-Type: application/json"
+
+          echo ""
+          echo "=== Done ==="
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
