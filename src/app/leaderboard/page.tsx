@@ -1,28 +1,40 @@
-import { LeaderboardTable } from '@/components/LeaderboardTable';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { ArrowLeft, Trophy } from 'lucide-react';
+"use client";
+
+import { LeaderboardTable } from "@/components/LeaderboardTable";
+import Link from "next/link";
+import { ArrowLeft, Trophy } from "lucide-react";
+import { motion } from "framer-motion";
+import { pageEntrance, staggerItem } from "@/lib/motion";
 
 export default function LeaderboardPage() {
   return (
-    <main className="min-h-screen p-4 md:p-8">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <Button variant="outline" size="icon" className="border-white/10 hover:bg-white/5">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
+    <motion.main
+      variants={pageEntrance}
+      initial="hidden"
+      animate="visible"
+      className="min-h-screen p-4 md:p-8"
+    >
+      <div className="mx-auto max-w-6xl space-y-6">
+        <motion.div variants={staggerItem} className="flex items-center gap-4">
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="flex items-center gap-3">
-            <Trophy className="h-6 w-6 text-yellow-400" />
-            <h1 className="text-3xl font-bold gradient-text">Leaderboard</h1>
+            <Trophy className="h-6 w-6 text-amber-400" />
+            <h1 className="text-display gradient-text">Leaderboard</h1>
           </div>
-        </div>
+          <p className="hidden sm:block text-sm text-fg-muted ml-auto">
+            Only the committed survive.
+          </p>
+        </motion.div>
 
-        <div className="glass-card p-6">
+        <motion.div variants={staggerItem} className="glass-card p-6">
           <LeaderboardTable />
-        </div>
+        </motion.div>
       </div>
-    </main>
+    </motion.main>
   );
 }

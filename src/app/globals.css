@@ -4,39 +4,99 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
+    /* ── Core palette ── */
+    --base: 240 12% 4%;
+    --surface: 240 11% 6%;
+    --elevated: 240 10% 8%;
+    --overlay: 240 10% 5%;
+
+    /* ── Semantic colors ── */
+    --accent: 265 85% 60%;
+    --accent-dim: 265 60% 45%;
+    --accent-glow: 265 85% 60%;
+    --destructive: 0 72% 51%;
+    --success: 142 76% 45%;
+    --warning: 38 92% 55%;
+    --muted: 240 6% 16%;
+    --muted-fg: 240 5% 55%;
+
+    /* ── Text colors ── */
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 263 70% 50%;
+    --foreground-dim: 240 5% 65%;
+    --foreground-muted: 240 5% 40%;
+
+    /* ── shadcn compatibility tokens ── */
+    --background: var(--base);
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--elevated);
+    --popover-foreground: var(--foreground);
+    --primary: var(--accent);
     --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 263 70% 50%;
-    --radius: 0.75rem;
-    --chart-1: 263 70% 50%;
+    --secondary: var(--muted);
+    --secondary-foreground: var(--foreground);
+    --border: 240 6% 14%;
+    --input: 240 6% 14%;
+    --ring: var(--accent);
+    --radius: 0.5rem;
+    --chart-1: 265 85% 60%;
     --chart-2: 187 85% 43%;
-    --chart-3: 24 95% 53%;
-    --chart-4: 142 71% 45%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 142 76% 45%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 263 70% 50%;
+
+    /* ── Radius scale ── */
+    --radius-compact: 4px;
+    --radius-standard: 8px;
+    --radius-container: 16px;
+
+    /* ── Depth / z-layers ── */
+    --z-base-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    --z-card-shadow:
+      0 0 0 1px rgba(255,255,255,0.04),
+      0 4px 16px -2px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+    --z-float-shadow:
+      0 0 0 1px rgba(255,255,255,0.06),
+      0 8px 32px -4px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+    --z-modal-shadow:
+      0 0 0 1px rgba(255,255,255,0.08),
+      0 24px 64px -8px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+
+    --z-float-backdrop: blur(12px) saturate(140%);
+    --z-modal-backdrop: blur(20px) saturate(160%);
+
+    /* ── Motion tokens ── */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur-instant: 80ms;
+    --dur-fast: 150ms;
+    --dur-normal: 300ms;
+    --dur-slow: 500ms;
+
+    /* ── Spacing rhythm (base 4px) ── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-24: 96px;
+
+    /* ── Sidebar tokens (shadcn compatibility) ── */
+    --sidebar-background: 240 6% 8%;
+    --sidebar-foreground: 240 5% 90%;
+    --sidebar-primary: 265 85% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 263 70% 50%;
+    --sidebar-accent: 240 6% 14%;
+    --sidebar-accent-foreground: 240 5% 90%;
+    --sidebar-border: 240 6% 14%;
+    --sidebar-ring: 265 85% 60%;
   }
 
   * {
@@ -44,8 +104,8 @@
   }
 
   body {
-    @apply bg-[#0a0a0f] text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-[hsl(var(--base))] text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
   }
 
   html {
@@ -58,14 +118,37 @@
     text-wrap: balance;
   }
 
-  .glass-card {
-    @apply relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl;
-    box-shadow: 
-      0 0 0 1px rgba(255,255,255,0.03),
-      0 4px 24px -1px rgba(0,0,0,0.3),
-      inset 0 1px 0 rgba(255,255,255,0.05);
+  /* ── Surface primitives ── */
+  .surface-card {
+    @apply relative overflow-hidden;
+    border-radius: var(--radius-standard);
+    background: hsl(var(--surface));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--z-card-shadow);
   }
 
+  .surface-elevated {
+    @apply relative overflow-hidden;
+    border-radius: var(--radius-standard);
+    background: hsl(var(--elevated));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--z-float-shadow);
+    backdrop-filter: var(--z-float-backdrop);
+  }
+
+  .surface-modal {
+    @apply relative overflow-hidden;
+    border-radius: var(--radius-container);
+    background: hsl(var(--overlay));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--z-modal-shadow);
+    backdrop-filter: var(--z-modal-backdrop);
+  }
+
+  /* ── Legacy glass-card (mapped to new system) ── */
+  .glass-card {
+    @apply surface-card;
+  }
   .glass-card::before {
     content: '';
     position: absolute;
@@ -74,8 +157,8 @@
     padding: 1px;
     background: linear-gradient(
       135deg,
-      rgba(168, 85, 247, 0.15) 0%,
-      rgba(6, 182, 212, 0.08) 50%,
+      hsl(265 85% 60% / 0.12) 0%,
+      hsl(187 85% 43% / 0.06) 50%,
       transparent 100%
     );
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -84,32 +167,104 @@
     pointer-events: none;
   }
 
+  /* ── Typography utilities ── */
+  .text-display {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+
+  .text-heading {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .text-subheading {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .text-body {
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .text-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .text-stat {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-stat-lg {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-code {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  /* ── Glow utilities ── */
   .glow-text {
-    text-shadow: 
-      0 0 20px rgba(168, 85, 247, 0.5),
-      0 0 40px rgba(168, 85, 247, 0.3),
-      0 0 60px rgba(168, 85, 247, 0.1);
+    text-shadow:
+      0 0 20px hsl(265 85% 60% / 0.5),
+      0 0 40px hsl(265 85% 60% / 0.3),
+      0 0 60px hsl(265 85% 60% / 0.1);
   }
 
   .glow-border {
-    box-shadow: 
-      0 0 0 1px rgba(168, 85, 247, 0.2),
-      0 0 20px rgba(168, 85, 247, 0.1),
+    box-shadow:
+      0 0 0 1px hsl(265 85% 60% / 0.2),
+      0 0 20px hsl(265 85% 60% / 0.1),
       inset 0 1px 0 rgba(255,255,255,0.05);
   }
 
+  .glow-accent {
+    box-shadow: 0 0 24px hsl(265 85% 60% / 0.25);
+  }
+
+  .glow-amber {
+    box-shadow: 0 0 24px hsl(38 92% 55% / 0.3);
+  }
+
+  /* ── Gradient text ── */
   .gradient-text {
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(135deg, #c084fc 0%, #22d3ee 50%, #f472b6 100%);
   }
 
+  /* ── Background patterns ── */
   .subtle-grid {
-    background-image: 
-      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
     background-size: 60px 60px;
   }
 
+  /* ── Animations ── */
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
@@ -121,6 +276,10 @@
   .animate-glow {
     animation: glow 2s ease-in-out infinite alternate;
   }
+
+  .animate-shimmer {
+    animation: shimmer 2s linear infinite;
+  }
 }
 
 @keyframes float {
@@ -130,16 +289,21 @@
 
 @keyframes pulse-slow {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  50% { opacity: 0.6; }
 }
 
 @keyframes glow {
-  from { 
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.2), 0 0 40px rgba(168, 85, 247, 0.1);
+  from {
+    box-shadow: 0 0 20px hsl(265 85% 60% / 0.2), 0 0 40px hsl(265 85% 60% / 0.1);
   }
-  to { 
-    box-shadow: 0 0 30px rgba(168, 85, 247, 0.4), 0 0 60px rgba(168, 85, 247, 0.2);
+  to {
+    box-shadow: 0 0 30px hsl(265 85% 60% / 0.4), 0 0 60px hsl(265 85% 60% / 0.2);
   }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 @keyframes slide-in {
@@ -147,38 +311,46 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-slide-in {
-  animation: slide-in 0.5s ease-out forwards;
+@keyframes draw-line {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
 }
 
+.animate-slide-in {
+  animation: slide-in 0.5s var(--ease-snap) forwards;
+}
+
+/* ── React Flow overrides ── */
 .react-flow__attribution {
   display: none !important;
 }
 
 .react-flow__minimap {
-  background: #111118 !important;
-  border-radius: 8px !important;
+  background: hsl(var(--surface)) !important;
+  border-radius: var(--radius-compact) !important;
+  border: 1px solid hsl(var(--border));
 }
 
 .react-flow__controls {
-  border-radius: 8px !important;
+  border-radius: var(--radius-compact) !important;
   overflow: hidden;
+  box-shadow: var(--z-float-shadow);
 }
 
 .react-flow__controls-button {
-  background: #111118 !important;
-  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
-  fill: rgba(255,255,255,0.5) !important;
+  background: hsl(var(--surface)) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+  fill: hsl(var(--foreground-dim)) !important;
 }
 
 .react-flow__controls-button:hover {
-  background: #1a1a24 !important;
+  background: hsl(var(--elevated)) !important;
 }
 
 .react-flow__edge-path {
-  stroke: rgba(255,255,255,0.15) !important;
+  stroke: hsl(var(--muted-fg) / 0.5);
 }
 
 .react-flow__edge-path.selected {
-  stroke: #a855f7 !important;
+  stroke: hsl(var(--accent));
 }
