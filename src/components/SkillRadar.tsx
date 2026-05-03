@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Ghost } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+import { motion } from 'framer-motion';
+import { cascadeVariants, fadeInUp } from '@/lib/motion';
 
 interface SkillData {
   subject: string;
@@ -64,44 +66,90 @@ export function SkillRadar() {
     : data;
 
   return (
-    <div>
-      <div className="flex justify-end mb-2">
-        <Button
-          variant={ghostMode ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setGhostMode(!ghostMode)}
-          className={`gap-2 text-xs ${ghostMode ? 'bg-gradient-to-r from-gray-600 to-gray-700 border-0' : 'border-white/10 hover:bg-white/5'}`}
-        >
-          <Ghost className="h-3.5 w-3.5" />
-          {ghostMode ? 'Ghost On' : 'Ghost Mode'}
-        </Button>
+    <motion.div
+      variants={cascadeVariants}
+      initial="hidden"
+      animate="visible"
+      custom={0}
+      className="prismatic-card ambient-cyan p-5"
+    >
+      {/* Section header with tertiary strip */}
+      <div className="section-strip-tertiary mb-4 pt-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            Skill Radar
+          </h3>
+          <motion.div
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            custom={0.2}
+          >
+            <Button
+              variant={ghostMode ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setGhostMode(!ghostMode)}
+              className={`gap-2 text-xs transition-all ${
+                ghostMode
+                  ? 'border-0 text-white'
+                  : 'border-[var(--color-border-default)] hover:bg-[var(--color-accent-secondary-dim)]'
+              }`}
+              style={
+                ghostMode
+                  ? {
+                      background: `linear-gradient(135deg, var(--color-accent-secondary), rgba(168, 85, 247, 0.7))`,
+                      boxShadow: `0 0 16px var(--color-accent-secondary-glow)`,
+                    }
+                  : { color: 'var(--color-text-muted)' }
+              }
+            >
+              <Ghost className="h-3.5 w-3.5" />
+              {ghostMode ? 'Ghost On' : 'Ghost Mode'}
+            </Button>
+          </motion.div>
+        </div>
       </div>
-      <ResponsiveContainer width="100%" height={280}>
-        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={mergedData}>
-          <PolarGrid stroke="rgba(255,255,255,0.06)" />
-          <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }} />
-          <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
-          <Radar
-            name="Current"
-            dataKey="A"
-            stroke="#a855f7"
-            fill="#a855f7"
-            fillOpacity={0.25}
-            strokeWidth={2}
-          />
-          {ghostMode && ghostData && (
-            <Radar
-              name="Ghost"
-              dataKey="ghost"
-              stroke="#6b7280"
-              fill="#6b7280"
-              fillOpacity={0.1}
-              strokeWidth={1}
-              strokeDasharray="4 4"
+
+      {/* Radar Chart */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        custom={0.15}
+      >
+        <ResponsiveContainer width="100%" height={280}>
+          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={mergedData}>
+            <PolarGrid stroke="var(--color-border-default)" />
+            <PolarAngleAxis
+              dataKey="subject"
+              tick={{
+                fill: 'var(--color-text-muted)',
+                fontSize: 11,
+              }}
             />
-          )}
-        </RadarChart>
-      </ResponsiveContainer>
-    </div>
+            <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
+            <Radar
+              name="Current"
+              dataKey="A"
+              stroke="var(--color-accent-primary)"
+              fill="var(--color-accent-primary)"
+              fillOpacity={0.25}
+              strokeWidth={2}
+            />
+            {ghostMode && ghostData && (
+              <Radar
+                name="Ghost"
+                dataKey="ghost"
+                stroke="var(--color-accent-secondary)"
+                fill="var(--color-accent-secondary)"
+                fillOpacity={0.1}
+                strokeWidth={1}
+                strokeDasharray="4 4"
+              />
+            )}
+          </RadarChart>
+        </ResponsiveContainer>
+      </motion.div>
+    </motion.div>
   );
 }
