@@ -59,6 +59,8 @@ async function syncUser(user: any) {
   // Current stats (to be updated on user)
   let totalCommits = prevCommits;
   let totalPRs = prevPRs;
+  let totalReviews = user.totalReviews;
+  let reviewComments = user.reviewComments;
   let leetcodeEasy = prevLeetcodeEasy;
   let leetcodeMedium = prevLeetcodeMedium;
   let leetcodeHard = prevLeetcodeHard;
@@ -136,6 +138,29 @@ async function syncUser(user: any) {
           timestamp: new Date(pr.mergedAt || pr.createdAt),
           metadata: { category, justification, url: pr.url },
         });
+      }
+
+      // Code reviews
+      try {
+        const { fetchGitHubReviews } = await import('@/lib/fetchers/github');
+        const reviews = await fetchGitHubReviews(user.githubHandle, process.env.GITHUB_TOKEN);
+        if (reviews.totalReviews > 0) {
+          totalReviews = Math.max(totalReviews, reviews.totalReviews);
+          reviewComments = Math.max(reviewComments, reviews.reviewComments);
+          const reviewXP = reviews.totalReviews * XP_TABLE.GITHUB.REVIEW;
+          totalDeltaXP += reviewXP;
+          activities.push({
+            userId: user.id,
+            platform: 'GITHUB',
+            activityType: 'REVIEW',
+            description: `${reviews.totalReviews} PR reviews`,
+            xpAwarded: reviewXP,
+            externalId: `github-reviews-${user.id}-${dateSlug}`,
+            metadata: { totalReviews: reviews.totalReviews, reviewComments: reviews.reviewComments },
+          });
+        }
+      } catch (err) {
+        console.warn('[Sync] Code review fetch failed for', user.githubHandle, err);
       }
 
       // DEEP DIVE on first sync
@@ -294,6 +319,8 @@ async function syncUser(user: any) {
       xp: finalXP,
       totalCommits,
       totalPRs,
+      totalReviews,
+      reviewComments,
       leetcodeEasy,
       leetcodeMedium,
       leetcodeHard,
@@ -572,6 +599,31 @@ async function syncUser(user: any) {
     data: { lastBadgeCommitSync: now },
   });
 
+  // ---------- DAILY ACTIVITY TRACKING ----------
+  if (totalDeltaXP > 0) {
+    const dateStr = now.toISOString().split('T')[0];
+    const platforms = Array.from(new Set(activities.map((a) => a.platform)));
+
+    await prisma.dailyActivity.upsert({
+      where: {
+        userId_date: { userId: user.id, date: dateStr },
+      },
+      update: {
+        xpGained: { increment: totalDeltaXP },
+        platforms: { push: platforms },
+      },
+      create: {
+        userId: user.id,
+        date: dateStr,
+        xpGained: totalDeltaXP,
+        platforms,
+      },
+    });
+
+    // Check streak badges
+    await checkStreakBadges(user.id);
+  }
+
   // ---------- QUEUE BADGE GENERATION ----------
   if (totalDeltaXP > 0 || isFirstSync || commitMessages.length > 0) {
     await prisma.badgeQueue.create({
@@ -586,4 +638,65 @@ async function syncUser(user: any) {
   }
 
   console.log(`[Sync] ${user.email}: +${totalDeltaXP} delta XP (commits: +${totalCommits - prevCommits}, PRs processed)`);
+}
+
+async function checkStreakBadges(userId: string) {
+  const activities = await prisma.dailyActivity.findMany({
+    where: { userId },
+    orderBy: { date: 'desc' },
+    take: 60,
+  });
+
+  const dateMap = new Map(activities.map((a) => [a.date, a.xpGained]));
+
+  // Calculate current streak
+  let streak = 0;
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const checkDate = dateMap.has(today) ? today : dateMap.has(yesterday) ? yesterday : null;
+
+  if (checkDate) {
+    const d = new Date(checkDate);
+    while (true) {
+      const dateStr = d.toISOString().split('T')[0];
+      const xp = dateMap.get(dateStr);
+      if (xp && xp > 0) {
+        streak++;
+        d.setDate(d.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+  }
+
+  const existingBadges = await prisma.badge.findMany({
+    where: { userId, category: 'streak' },
+  });
+
+  const hasBadge = (name: string) => existingBadges.some((b) => b.name === name);
+
+  const streakBadges = [
+    { days: 30, name: '30-Day Apotheosis', rarity: 'legendary', color: '#f59e0b', icon: 'Crown' },
+    { days: 14, name: '14-Day Inferno', rarity: 'epic', color: '#a855f7', icon: 'Flame' },
+    { days: 7, name: '7-Day Flame', rarity: 'rare', color: '#3b82f6', icon: 'Flame' },
+    { days: 3, name: '3-Day Spark', rarity: 'common', color: '#6b7280', icon: 'Zap' },
+  ];
+
+  for (const sb of streakBadges) {
+    if (streak >= sb.days && !hasBadge(sb.name)) {
+      await prisma.badge.create({
+        data: {
+          userId,
+          name: sb.name,
+          description: `Maintained a ${sb.days}-day activity streak.`,
+          rarity: sb.rarity,
+          color: sb.color,
+          icon: sb.icon,
+          category: 'streak',
+          generatedBy: 'system',
+        },
+      });
+      break; // Only award the highest tier
+    }
+  }
 }

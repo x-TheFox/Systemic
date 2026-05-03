@@ -4,6 +4,8 @@ export const XP_TABLE = {
     PR_SIMPLE: 20,
     PR_COMPLEX_BASE: 30,
     PR_AI_MAX: 100,
+    REVIEW: 5, // per PR reviewed
+    REVIEW_COMMENT: 2, // per review comment
     LANGUAGE_BONUS: 5, // per language used significantly (>10%)
   },
   LEETCODE: {

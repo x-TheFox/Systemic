@@ -9,6 +9,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { BadgeGrid, BadgeCard } from "@/components/BadgeGrid";
+import { StreakHeatmap } from "@/components/StreakHeatmap";
 import { pageEntrance, staggerItem, statReveal } from "@/lib/motion";
 
 const platformIcons: Record<string, React.ReactNode> = {
@@ -214,6 +215,13 @@ export function ProfileView({
             ))}
           </div>
         </motion.div>
+
+        {/* Streak Heatmap */}
+        {profile.githubHandle && (
+          <motion.div variants={staggerItem} className="glass-card p-6">
+            <StreakHeatmap handle={profile.githubHandle} />
+          </motion.div>
+        )}
 
         {/* Platform Handles */}
         {isOwnProfile && (
