@@ -5,6 +5,26 @@ import { fetchRepoTree, fetchRepoFile } from '@/lib/fetchers/github-repos';
 
 export const dynamic = 'force-dynamic';
 
+// GET: Return pending project count
+export async function GET(req: Request) {
+  try {
+    const authHeader = req.headers.get('authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const pendingCount = await prisma.projectQueue.count({
+      where: { status: 'pending' },
+    });
+
+    return NextResponse.json({ pending: pendingCount });
+  } catch (error: any) {
+    console.error('Project queue GET error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// POST: Process project queue
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');
@@ -12,20 +32,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get pending queue items
+    const { searchParams } = new URL(req.url);
+    const count = Math.min(parseInt(searchParams.get('count') || '1'), 5);
+    const finalize = searchParams.get('finalize') === 'true';
+
+    // If finalize mode: just do pinning + badge queue feeding for users with unprocessed summaries
+    if (finalize) {
+      return await finalizeProjects();
+    }
+
+    // Get pending queue items (process 1 by default, max 5)
     const queue = await prisma.projectQueue.findMany({
       where: { status: 'pending' },
-      take: 10, // Process in batches
+      take: count,
       orderBy: { createdAt: 'asc' },
       include: { user: { select: { githubHandle: true } } },
     });
 
     if (queue.length === 0) {
-      return NextResponse.json({ success: true, processed: 0 });
+      return NextResponse.json({ success: true, processed: 0, remaining: 0 });
     }
 
     const processed = [];
-    const summaries: string[] = [];
 
     for (const item of queue) {
       try {
@@ -62,7 +90,6 @@ export async function POST(req: Request) {
         }
 
         const summary = await summarizeProjectForBadges(repoName, card.description, tree, fileContents);
-        summaries.push(summary);
 
         // Save project
         await prisma.project.create({
@@ -72,7 +99,7 @@ export async function POST(req: Request) {
             description: card.description,
             repoUrl: item.repoUrl,
             language: card.language || repoName.match(/\.(\w+)$/)?.[1] || null,
-            stars: 0, // Will update later
+            stars: 0,
             forks: 0,
             pinned: false,
             aiSummary: summary,
@@ -95,15 +122,36 @@ export async function POST(req: Request) {
       }
     }
 
-    // After processing, pick best 3 to pin for each user
-    const affectedUserIds = Array.from(new Set(queue.map((q) => q.userId)));
-    for (const userId of affectedUserIds) {
+    const remaining = await prisma.projectQueue.count({
+      where: { status: 'pending' },
+    });
+
+    return NextResponse.json({ success: true, processed: processed.length, projects: processed, remaining });
+  } catch (error: any) {
+    console.error('Project queue error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+async function finalizeProjects() {
+  try {
+    // Find all users who have projects that were just processed
+    const affectedUsers = await prisma.project.findMany({
+      distinct: ['userId'],
+      select: { userId: true },
+    });
+
+    const pinnedCount = { total: 0 };
+    const badgeQueued = { total: 0 };
+
+    for (const { userId } of affectedUsers) {
       const userProjects = await prisma.project.findMany({
         where: { userId },
-        select: { id: true, name: true, description: true, stars: true },
+        select: { id: true, name: true, description: true, stars: true, aiSummary: true },
       });
 
       if (userProjects.length >= 3) {
+        // Pick best 3 to pin
         const bestNames = await pickBestProjects(userProjects.map((p) => ({
           name: p.name,
           description: p.description || '',
@@ -125,14 +173,14 @@ export async function POST(req: Request) {
               where: { id: proj.id },
               data: { pinned: true },
             });
+            pinnedCount.total++;
           }
         }
       }
-    }
 
-    // Feed summaries to badge queue
-    if (summaries.length > 0) {
-      for (const userId of affectedUserIds) {
+      // Feed summaries to badge queue
+      const summaries = userProjects.map((p) => p.aiSummary).filter(Boolean) as string[];
+      if (summaries.length > 0) {
         await prisma.badgeQueue.create({
           data: {
             userId,
@@ -141,12 +189,19 @@ export async function POST(req: Request) {
             status: 'pending',
           },
         });
+        badgeQueued.total++;
       }
     }
 
-    return NextResponse.json({ success: true, processed: processed.length, projects: processed });
+    return NextResponse.json({
+      success: true,
+      finalized: true,
+      usersAffected: affectedUsers.length,
+      pinned: pinnedCount.total,
+      badgeQueues: badgeQueued.total,
+    });
   } catch (error: any) {
-    console.error('Project queue error:', error);
+    console.error('Project finalize error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

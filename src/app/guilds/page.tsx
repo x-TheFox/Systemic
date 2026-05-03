@@ -15,6 +15,7 @@ interface Guild {
   description: string | null;
   iconUrl: string | null;
   isPublic: boolean;
+  adminId: string;
   _count: { members: number };
 }
 
@@ -22,7 +23,7 @@ export default function GuildsPage() {
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: "", slug: "", description: "" });
+  const [form, setForm] = useState({ name: "", slug: "", description: "", iconUrl: "" });
   const [myGuildId, setMyGuildId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function GuildsPage() {
       if (!res.ok) throw new Error("Failed");
       toast.success("Guild created!");
       setShowCreate(false);
+      setForm({ name: "", slug: "", description: "", iconUrl: "" });
       // Refresh
       const refresh = await fetch("/api/guilds");
       const data = await refresh.json();
@@ -84,15 +86,29 @@ export default function GuildsPage() {
     }
   }
 
-  async function leaveGuild() {
+  async function leaveGuild(guildId: string) {
+    const guild = guilds.find((g) => g.id === guildId);
+    if (!guild) return;
+
+    // Check if user is admin of this guild
+    const isAdmin = guild.adminId === myUserId;
+    if (isAdmin) {
+      const confirmed = confirm(
+        `WARNING: You are the admin of "${guild.name}".\n\nLeaving will PERMANENTLY DELETE this guild and remove all members. This cannot be undone.\n\nAre you absolutely sure?`
+      );
+      if (!confirmed) return;
+    }
+
     try {
-      // Find current guild slug
-      const myGuild = guilds.find((g) => g.id === myGuildId);
-      if (!myGuild) return;
-      const res = await fetch(`/api/guilds/${myGuild.slug}/join`, { method: "DELETE" });
+      const res = await fetch(`/api/guilds/${guild.slug}/join`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
-      toast.success("Left guild!");
+      const data = await res.json();
+      toast.success(data.deleted ? `Guild "${guild.name}" deleted.` : "Left guild!");
       setMyGuildId(null);
+      // Refresh list
+      const refresh = await fetch("/api/guilds");
+      const refreshData = await refresh.json();
+      setGuilds(refreshData.guilds || []);
     } catch {
       toast.error("Failed to leave guild.");
     }
@@ -140,8 +156,15 @@ export default function GuildsPage() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder="Description (optional)"
-                rows={3}
+                rows={2}
                 className="w-full px-3 py-2 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50 resize-none"
+              />
+              <textarea
+                value={form.iconUrl}
+                onChange={(e) => setForm({ ...form, iconUrl: e.target.value })}
+                placeholder="Guild SVG icon (paste <svg>...</svg> or image URL)"
+                rows={2}
+                className="w-full px-3 py-2 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50 resize-none font-mono text-xs"
               />
               <div className="flex gap-2">
                 <button onClick={createGuild} className="h-9 px-4 rounded-[var(--radius-compact)] bg-accent text-white text-sm font-semibold">
@@ -168,13 +191,33 @@ export default function GuildsPage() {
           ) : (
             guilds.map((guild) => (
               <div key={guild.id} className="glass-card p-5 hover:border-accent/20 transition-colors">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-lg font-bold text-white">{guild.name}</h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/[0.08] text-fg-muted">
-                    {guild._count.members} members
-                  </span>
+                <div className="flex items-start gap-3 mb-3">
+                  {/* Guild Icon */}
+                  <div className="flex-shrink-0">
+                    {guild.iconUrl ? (
+                      <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
+                        {guild.iconUrl.trim().startsWith('<svg') ? (
+                          <div dangerouslySetInnerHTML={{ __html: guild.iconUrl }} className="h-6 w-6" />
+                        ) : (
+                          <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-cover" />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-10 w-10 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/20 flex items-center justify-center">
+                        <Shield className="h-5 w-5 text-accent" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <h3 className="text-lg font-bold text-white truncate">{guild.name}</h3>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/[0.08] text-fg-muted shrink-0 ml-2">
+                        {guild._count.members} members
+                      </span>
+                    </div>
+                    {guild.description && <p className="text-sm text-fg-muted truncate">{guild.description}</p>}
+                  </div>
                 </div>
-                {guild.description && <p className="text-sm text-fg-muted mb-3">{guild.description}</p>}
                 <div className="flex gap-2">
                   <Link href={`/guilds/${guild.slug}`}>
                     <span className="h-8 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:border-white/[0.15] transition-colors inline-flex items-center">
@@ -183,7 +226,7 @@ export default function GuildsPage() {
                   </Link>
                   {myGuildId === guild.id ? (
                     <button
-                      onClick={leaveGuild}
+                      onClick={() => leaveGuild(guild.id)}
                       className="h-8 px-3 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
                     >
                       Leave

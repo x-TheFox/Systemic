@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Shield, Users, Trophy, Crown, ArrowLeft, LogOut } from "lucide-react";
+import { Shield, Users, Trophy, Crown, ArrowLeft, LogOut, Pencil } from "lucide-react";
 import { pageEntrance, staggerItem } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,6 +38,8 @@ export default function GuildDetailPage() {
   const [loading, setLoading] = useState(true);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", description: "", iconUrl: "" });
 
   useEffect(() => {
     async function load() {
@@ -69,6 +71,37 @@ export default function GuildDetailPage() {
       setIsAdmin(guild.adminId === myUserId);
     }
   }, [guild, myUserId]);
+
+  useEffect(() => {
+    if (guild) {
+      setEditForm({
+        name: guild.name,
+        description: guild.description || "",
+        iconUrl: guild.iconUrl || "",
+      });
+    }
+  }, [guild]);
+
+  async function saveGuildEdit() {
+    try {
+      const res = await fetch(`/api/guilds?slug=${slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success("Guild updated!");
+      setEditing(false);
+      // Refresh guild data
+      const refresh = await fetch(`/api/guilds?slug=${slug}`);
+      if (refresh.ok) {
+        const data = await refresh.json();
+        setGuild(data.guild);
+      }
+    } catch {
+      toast.error("Failed to update guild.");
+    }
+  }
 
   async function leaveGuild() {
     const msg = isAdmin ? "Delete this guild? All members will be removed." : "Leave this guild?";

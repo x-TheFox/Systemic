@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Code2, Trophy, Zap, RefreshCw,
   Brain, X, Crown, Sparkles, Clock, Copy, Check,
-  GitPullRequest, FolderGit2, Shield,
+  GitPullRequest, FolderGit2, Shield, Swords, BarChart3,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -66,6 +66,8 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   });
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
+  const [compareInput, setCompareInput] = useState("");
+  const [showCompare, setShowCompare] = useState(false);
 
   // Fetch projects
   useEffect(() => {
@@ -144,6 +146,29 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
     }
   }
 
+  function goCompare() {
+    if (!compareInput.trim()) return;
+    window.location.href = `/compare/${encodeURIComponent(compareInput.trim())}/${encodeURIComponent(profile.githubHandle || profile.name || "")}`;
+  }
+
+  async function challengeToDuel() {
+    if (!profile.githubHandle) {
+      toast.error("This user has no GitHub handle to challenge.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/duels/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ opponentHandle: profile.githubHandle }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success("Duel challenge sent!");
+    } catch {
+      toast.error("Failed to send duel challenge.");
+    }
+  }
+
   if (!profile) return null;
 
   const pastTitles: PastTitle[] = profile.pastTitles || [];
@@ -216,14 +241,56 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
               <p className="text-sm text-accent mt-0.5">{profile.skillTreeState.currentGrind}</p>
             ) : null}
           </div>
-          {profile.githubHandle && (
-            <a href={`https://github.com/${profile.githubHandle}`} target="_blank" rel="noopener noreferrer">
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors">
-                <Code2 className="h-4 w-4" />
-                <span className="hidden sm:inline">{profile.githubHandle}</span>
-              </span>
-            </a>
-          )}
+          <div className="flex items-center gap-2 ml-auto">
+            {profile.githubHandle && (
+              <a href={`https://github.com/${profile.githubHandle}`} target="_blank" rel="noopener noreferrer">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors">
+                  <Code2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">{profile.githubHandle}</span>
+                </span>
+              </a>
+            )}
+            {/* Compare button */}
+            <div className="relative">
+              {showCompare ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    value={compareInput}
+                    onChange={(e) => setCompareInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && goCompare()}
+                    placeholder="GitHub handle..."
+                    className="h-8 w-32 px-2 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-xs focus:outline-none focus:border-accent/50"
+                    autoFocus
+                  />
+                  <button onClick={goCompare} className="h-8 px-2 rounded-[var(--radius-compact)] bg-accent text-white text-xs font-semibold">
+                    VS
+                  </button>
+                  <button onClick={() => setShowCompare(false)} className="h-8 px-2 text-fg-muted hover:text-white text-xs">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowCompare(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors"
+                  title="Compare with another developer"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Compare</span>
+                </button>
+              )}
+            </div>
+            {/* Duel button for other profiles */}
+            {!isOwnProfile && profile.githubHandle && (
+              <button
+                onClick={challengeToDuel}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-[var(--radius-compact)] bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors"
+              >
+                <Swords className="h-4 w-4" />
+                <span className="hidden sm:inline">Duel</span>
+              </button>
+            )}
+          </div>
         </motion.div>
 
         {/* Past Titles */}
@@ -461,23 +528,55 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
 
       {/* Guild */}
       {profile?.guild && (
-        <motion.div variants={staggerItem} className="glass-card p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="h-5 w-5 text-accent" />
-            <h2 className="text-heading text-white">{profile.guild.name}</h2>
-          </div>
-          {profile.guild.badges && profile.guild.badges.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {profile.guild.badges.map((badge: any) => (
-                <span
-                  key={badge.id}
-                  className="text-xs border border-accent/20 text-accent bg-accent/10 px-3 py-1 rounded-full"
-                >
-                  {badge.name}
-                </span>
-              ))}
+        <motion.div variants={staggerItem}>
+          <Link href={`/guilds/${profile.guild.slug}`}>
+            <div className="glass-card p-5 flex items-center gap-4 hover:border-accent/20 transition-colors cursor-pointer group">
+              {/* Guild Icon / SVG */}
+              <div className="relative flex-shrink-0">
+                {profile.guild.iconUrl ? (
+                  <div
+                    className="h-14 w-14 rounded-[var(--radius-standard)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center"
+                    dangerouslySetInnerHTML={{
+                      __html: profile.guild.iconUrl.startsWith('<svg')
+                        ? profile.guild.iconUrl
+                        : `<img src="${profile.guild.iconUrl}" alt="${profile.guild.name}" style="width:100%;height:100%;object-fit:cover;" />`,
+                    }}
+                  />
+                ) : (
+                  <div className="h-14 w-14 rounded-[var(--radius-standard)] bg-accent/10 border border-accent/20 flex items-center justify-center">
+                    <Shield className="h-7 w-7 text-accent" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-heading text-white group-hover:text-accent transition-colors">{profile.guild.name}</h2>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-accent/20 text-accent bg-accent/10">
+                    Guild
+                  </span>
+                </div>
+                {profile.guild.description && (
+                  <p className="text-sm text-fg-muted mt-0.5 truncate">{profile.guild.description}</p>
+                )}
+                {profile.guild.badges && profile.guild.badges.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {profile.guild.badges.slice(0, 3).map((badge: any) => (
+                      <span
+                        key={badge.id}
+                        className="text-[10px] border border-accent/20 text-accent bg-accent/10 px-2 py-0.5 rounded-full"
+                      >
+                        {badge.name}
+                      </span>
+                    ))}
+                    {profile.guild.badges.length > 3 && (
+                      <span className="text-[10px] text-fg-muted px-1">+{profile.guild.badges.length - 3}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <BarChart3 className="h-5 w-5 text-fg-muted group-hover:text-accent transition-colors" />
             </div>
-          )}
+          </Link>
         </motion.div>
       )}
 
