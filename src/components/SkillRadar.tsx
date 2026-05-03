@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Ghost } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Ghost, Zap } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
+import { scaleInItem } from "@/lib/motion";
 
 interface SkillData {
   subject: string;
@@ -15,11 +16,11 @@ interface SkillData {
 }
 
 const defaultData: SkillData[] = [
-  { subject: 'Frontend', A: 50, fullMark: 150 },
-  { subject: 'Backend', A: 50, fullMark: 150 },
-  { subject: 'DevOps', A: 50, fullMark: 150 },
-  { subject: 'Architecture', A: 50, fullMark: 150 },
-  { subject: 'Algo', A: 50, fullMark: 150 },
+  { subject: "Frontend", A: 50, fullMark: 150 },
+  { subject: "Backend", A: 50, fullMark: 150 },
+  { subject: "DevOps", A: 50, fullMark: 150 },
+  { subject: "Architecture", A: 50, fullMark: 150 },
+  { subject: "Algo", A: 50, fullMark: 150 },
 ];
 
 export function SkillRadar() {
@@ -39,7 +40,7 @@ export function SkillRadar() {
           return;
         }
         const res = await fetch(`/api/radar?clerkId=${clerkId}&ghost=true`);
-        if (!res.ok) throw new Error('Failed');
+        if (!res.ok) throw new Error("Failed");
         const d = await res.json();
         if (d.radar && d.radar.length > 0) setData(d.radar);
         if (d.ghost && d.ghost.length > 0) {
@@ -54,7 +55,7 @@ export function SkillRadar() {
     load();
   }, [isLoaded, user]);
 
-  if (loading) return <Skeleton className="w-full h-[300px] rounded-xl" />;
+  if (loading) return <Skeleton className="w-full h-[300px] rounded-[var(--radius-standard)]" />;
 
   const mergedData = ghostMode && ghostData
     ? data.map((d) => {
@@ -64,44 +65,57 @@ export function SkillRadar() {
     : data;
 
   return (
-    <div>
-      <div className="flex justify-end mb-2">
-        <Button
-          variant={ghostMode ? 'default' : 'outline'}
-          size="sm"
+    <motion.div variants={scaleInItem} initial="hidden" animate="visible">
+      <div className="flex justify-end mb-3">
+        <button
           onClick={() => setGhostMode(!ghostMode)}
-          className={`gap-2 text-xs ${ghostMode ? 'bg-gradient-to-r from-gray-600 to-gray-700 border-0' : 'border-white/10 hover:bg-white/5'}`}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[var(--radius-compact)] border transition-all duration-200 ${
+            ghostMode
+              ? "bg-fg-muted/20 border-fg-muted/30 text-white shadow-[0_0_16px_rgba(255,255,255,0.1)]"
+              : "bg-transparent border-white/[0.08] text-fg-muted hover:text-white hover:border-white/15"
+          }`}
         >
-          <Ghost className="h-3.5 w-3.5" />
-          {ghostMode ? 'Ghost On' : 'Ghost Mode'}
-        </Button>
+          {ghostMode ? <Zap className="h-3.5 w-3.5 text-accent" /> : <Ghost className="h-3.5 w-3.5" />}
+          {ghostMode ? "Ghost Active" : "Ghost Mode"}
+        </button>
       </div>
       <ResponsiveContainer width="100%" height={280}>
         <RadarChart cx="50%" cy="50%" outerRadius="75%" data={mergedData}>
-          <PolarGrid stroke="rgba(255,255,255,0.06)" />
-          <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }} />
+          <defs>
+            <linearGradient id="radarFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity={0.05} />
+            </linearGradient>
+            <linearGradient id="ghostFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--muted-fg))" stopOpacity={0.15} />
+              <stop offset="100%" stopColor="hsl(var(--muted-fg))" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <PolarGrid stroke="hsl(var(--border))" />
+          <PolarAngleAxis
+            dataKey="subject"
+            tick={{ fill: "hsl(var(--fg-dim))", fontSize: 11, fontFamily: "var(--font-geist-sans)" }}
+          />
           <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
           <Radar
             name="Current"
             dataKey="A"
-            stroke="#a855f7"
-            fill="#a855f7"
-            fillOpacity={0.25}
+            stroke="hsl(var(--accent))"
+            fill="url(#radarFill)"
             strokeWidth={2}
           />
           {ghostMode && ghostData && (
             <Radar
               name="Ghost"
               dataKey="ghost"
-              stroke="#6b7280"
-              fill="#6b7280"
-              fillOpacity={0.1}
-              strokeWidth={1}
+              stroke="hsl(var(--muted-fg))"
+              fill="url(#ghostFill)"
+              strokeWidth={1.5}
               strokeDasharray="4 4"
             />
           )}
         </RadarChart>
       </ResponsiveContainer>
-    </div>
+    </motion.div>
   );
 }

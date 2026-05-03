@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { PageTransition } from "@/components/PageTransition";
+import { CommandPalette } from "@/components/CommandPalette";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -35,21 +37,29 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" className={cn("dark", geistSans.variable, geistMono.variable)}>
-        <body className="min-h-screen bg-[#0a0a0f] text-white font-sans flex flex-col">
+        <body className="min-h-screen bg-base text-white font-sans flex flex-col">
           <TooltipProvider>
-            <div className="fixed inset-0 subtle-grid pointer-events-none opacity-50" />
-            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
-            <div className="fixed bottom-0 right-0 w-[600px] h-[300px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
+            {/* Ambient background */}
+            <div className="fixed inset-0 subtle-grid pointer-events-none opacity-40" />
+            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-accent/8 rounded-full blur-[140px] pointer-events-none" />
+            <div className="fixed bottom-0 right-0 w-[700px] h-[400px] bg-cyan-500/8 rounded-full blur-[120px] pointer-events-none" />
+            <div className="fixed top-1/2 left-0 w-[400px] h-[600px] bg-purple-600/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2" />
+
+            <CommandPalette />
             <Navbar />
-            <main className="flex-1">{children}</main>
+            <PageTransition>
+              <main className="flex-1 relative z-10">{children}</main>
+            </PageTransition>
             <Footer />
-            <Toaster 
+            <Toaster
               position="bottom-right"
               toastOptions={{
                 style: {
-                  background: 'rgba(10, 10, 15, 0.95)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'hsl(var(--overlay))',
+                  border: '1px solid hsl(var(--border))',
                   color: '#fff',
+                  borderRadius: 'var(--radius-standard)',
+                  boxShadow: 'var(--z-float-shadow)',
                 },
               }}
             />

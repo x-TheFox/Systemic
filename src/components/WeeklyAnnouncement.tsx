@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Megaphone, Trophy, TrendingDown } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Megaphone, Trophy, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
+import { expandHeight, fadeUpItem } from "@/lib/motion";
 
 interface WeeklyReport {
   id: string;
@@ -22,41 +23,37 @@ interface WeeklyReport {
 
 function renderInline(text: string): string {
   return text
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<em><strong>$1</strong></em>')
+    .replace(/\*\*\*(.+?)\*\*\*/g, "<em><strong>$1</strong></em>")
     .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-white/10 text-purple-300 text-xs font-mono">$1</code>');
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-white/[0.08] text-accent text-xs font-mono">$1</code>');
 }
 
 function MarkdownRender({ text }: { text: string }) {
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   const elements: React.ReactNode[] = [];
   let i = 0;
 
   while (i < lines.length) {
     const line = lines[i];
 
-    // Table detection: | header | header |
-    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+    if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
       const tableLines: string[] = [];
-      while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+      while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
         tableLines.push(lines[i].trim());
         i++;
       }
-
-      const dataRows = tableLines.filter(row => !row.match(/^\|[\s\-:|]+\|$/));
+      const dataRows = tableLines.filter((row) => !row.match(/^\|[\s\-:|]+\|$/));
       if (dataRows.length === 0) continue;
-
-      const headerCells = dataRows[0].split('|').filter(c => c.trim() !== '');
-      const bodyRows = dataRows.slice(1).map(row => row.split('|').filter(c => c.trim() !== ''));
-
+      const headerCells = dataRows[0].split("|").filter((c) => c.trim() !== "");
+      const bodyRows = dataRows.slice(1).map((row) => row.split("|").filter((c) => c.trim() !== ""));
       elements.push(
         <div key={`table-${i}`} className="overflow-x-auto my-3">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10">
+              <tr className="border-b border-white/[0.08]">
                 {headerCells.map((cell, ci) => (
-                  <th key={ci} className="px-3 py-2 text-left text-white/60 font-medium whitespace-nowrap" dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }} />
+                  <th key={ci} className="px-3 py-2 text-left text-fg-dim font-medium whitespace-nowrap" dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }} />
                 ))}
               </tr>
             </thead>
@@ -64,7 +61,7 @@ function MarkdownRender({ text }: { text: string }) {
               {bodyRows.map((row, ri) => (
                 <tr key={ri} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                   {row.map((cell, ci) => (
-                    <td key={ci} className="px-3 py-2 text-white/70 whitespace-nowrap" dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }} />
+                    <td key={ci} className="px-3 py-2 text-fg-dim whitespace-nowrap" dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }} />
                   ))}
                 </tr>
               ))}
@@ -75,74 +72,61 @@ function MarkdownRender({ text }: { text: string }) {
       continue;
     }
 
-    // Headers
-    if (line.startsWith('### ')) {
+    if (line.startsWith("### ")) {
       elements.push(<h3 key={i} className="text-lg font-bold text-white mt-4 mb-2" dangerouslySetInnerHTML={{ __html: renderInline(line.slice(4)) }} />);
-    } else if (line.startsWith('## ')) {
+    } else if (line.startsWith("## ")) {
       elements.push(<h2 key={i} className="text-xl font-bold text-white mt-5 mb-2" dangerouslySetInnerHTML={{ __html: renderInline(line.slice(3)) }} />);
-    } else if (line.startsWith('# ')) {
+    } else if (line.startsWith("# ")) {
       elements.push(<h1 key={i} className="text-2xl font-bold text-white mt-6 mb-3" dangerouslySetInnerHTML={{ __html: renderInline(line.slice(2)) }} />);
-    }
-    // Divider
-    else if (line.trim() === '---') {
-      elements.push(<hr key={i} className="border-white/10 my-4" />);
-    }
-    // Unordered list
-    else if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+    } else if (line.trim() === "---") {
+      elements.push(<hr key={i} className="border-white/[0.08] my-4" />);
+    } else if (line.trim().startsWith("- ") || line.trim().startsWith("* ")) {
       const listItems: string[] = [];
-      while (i < lines.length && (lines[i].trim().startsWith('- ') || lines[i].trim().startsWith('* '))) {
+      while (i < lines.length && (lines[i].trim().startsWith("- ") || lines[i].trim().startsWith("* "))) {
         listItems.push(lines[i].trim().slice(2));
         i++;
       }
       elements.push(
-        <ul key={i} className="list-disc list-inside space-y-1 my-2 text-sm text-white/70">
+        <ul key={i} className="list-disc list-inside space-y-1 my-2 text-sm text-fg-dim">
           {listItems.map((item, idx) => (
             <li key={idx} dangerouslySetInnerHTML={{ __html: renderInline(item) }} />
           ))}
         </ul>
       );
       continue;
-    }
-    // Ordered list
-    else if (/^\d+\.\s/.test(line.trim())) {
+    } else if (/^\d+\.\s/.test(line.trim())) {
       const listItems: string[] = [];
       while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
-        listItems.push(lines[i].trim().replace(/^\d+\.\s/, ''));
+        listItems.push(lines[i].trim().replace(/^\d+\.\s/, ""));
         i++;
       }
       elements.push(
-        <ol key={i} className="list-decimal list-inside space-y-1 my-2 text-sm text-white/70">
+        <ol key={i} className="list-decimal list-inside space-y-1 my-2 text-sm text-fg-dim">
           {listItems.map((item, idx) => (
             <li key={idx} dangerouslySetInnerHTML={{ __html: renderInline(item) }} />
           ))}
         </ol>
       );
       continue;
-    }
-    // Blockquote
-    else if (line.trim().startsWith('> ')) {
+    } else if (line.trim().startsWith("> ")) {
       const quoteLines: string[] = [];
-      while (i < lines.length && lines[i].trim().startsWith('> ')) {
+      while (i < lines.length && lines[i].trim().startsWith("> ")) {
         quoteLines.push(lines[i].trim().slice(2));
         i++;
       }
       elements.push(
-        <blockquote key={i} className="border-l-2 border-purple-500/40 pl-3 my-2 text-sm text-white/50 italic">
+        <blockquote key={i} className="border-l-2 border-accent/40 pl-3 my-2 text-sm text-fg-muted italic">
           {quoteLines.map((ql, qi) => (
             <p key={qi} dangerouslySetInnerHTML={{ __html: renderInline(ql) }} />
           ))}
         </blockquote>
       );
       continue;
-    }
-    // Empty line
-    else if (line.trim() === '') {
+    } else if (line.trim() === "") {
       elements.push(<div key={i} className="h-2" />);
-    }
-    // Regular paragraph
-    else {
+    } else {
       elements.push(
-        <p key={i} className="text-sm text-white/70 leading-relaxed my-1.5" dangerouslySetInnerHTML={{ __html: renderInline(line) }} />
+        <p key={i} className="text-sm text-fg-dim leading-relaxed my-1.5" dangerouslySetInnerHTML={{ __html: renderInline(line) }} />
       );
     }
     i++;
@@ -159,12 +143,12 @@ export function WeeklyAnnouncement() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/weekly/latest');
-        if (!res.ok) throw new Error('Failed');
+        const res = await fetch("/api/weekly/latest");
+        if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         if (data.report) setReport(data.report);
       } catch (err) {
-        console.error('Weekly announcement load error:', err);
+        console.error("Weekly announcement load error:", err);
       } finally {
         setLoading(false);
       }
@@ -173,103 +157,125 @@ export function WeeklyAnnouncement() {
   }, []);
 
   if (loading) {
-    return <Skeleton className="h-32 w-full rounded-xl" />;
+    return <Skeleton className="h-32 w-full rounded-[var(--radius-standard)]" />;
   }
 
   if (!report) {
     return (
       <div className="glass-card p-6 flex items-center gap-4">
-        <Megaphone className="h-6 w-6 text-purple-400" />
+        <Megaphone className="h-6 w-6 text-accent" />
         <div>
           <h3 className="text-white font-semibold">Weekly Post-Mortem</h3>
-          <p className="text-sm text-white/40">The Ghost hasn&apos;t published a report yet. Check back after Sunday!</p>
+          <p className="text-sm text-fg-muted">The Ghost hasn&apos;t published a report yet. Check back after Sunday!</p>
         </div>
       </div>
     );
   }
 
-  const lines = report.content.split('\n');
+  const lines = report.content.split("\n");
   const previewLines = lines.slice(0, 10);
 
   return (
-    <div className="glass-card p-6 relative overflow-hidden">
-      {/* Top bar */}
+    <motion.div
+      variants={fadeUpItem}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true }}
+      className="glass-card p-6 relative overflow-hidden"
+    >
+      {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <div className="relative">
-          <Megaphone className="h-5 w-5 text-purple-400" />
-          <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-400 rounded-full animate-pulse" />
+          <Megaphone className="h-5 w-5 text-accent" />
+          <span className="absolute -top-1 -right-1 h-2 w-2 bg-success rounded-full animate-pulse" />
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h3 className="text-white font-semibold">The Ghost&apos;s Weekly Post-Mortem</h3>
-            <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/10">
+            <span className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-accent/20 text-accent bg-accent/10">
               Week {report.weekNumber}, {report.year}
-            </Badge>
+            </span>
           </div>
-          <p className="text-[11px] text-white/30">
+          <p className="text-[11px] text-fg-muted">
             {report.participants} grinders · {report.totalXP.toLocaleString()} XP gained
           </p>
         </div>
       </div>
 
-      {/* MVP / Lurker quick stats */}
+      {/* MVP / Lurker */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="p-3 rounded-lg bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/20">
+        <div className="p-3 rounded-[var(--radius-standard)] bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/20">
           <div className="flex items-center gap-1.5 mb-1">
-            <Trophy className="h-3.5 w-3.5 text-yellow-400" />
-            <span className="text-[10px] uppercase tracking-wider text-yellow-400/70 font-medium">MVP</span>
+            <Trophy className="h-3.5 w-3.5 text-amber-400" />
+            <span className="text-label text-amber-400/70">MVP</span>
           </div>
-          <p className="text-sm font-bold text-white">{report.mvpName || 'N/A'}</p>
-          <p className="text-xs text-white/40">+{report.mvpXp.toLocaleString()} XP</p>
+          <p className="text-sm font-bold text-white">{report.mvpName || "N/A"}</p>
+          <p className="text-xs text-fg-muted font-mono">+{report.mvpXp.toLocaleString()} XP</p>
         </div>
-        <div className="p-3 rounded-lg bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20">
+        <div className="p-3 rounded-[var(--radius-standard)] bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20">
           <div className="flex items-center gap-1.5 mb-1">
             <TrendingDown className="h-3.5 w-3.5 text-red-400" />
-            <span className="text-[10px] uppercase tracking-wider text-red-400/70 font-medium">Lurker</span>
+            <span className="text-label text-red-400/70">Lurker</span>
           </div>
-          <p className="text-sm font-bold text-white">{report.lurkerName || 'N/A'}</p>
-          <p className="text-xs text-white/40">+{report.lurkerXp.toLocaleString()} XP</p>
+          <p className="text-sm font-bold text-white">{report.lurkerName || "N/A"}</p>
+          <p className="text-xs text-fg-muted font-mono">+{report.lurkerXp.toLocaleString()} XP</p>
         </div>
       </div>
 
       {/* Report content */}
       <div className="max-w-none">
-        {expanded ? (
-          <MarkdownRender text={report.content} />
-        ) : (
-          <div className="opacity-60">
-            <MarkdownRender text={previewLines.join('\n')} />
-          </div>
-        )}
+        <div className={expanded ? "" : "opacity-60"}>
+          <MarkdownRender text={previewLines.join("\n")} />
+        </div>
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              variants={expandHeight}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <MarkdownRender text={lines.slice(10).join("\n")} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Expand toggle */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="mt-3 text-xs text-purple-400 hover:text-purple-300 transition-colors font-medium"
+        className="mt-3 inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors font-medium"
       >
-        {expanded ? 'Show less' : 'Read full report'}
+        {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        {expanded ? "Show less" : "Read full report"}
       </button>
 
       {/* Mini leaderboard */}
       {report.rankings && report.rankings.length > 0 && (
         <div className="mt-4 pt-4 border-t border-white/[0.06]">
-          <p className="text-[10px] uppercase tracking-wider text-white/20 mb-2">Top Grinders This Week</p>
+          <p className="text-label text-fg-muted mb-2">Top Grinders This Week</p>
           <div className="space-y-1.5">
-            {report.rankings.slice(0, 5).map((r, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs">
-                <span className={`w-5 text-right font-mono ${
-                  i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-500' : 'text-white/30'
-                }`}>
-                  {i + 1}
-                </span>
-                <span className="text-white/70 truncate flex-1">{r.name}</span>
-                <span className="text-white/30">{r.xp.toLocaleString()} XP</span>
-              </div>
-            ))}
+            {report.rankings.slice(0, 5).map((r, i) => {
+              const maxWeekXP = Math.max(...report.rankings.map((x) => x.xp), 1);
+              const pct = (r.xp / maxWeekXP) * 100;
+              return (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className={`w-5 text-right font-mono font-bold ${
+                    i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-500" : "text-fg-muted"
+                  }`}>
+                    {i + 1}
+                  </span>
+                  <span className="text-fg-dim truncate flex-1">{r.name}</span>
+                  <div className="w-16 h-1 bg-white/[0.04] rounded-full overflow-hidden hidden sm:block">
+                    <div className="h-full rounded-full bg-accent/60" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-fg-muted font-mono">{r.xp.toLocaleString()} XP</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
