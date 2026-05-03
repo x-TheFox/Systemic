@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { currentUser } from '@clerk/nextjs/server';
 
-
 export const dynamic = 'force-dynamic';
+
 async function getOrCreateUser(clerkId: string, email: string, name: string | null, imageUrl: string | null) {
   return prisma.user.upsert({
     where: { clerkId },
@@ -18,11 +18,36 @@ async function getOrCreateUser(clerkId: string, email: string, name: string | nu
   });
 }
 
-const userInclude = {
+const privateUserInclude = {
   activityLogs: { orderBy: { timestamp: 'desc' as const }, take: 50 },
   skillTreeState: true,
   ghostSnapshots: { orderBy: [{ year: 'desc' as const }, { weekNumber: 'desc' as const }], take: 10 },
   badges: { orderBy: { createdAt: 'desc' as const } },
+  dynamicNodes: true,
+  pastTitles: { orderBy: { createdAt: 'desc' as const }, take: 20 },
+};
+
+const publicUserSelect = {
+  id: true,
+  name: true,
+  imageUrl: true,
+  githubHandle: true,
+  leetcodeHandle: true,
+  codeforcesHandle: true,
+  hackerrankHandle: true,
+  title: true,
+  xp: true,
+  totalCommits: true,
+  totalPRs: true,
+  totalReviews: true,
+  leetcodeEasy: true,
+  leetcodeMedium: true,
+  leetcodeHard: true,
+  codeforcesRating: true,
+  codeforcesSolved: true,
+  hackerrankBadges: true,
+  badges: { orderBy: { createdAt: 'desc' as const } },
+  skillTreeState: true,
   dynamicNodes: true,
   pastTitles: { orderBy: { createdAt: 'desc' as const }, take: 20 },
 };
@@ -37,24 +62,20 @@ export async function GET(req: Request) {
     let dbUser;
 
     if (githubHandle) {
-      dbUser = await prisma.user.findFirst({
-        where: {
-          githubHandle: {
-            equals: githubHandle,
-            mode: 'insensitive',
-          },
-        },
-        include: userInclude,
+      // Public profile lookup — use public-safe select (no email, no activityLogs, no ghostSnapshots)
+      dbUser = await prisma.user.findUnique({
+        where: { githubHandle },
+        select: publicUserSelect,
       });
     } else if (clerkIdParam) {
       dbUser = await prisma.user.findUnique({
         where: { clerkId: clerkIdParam },
-        include: userInclude,
+        include: privateUserInclude,
       });
     } else if (userIdParam) {
       dbUser = await prisma.user.findUnique({
         where: { id: userIdParam },
-        include: userInclude,
+        include: privateUserInclude,
       });
     } else {
       const user = await currentUser();
@@ -71,7 +92,7 @@ export async function GET(req: Request) {
 
       dbUser = await prisma.user.findUnique({
         where: { id: dbUser.id },
-        include: userInclude,
+        include: privateUserInclude,
       });
     }
 

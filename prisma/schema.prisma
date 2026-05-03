@@ -17,7 +17,7 @@ model User {
   email              String   @unique
   name               String?
   imageUrl           String?
-  githubHandle       String?
+  githubHandle       String?  @unique
   leetcodeHandle     String?
   hackerrankHandle   String?
   codeforcesHandle   String?

@@ -3,6 +3,24 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
+const publicUserSelect = {
+  id: true,
+  name: true,
+  imageUrl: true,
+  githubHandle: true,
+  title: true,
+  xp: true,
+  totalCommits: true,
+  totalPRs: true,
+  leetcodeHard: true,
+  codeforcesRating: true,
+  hackerrankBadges: true,
+  badges: {
+    orderBy: { createdAt: 'desc' as const },
+  },
+  skillTreeState: true,
+};
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -13,20 +31,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'h1 and h2 required' }, { status: 400 });
     }
 
-    const user1 = await prisma.user.findFirst({
+    const user1 = await prisma.user.findUnique({
       where: { githubHandle: handle1 },
-      include: {
-        badges: true,
-        skillTreeState: true,
-      },
+      select: publicUserSelect,
     });
 
-    const user2 = await prisma.user.findFirst({
+    const user2 = await prisma.user.findUnique({
       where: { githubHandle: handle2 },
-      include: {
-        badges: true,
-        skillTreeState: true,
-      },
+      select: publicUserSelect,
     });
 
     if (!user1 || !user2) {
@@ -41,7 +53,6 @@ export async function GET(req: Request) {
       user1: {
         id: user1.id,
         name: user1.name,
-        email: user1.email,
         imageUrl: user1.imageUrl,
         githubHandle: user1.githubHandle,
         title: user1.title,
@@ -57,7 +68,6 @@ export async function GET(req: Request) {
       user2: {
         id: user2.id,
         name: user2.name,
-        email: user2.email,
         imageUrl: user2.imageUrl,
         githubHandle: user2.githubHandle,
         title: user2.title,

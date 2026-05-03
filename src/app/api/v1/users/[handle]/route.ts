@@ -3,22 +3,22 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+export async function GET(
+  _req: Request,
+  { params }: { params: { handle: string } }
+) {
   try {
-    const { searchParams } = new URL(req.url);
-    const handle = searchParams.get('handle');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const handle = params.handle;
+    const limit = Math.min(
+      parseInt(new URL(_req.url).searchParams.get('limit') || '50'),
+      100
+    );
 
-    if (!handle) {
-      return NextResponse.json({ error: 'handle required' }, { status: 400 });
-    }
-
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
       where: { githubHandle: handle },
       select: {
         id: true,
         name: true,
-        email: true,
         imageUrl: true,
         githubHandle: true,
         title: true,
@@ -54,7 +54,7 @@ export async function GET(req: Request) {
       name: user.name,
       title: user.title,
       xp: user.xp,
-      rank: null, // Could compute if needed
+      rank: null,
       stats: {
         commits: user.totalCommits,
         prs: user.totalPRs,

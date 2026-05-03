@@ -202,11 +202,11 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
           <Avatar className="h-14 w-14 border-2 border-accent/40 flex-shrink-0">
             <AvatarImage src={profile.imageUrl || undefined} />
             <AvatarFallback className="bg-gradient-to-br from-accent to-cyan-500 text-white text-xl font-bold">
-              {(profile.name || profile.email).charAt(0).toUpperCase()}
+              {(profile.name || profile.githubHandle || "?").charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h1 className="text-display gradient-text">{profile.name || profile.email}</h1>
+            <h1 className="text-display gradient-text">{profile.name || profile.githubHandle || "Anonymous"}</h1>
             {profile.title ? (
               <div className="flex items-center gap-2 mt-1">
                 <Sparkles className="h-4 w-4 text-amber-400" />
