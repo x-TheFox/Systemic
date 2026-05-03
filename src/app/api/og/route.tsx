@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
 }
 
 async function profileOGImage(handle: string) {
-  // Fetch user data
-  const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+  // Fetch user data — use the request origin or fall back to env
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const userRes = await fetch(`${baseUrl}/api/profile?githubHandle=${handle}`);
   
   if (!userRes.ok) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { ProfileView } from "@/components/ProfileView";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -18,9 +19,14 @@ const RESERVED_HANDLES = new Set([
 export default function PublicProfilePage() {
   const params = useParams();
   const handle = params.handle as string;
+  const { user: clerkUser, isLoaded } = useUser();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  // Detect if viewing own profile
+  const ownUsername = (clerkUser as any)?.username;
+  const isOwnProfile = !!ownUsername && ownUsername.toLowerCase() === handle.toLowerCase();
 
   useEffect(() => {
     if (!handle) {
@@ -78,5 +84,10 @@ export default function PublicProfilePage() {
     );
   }
 
-  return <ProfileView profile={profile} isOwnProfile={false} />;
+  return (
+    <ProfileView
+      profile={profile}
+      isOwnProfile={isOwnProfile}
+    />
+  );
 }

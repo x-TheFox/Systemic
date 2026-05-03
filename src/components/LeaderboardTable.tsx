@@ -322,7 +322,7 @@ export function LeaderboardTable() {
 
 function PodiumCard({ rank, user, maxXP }: { rank: number; user: LeaderboardUser; maxXP: number }) {
   const cfg = podiumConfig[rank];
-  const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : "#";
+  const profileUrl = user.githubHandle ? `/${user.githubHandle}` : "#";
   const isClickable = !!user.githubHandle;
   const xpPct = (user.xp / maxXP) * 100;
 

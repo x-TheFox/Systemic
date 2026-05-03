@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   ArrowLeft, Code2, Trophy, Zap, RefreshCw,
   Brain, X, Crown, Sparkles, Clock, Copy, Check,
+  GitPullRequest, FolderGit2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -34,36 +36,112 @@ interface PastTitle {
   createdAt: string;
 }
 
+interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  repoUrl: string;
+  language: string | null;
+  stars: number;
+  forks: number;
+  pinned: boolean;
+  aiSummary: string | null;
+}
+
 interface ProfileViewProps {
   profile: any;
   isOwnProfile: boolean;
-  onEdit?: () => void;
-  editing?: boolean;
-  formData?: any;
-  setFormData?: (data: any) => void;
-  onSave?: () => void;
-  onSync?: () => void;
-  onDeepDive?: () => void;
 }
 
-export function ProfileView({
-  profile,
-  isOwnProfile,
-  onEdit,
-  editing,
-  formData,
-  setFormData,
-  onSave,
-  onSync,
-  onDeepDive,
-}: ProfileViewProps) {
+export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   const [selectedBadge, setSelectedBadge] = useState<any>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    githubHandle: profile?.githubHandle || "",
+    leetcodeHandle: profile?.leetcodeHandle || "",
+    codeforcesHandle: profile?.codeforcesHandle || "",
+    hackerrankHandle: profile?.hackerrankHandle || "",
+    name: profile?.name || "",
+  });
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+
+  // Fetch projects
+  useEffect(() => {
+    if (!profile?.githubHandle) {
+      setProjectsLoading(false);
+      return;
+    }
+    async function loadProjects() {
+      try {
+        const res = await fetch(`/api/projects?handle=${profile.githubHandle}`);
+        if (!res.ok) throw new Error("Failed");
+        const data = await res.json();
+        setProjects(data.projects || []);
+      } catch {
+        setProjects([]);
+      } finally {
+        setProjectsLoading(false);
+      }
+    }
+    loadProjects();
+  }, [profile?.githubHandle]);
 
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 1500);
+  }
+
+  async function handleSave() {
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      toast.success("Profile updated!");
+      setEditing(false);
+      // Refresh page to show updated data
+      window.location.reload();
+    } catch {
+      toast.error("Failed to save profile");
+    }
+  }
+
+  async function triggerSync() {
+    toast.info("Sync triggered in the background. Check back in a minute!");
+    try {
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ""}` },
+      });
+      if (!res.ok) throw new Error("Sync failed");
+      toast.success("Sync complete! Refresh to see changes.");
+    } catch {
+      toast.error("Sync failed. Try again later.");
+    }
+  }
+
+  async function triggerDeepDive() {
+    toast.info("Deep dive started. Analyzing your entire GitHub history...");
+    try {
+      const res = await fetch("/api/deepdive", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: profile?.id }),
+      });
+      if (!res.ok) throw new Error("Deep dive failed");
+      const data = await res.json();
+      toast.success(`Deep dive complete! Archetype: ${data.archetype}`);
+    } catch {
+      toast.error("Deep dive failed. Try again later.");
+    }
   }
 
   if (!profile) return null;
@@ -78,11 +156,32 @@ export function ProfileView({
     { key: "xp", label: "Total XP", value: profile?.xp || 0, color: "accent" as const },
     { key: "totalCommits", label: "Commits", value: profile?.totalCommits || 0, color: "cyan" as const },
     { key: "totalPRs", label: "PRs", value: profile?.totalPRs || 0, color: "success" as const },
+    { key: "totalReviews", label: "Reviews", value: profile?.totalReviews || 0, color: "purple" as const },
     { key: "leetcodeHard", label: "LC Hard", value: profile?.leetcodeHard || 0, color: "pink" as const },
     { key: "codeforcesRating", label: "CF Rating", value: profile?.codeforcesRating || 0, color: "amber" as const },
     { key: "hackerrankBadges", label: "HR Badges", value: profile?.hackerrankBadges || 0, color: "warning" as const },
   ];
   const maxStat = stats.reduce((a, b) => (a.value > b.value ? a : b), stats[0]);
+
+  // Language color map
+  const langColors: Record<string, string> = {
+    TypeScript: "#3178c6",
+    JavaScript: "#f7df1e",
+    Python: "#3776ab",
+    Rust: "#dea584",
+    Go: "#00add8",
+    Java: "#b07219",
+    "C++": "#f34b7d",
+    C: "#555555",
+    Shell: "#89e051",
+    Ruby: "#701516",
+    PHP: "#4F5D95",
+    Swift: "#ffac45",
+    Kotlin: "#A97BFF",
+    Dart: "#00B4AB",
+    HTML: "#e34c26",
+    CSS: "#563d7c",
+  };
 
   return (
     <motion.main
@@ -223,20 +322,75 @@ export function ProfileView({
           </motion.div>
         )}
 
+        {/* Projects */}
+        {profile.githubHandle && (
+          <motion.div variants={staggerItem} className="glass-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <FolderGit2 className="h-5 w-5 text-accent" />
+              <h2 className="text-heading text-white">Projects</h2>
+            </div>
+            {projectsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 bg-white/[0.02] rounded-[var(--radius-standard)] animate-pulse" />
+                ))}
+              </div>
+            ) : projects.length === 0 ? (
+              <p className="text-sm text-fg-muted">No projects indexed yet. Run a sync to auto-import from GitHub.</p>
+            ) : (
+              <div className="space-y-3">
+                {projects.slice(0, 6).map((project) => (
+                  <a
+                    key={project.id}
+                    href={project.repoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-4 rounded-[var(--radius-standard)] bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.10] hover:bg-white/[0.03] transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">{project.name}</span>
+                        {project.language && (
+                          <span
+                            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                            style={{
+                              backgroundColor: `${langColors[project.language] || '#6b7280'}20`,
+                              color: langColors[project.language] || '#9ca3af',
+                            }}
+                          >
+                            {project.language}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-fg-muted">
+                        {project.stars > 0 && <span>⭐ {project.stars}</span>}
+                        {project.forks > 0 && <span>🍴 {project.forks}</span>}
+                      </div>
+                    </div>
+                    {project.aiSummary && (
+                      <p className="text-xs text-fg-muted line-clamp-2">{project.aiSummary}</p>
+                    )}
+                  </a>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Platform Handles */}
         {isOwnProfile && (
           <motion.div variants={staggerItem} className="glass-card p-6 space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="text-heading text-white">Platform Handles</h2>
               <button
-                onClick={() => (editing ? onSave?.() : onEdit?.())}
+                onClick={() => (editing ? handleSave() : setEditing(true))}
                 className="text-xs font-semibold px-3 py-1.5 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors"
               >
                 {editing ? "Save" : "Edit"}
               </button>
             </div>
 
-            {editing && formData && setFormData ? (
+            {editing ? (
               <div className="space-y-4">
                 <div>
                   <label className="text-label text-fg-muted mb-1 block">Display Name</label>
@@ -288,14 +442,14 @@ export function ProfileView({
           <motion.div variants={staggerItem} className="glass-card p-6">
             <div className="space-y-2">
               <button
-                onClick={onSync}
+                onClick={triggerSync}
                 className="w-full h-10 inline-flex items-center justify-center gap-2 rounded-[var(--radius-compact)] bg-accent text-white font-semibold text-sm shadow-glow hover:shadow-[0_0_24px_hsl(265_85%_60%/_0.4)] transition-shadow"
               >
                 <RefreshCw className="h-4 w-4" />
                 Sync Now
               </button>
               <button
-                onClick={onDeepDive}
+                onClick={triggerDeepDive}
                 className="w-full h-10 inline-flex items-center justify-center gap-2 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors text-sm font-medium"
               >
                 <Brain className="h-4 w-4" />
