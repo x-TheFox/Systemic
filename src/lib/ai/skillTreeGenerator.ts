@@ -17,51 +17,151 @@ export interface GeneratedNode {
   justification: string;
 }
 
-const requirementsSchema = z.object({
-  total_xp: z.number().describe("Total XP threshold"),
-  leetcode_hard: z.number().describe("LeetCode hard problems solved threshold. 0 means not required"),
-  leetcode_medium: z.number().describe("LeetCode medium problems solved threshold. 0 means not required"),
-  leetcode_easy: z.number().describe("LeetCode easy problems solved threshold. 0 means not required"),
-  github_prs: z.number().describe("GitHub PRs threshold. 0 means not required"),
-  github_commits: z.number().describe("GitHub commits threshold. 0 means not required"),
-  codeforces_rating: z.number().describe("Codeforces rating threshold. 0 means not required"),
-  codeforces_solved: z.number().describe("Codeforces problems solved threshold. 0 means not required"),
-  hackerrank_badges: z.number().describe("HackerRank badges threshold. 0 means not required"),
-  skill_xp_Frontend: z.number().describe("Frontend XP threshold. 0 means not required"),
-  skill_xp_Backend: z.number().describe("Backend XP threshold. 0 means not required"),
-  skill_xp_DevOps: z.number().describe("DevOps XP threshold. 0 means not required"),
-  skill_xp_Architecture: z.number().describe("Architecture XP threshold. 0 means not required"),
-  skill_xp_Algo: z.number().describe("Algo XP threshold. 0 means not required"),
-}).describe("Unlock requirements. Set fields to 0 if not required for this node. Only non-zero values are actual requirements.");
+// ---------------------------------------------------------------------------
+// LLM outputs are messy. We accept a VERY loose shape then normalize it.
+// ---------------------------------------------------------------------------
 
-const nodeSchema = z.object({
-  nodeId: z.string().describe("Unique kebab-case ID. Use prefixes: 'core-', 'fw-', 'se-', 'ds-', 'fs-', 'devops-', 'mob-', 'sec-'"),
-  name: z.string().describe('Short, hype name for the skill'),
-  description: z.string().describe('What it represents and how to unlock it'),
-  path: z.string().describe('One of: Frontend Wizard, Systems Engineer, Data Scientist, Core, Fullstack Legend, DevOps Architect, Mobile Warrior, Security Phantom'),
-  tier: z.number().int().min(1).max(10).describe('Depth in tree. Root=0, children=parent.tier+1'),
-  positionX: z.number().int().describe('X coordinate on canvas. Range 0-1000'),
-  positionY: z.number().int().describe('Y coordinate on canvas. Range 0-1000. Increase Y per tier'),
-  requirements: requirementsSchema,
-  xpReward: z.number().int().min(50).max(2000).describe('XP awarded when unlocked'),
-  parentIds: z.array(z.string()).describe('Parent node IDs that must be unlocked first'),
-  justification: z.string().describe('Why this node was generated for this user'),
+const looseRequirementsSchema = z.record(z.any()).default({});
+
+const looseNodeSchema = z.object({
+  nodeId: z.string().optional(),
+  id: z.string().optional(),
+  name: z.string().optional().default('Unnamed Node'),
+  description: z.string().optional().default(''),
+  path: z.string().optional().default('Core'),
+  branch: z.string().optional(),
+  tier: z.coerce.number().optional().default(1),
+  positionX: z.coerce.number().optional(),
+  positionY: z.coerce.number().optional(),
+  x: z.coerce.number().optional(),
+  y: z.coerce.number().optional(),
+  pos: z.object({ x: z.coerce.number(), y: z.coerce.number() }).optional(),
+  position: z.object({ x: z.coerce.number(), y: z.coerce.number() }).optional(),
+  requirements: looseRequirementsSchema,
+  required: looseRequirementsSchema,
+  reqs: looseRequirementsSchema,
+  xpReward: z.coerce.number().optional(),
+  reward_xp: z.coerce.number().optional(),
+  xp: z.coerce.number().optional(),
+  parentIds: z.array(z.string()).optional(),
+  parents: z.array(z.string()).optional(),
+  parent: z.string().optional(),
+  unlocked: z.boolean().optional().default(false),
+  justification: z.string().optional().default(''),
 });
 
-const deepDiveNodeSchema = z.object({
-  nodeId: z.string().describe("Unique kebab-case ID. Use prefixes: 'core-', 'fw-', 'se-', 'ds-', 'fs-', 'devops-', 'mob-', 'sec-'"),
-  name: z.string().describe("Short HYPE name. Think gaming skill trees. Examples: 'DOM Surgeon', 'Kernel Whisperer', 'Pipeline Warlord'"),
-  description: z.string().describe('2-3 sentences. What this node represents and the grind needed.'),
-  path: z.string().describe('One of: Frontend Wizard, Systems Engineer, Data Scientist, Core, Fullstack Legend, DevOps Architect, Mobile Warrior, Security Phantom'),
-  tier: z.number().int().min(0).max(5).describe('0=root, 1=first branch, 2=deeper, etc.'),
-  positionX: z.number().int().describe('X on canvas 0-1000. Root=500. Spread paths apart.'),
-  positionY: z.number().int().describe('Y on canvas 0-1000. Each tier adds 150-200.'),
-  requirements: requirementsSchema,
-  xpReward: z.number().int().min(25).max(500).describe('XP bonus when unlocked'),
-  parentIds: z.array(z.string()).describe('Parent node IDs. Root node has empty array.'),
-  unlocked: z.boolean().describe('Whether this should start unlocked. Root always true, starter nodes based on existing skills.'),
-  justification: z.string().describe('Why this specific node was chosen for THIS user'),
+const looseNewNodesSchema = z.object({
+  newNodes: z.array(looseNodeSchema).optional().default([]),
 });
+
+const looseNodesSchema = z.object({
+  nodes: z.array(looseNodeSchema).optional().default([]),
+});
+
+// Also accept raw arrays at the top level
+const looseArraySchema = z.array(looseNodeSchema).optional().default([]);
+
+// ---------------------------------------------------------------------------
+// Normalizer: converts whatever the LLM returned into a proper GeneratedNode
+// ---------------------------------------------------------------------------
+
+function normalizeRequirements(raw: any): Record<string, number> {
+  if (!raw || typeof raw !== 'object') return {};
+  const result: Record<string, number> = {};
+  for (const [key, val] of Object.entries(raw)) {
+    const num = typeof val === 'number' ? val : typeof val === 'string' ? parseInt(val, 10) || 0 : 0;
+    if (num > 0) result[key] = num;
+  }
+  return result;
+}
+
+function kebabCase(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function normalizeNode(raw: z.infer<typeof looseNodeSchema>, index: number): GeneratedNode {
+  const nodeId = raw.nodeId || raw.id || `ai-node-${kebabCase(raw.name ?? 'unknown')}-${index}`;
+  const name = raw.name || 'Unnamed Node';
+  const description = raw.description || '';
+  const path = raw.path || raw.branch || 'Core';
+  const tier = Math.max(0, Math.min(10, raw.tier ?? 1));
+
+  // Handle multiple position field variations
+  let positionX = 500;
+  let positionY = tier * 180;
+  if (raw.positionX !== undefined) positionX = raw.positionX;
+  else if (raw.x !== undefined) positionX = raw.x;
+  else if (raw.pos?.x !== undefined) positionX = raw.pos.x;
+  else if (raw.position?.x !== undefined) positionX = raw.position.x;
+  else positionX = 200 + (index % 4) * 200; // spread horizontally
+
+  if (raw.positionY !== undefined) positionY = raw.positionY;
+  else if (raw.y !== undefined) positionY = raw.y;
+  else if (raw.pos?.y !== undefined) positionY = raw.pos.y;
+  else if (raw.position?.y !== undefined) positionY = raw.position.y;
+
+  const reqs = raw.requirements || raw.required || raw.reqs || {};
+  const requirements = normalizeRequirements(reqs);
+
+  const xpReward = raw.xpReward ?? raw.reward_xp ?? raw.xp ?? 100;
+
+  let parentIds: string[] = [];
+  if (Array.isArray(raw.parentIds)) parentIds = raw.parentIds;
+  else if (Array.isArray(raw.parents)) parentIds = raw.parents;
+  else if (typeof raw.parent === 'string') parentIds = [raw.parent];
+
+  // Auto-assign parent if none given and not root
+  if (parentIds.length === 0 && tier > 0) {
+    parentIds = ['core-junior-dev'];
+  }
+
+  return {
+    nodeId,
+    name,
+    description,
+    path,
+    tier,
+    positionX: Math.round(positionX),
+    positionY: Math.round(positionY),
+    requirements,
+    xpReward: Math.round(xpReward),
+    parentIds,
+    unlocked: raw.unlocked ?? (tier === 0),
+    justification: raw.justification || `AI-generated ${path} node at tier ${tier}`,
+  };
+}
+
+function extractNodesFromResponse(response: any): GeneratedNode[] {
+  if (!response) return [];
+
+  let rawNodes: any[] = [];
+
+  if (Array.isArray(response)) {
+    // LLM returned raw array
+    rawNodes = response;
+  } else if (response.newNodes && Array.isArray(response.newNodes)) {
+    rawNodes = response.newNodes;
+  } else if (response.nodes && Array.isArray(response.nodes)) {
+    rawNodes = response.nodes;
+  } else if (typeof response === 'object') {
+    // Maybe the LLM wrapped it in an extra object
+    const values = Object.values(response);
+    if (values.length === 1 && Array.isArray(values[0])) {
+      rawNodes = values[0];
+    }
+  }
+
+  return rawNodes
+    .filter((n) => n && typeof n === 'object')
+    .map((n, i) => normalizeNode(n, i));
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
 
 export async function generatePersonalizedSkillTree(
   userId: string,
@@ -95,9 +195,10 @@ export async function generatePersonalizedSkillTree(
 
   const fallback = { newNodes: [] };
 
-  const object = await groqGenerateObject(z.object({
-      newNodes: z.array(nodeSchema).max(3).describe('0-3 new nodes. Empty array if nothing new.'),
-    }), `You are the AI Architect of Systemics, a competitive developer skill tree.
+  // We tell the LLM what we want, but use a loose schema for parsing
+  const response = await groqGenerateObject(
+    looseNewNodesSchema,
+    `You are the AI Architect of Systemics, a competitive developer skill tree.
 
 Generate 0-3 NEW skill tree nodes for a specific user based on their activity and stats.
 
@@ -109,10 +210,10 @@ USER STATS:
 - Dominant Skills: ${userStats.dominantSkills.join(', ') || 'None yet'}
 
 RECENT ACTIVITIES (last 20):
-${recentActivities.slice(0, 20).map(a => `- [${a.platform}] ${a.activityType}: ${a.description} (+${a.xpAwarded} XP)`).join('\n')}
+${recentActivities.slice(0, 20).map((a) => `- [${a.platform}] ${a.activityType}: ${a.description} (+${a.xpAwarded} XP)`).join('\n')}
 
 EXISTING NODES:
-${existingNodesSummary.map(n => `- ${n.nodeId}: ${n.name} (${n.path}, tier ${n.tier}, ${n.unlocked ? 'unlocked' : 'locked'})`).join('\n')}
+${existingNodesSummary.map((n) => `- ${n.nodeId}: ${n.name} (${n.path}, tier ${n.tier}, ${n.unlocked ? 'unlocked' : 'locked'})`).join('\n')}
 
 RULES:
 1. Only generate nodes that feel NATURAL given the user's actual activity
@@ -120,11 +221,32 @@ RULES:
 3. Requirements should be ACHIEVABLE but require real effort (1.5-3x their current stats)
 4. DO NOT duplicate existing node concepts
 5. Return EMPTY newNodes array if nothing new is warranted
-6. Position nodes to not overlap (spread X, increase Y per tier)`,
+6. Position nodes to not overlap (spread X, increase Y per tier)
+
+RETURN FORMAT — a JSON object with this exact structure:
+{
+  "newNodes": [
+    {
+      "nodeId": "unique-kebab-case-id",
+      "name": "Short Hype Name",
+      "description": "What it represents and how to unlock it",
+      "path": "One of: Frontend Wizard, Systems Engineer, Data Scientist, Core, Fullstack Legend, DevOps Architect",
+      "tier": 1,
+      "positionX": 200,
+      "positionY": 200,
+      "requirements": { "total_xp": 100, "leetcode_medium": 5 },
+      "xpReward": 150,
+      "parentIds": ["core-junior-dev"],
+      "justification": "Why this node was generated"
+    }
+  ]
+}
+
+Only include requirement keys that are actually needed. Set values to 0 or omit if not required.`,
     fallback
   );
 
-  return object.newNodes ?? [];
+  return extractNodesFromResponse(response);
 }
 
 export async function generateInitialTreeFromDeepDive(
@@ -152,17 +274,17 @@ export async function generateInitialTreeFromDeepDive(
   const topRepos = repos
     .sort((a, b) => b.commitCount - a.commitCount)
     .slice(0, 10)
-    .map(r => `- ${r.name} (${r.language || 'unknown'}, ${r.commitCount} commits, ${r.stars} stars): ${(r.description || 'No description').slice(0, 100)}`)
+    .map((r) => `- ${r.name} (${r.language || 'unknown'}, ${r.commitCount} commits, ${r.stars} stars): ${(r.description || 'No description').slice(0, 100)}`)
     .join('\n');
 
   const repoReadmeSnippets = repos
-    .filter(r => r.readmeSnippet.length > 20)
+    .filter((r) => r.readmeSnippet.length > 20)
     .slice(0, 5)
-    .map(r => `[${r.name}]: ${r.readmeSnippet.slice(0, 150)}`)
+    .map((r) => `[${r.name}]: ${r.readmeSnippet.slice(0, 150)}`)
     .join('\n');
 
   const recentCommits = repos
-    .flatMap(r => r.recentCommitMessages.slice(0, 3).map(m => `[${r.name}] ${m}`))
+    .flatMap((r) => r.recentCommitMessages.slice(0, 3).map((m) => `[${r.name}] ${m}`))
     .slice(0, 20)
     .join('\n');
 
@@ -173,31 +295,10 @@ export async function generateInitialTreeFromDeepDive(
     .join(', ');
 
   const fallbackNodes = await generateInitialSkillTree();
-  const fallback = {
-    nodes: fallbackNodes.map(n => ({
-      ...n,
-      requirements: {
-        total_xp: n.requirements.total_xp ?? 0,
-        leetcode_hard: n.requirements.leetcode_hard ?? 0,
-        leetcode_medium: n.requirements.leetcode_medium ?? 0,
-        leetcode_easy: n.requirements.leetcode_easy ?? 0,
-        github_prs: n.requirements.github_prs ?? 0,
-        github_commits: n.requirements.github_commits ?? 0,
-        codeforces_rating: n.requirements.codeforces_rating ?? 0,
-        codeforces_solved: n.requirements.codeforces_solved ?? 0,
-        hackerrank_badges: n.requirements.hackerrank_badges ?? 0,
-        skill_xp_Frontend: n.requirements.skill_xp_Frontend ?? 0,
-        skill_xp_Backend: n.requirements.skill_xp_Backend ?? 0,
-        skill_xp_DevOps: n.requirements.skill_xp_DevOps ?? 0,
-        skill_xp_Architecture: n.requirements.skill_xp_Architecture ?? 0,
-        skill_xp_Algo: n.requirements.skill_xp_Algo ?? 0,
-      },
-    })),
-  } as any;
 
-  const object = await groqGenerateObject(z.object({
-      nodes: z.array(deepDiveNodeSchema).min(5).max(15).describe('5-15 nodes forming a personalized skill tree for this user.'),
-    }), `You are the AI Architect of Systemics, building a PERSONALIZED skill tree for a developer based on their ENTIRE GitHub history.
+  const response = await groqGenerateObject(
+    looseNodesSchema,
+    `You are the AI Architect of Systemics, building a PERSONALIZED skill tree for a developer based on their ENTIRE GitHub history.
 
 USER PROFILE:
 - Login: ${deepDive.user.login}
@@ -234,21 +335,39 @@ ${recentCommits}
 
 RULES:
 1. Start with ONE root node (tier 0) that should ALWAYS be unlocked — "Code Initiate" or similar
-2. Create 2-4 PATH branches at tier 1 that match the user's ACTUAL skills. If they're a frontend dev, make Frontend Wizard path prominent.
-3. Create deeper nodes (tier 2-3) that represent REAL skills this user clearly has based on their repos
-4. If user has STRONG signals in an area, make those nodes UNLOCKED (they've already earned them)
+2. Create 2-4 PATH branches at tier 1 that match the user's ACTUAL skills
+3. Create deeper nodes (tier 2-3) that represent REAL skills this user clearly has
+4. If user has STRONG signals in an area, make those nodes UNLOCKED
 5. For weaker signals, make nodes LOCKED with reasonable requirements
 6. Names must be MEMORABLE and HYPE (gaming-style). No generic names.
-7. Requirements should be ACHIEVABLE — roughly 1.2-2x their current stats for the next level, higher for further nodes
-8. This tree should feel PERSONAL — like an AI actually studied their whole dev history
-9. Position nodes so paths spread out horizontally (X) and deepen vertically (Y)
-10. Include at least one node per dominant skill area
+7. Requirements should be ACHIEVABLE — roughly 1.2-2x their current stats
+8. Position nodes so paths spread out horizontally (X) and deepen vertically (Y)
 
-Create a tree that makes this developer say "damn, that AI really studied my whole GitHub"`,
-    fallback
+RETURN FORMAT — a JSON object with this exact structure:
+{
+  "nodes": [
+    {
+      "nodeId": "unique-kebab-id",
+      "name": "Hype Name",
+      "description": "2-3 sentences",
+      "path": "Frontend Wizard",
+      "tier": 0,
+      "positionX": 500,
+      "positionY": 0,
+      "requirements": { "total_xp": 0 },
+      "xpReward": 0,
+      "parentIds": [],
+      "unlocked": true,
+      "justification": "Why this node"
+    }
+  ]
+}
+
+Only include requirement keys that are actually needed. Set values to 0 or omit if not required.`,
+    { nodes: fallbackNodes as any }
   );
 
-  return object.nodes ?? fallback.nodes;
+  return extractNodesFromResponse(response);
 }
 
 export async function generateInitialSkillTree(): Promise<GeneratedNode[]> {
@@ -317,13 +436,15 @@ export async function recommendNextPath(
 ): Promise<string> {
   const fallback = { recommendedPath: 'Fullstack Legend' as const, reasoning: 'Default recommendation' };
 
-  const object = await groqGenerateObject(z.object({
+  const object = await groqGenerateObject(
+    z.object({
       recommendedPath: z.enum(['Frontend Wizard', 'Systems Engineer', 'Data Scientist', 'Fullstack Legend', 'DevOps Architect']),
       reasoning: z.string(),
-    }), `Based on this developer's recent activity, recommend their optimal grind path.
+    }),
+    `Based on this developer's recent activity, recommend their optimal grind path.
 
 Activities:
-${activities.slice(0, 10).map(a => `- ${a.platform}: ${a.description}`).join('\n')}
+${activities.slice(0, 10).map((a) => `- ${a.platform}: ${a.description}`).join('\n')}
 
 Return the best matching path and a one-sentence reasoning.`,
     fallback
