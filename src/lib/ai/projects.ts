@@ -2,7 +2,13 @@ import { z } from 'zod';
 import { groqGenerateObject } from './groq-models';
 import { fetchRepoTree, fetchRepoFile } from '@/lib/fetchers/github-repos';
 
-const FileListSchema = z.array(z.string());
+// Accepts both raw arrays and {files: [...]} wrapper objects
+const FileListSchema = z.union([
+  z.array(z.string()),
+  z.object({ files: z.array(z.string()) }).transform((o) => o.files),
+  z.object({ fileList: z.array(z.string()) }).transform((o) => o.fileList),
+  z.object({ selectedFiles: z.array(z.string()) }).transform((o) => o.selectedFiles),
+]);
 
 const ProjectCardSchema = z.object({
   name: z.string().describe('Project name, max 30 chars'),
@@ -81,7 +87,7 @@ List the 5-10 most important files to read to understand what this project does.
     .map(([path, content]) => `--- ${path} ---\n${content.slice(0, 3000)}`)
     .join('\n\n');
 
-  const cardPrompt = `Analyze this GitHub repository and generate a project card.
+  const cardPrompt = `You are a brutal but fair project evaluator for an elite developer guild. Rate this repository HONESTLY — most developers underrate their own work, so YOU must compensate.
 
 Repo: ${repoName}
 Description: ${repoDescription || 'N/A'}
@@ -90,18 +96,26 @@ Language: ${repoLanguage || 'Unknown'}${forkContext}
 Key files:
 ${filesContext}
 
+RARITY RUBRIC — be GENEROUS. When in doubt, rank UP:
+• common: Toy scripts, hello-world tutorials, config repos, single-file utilities
+• rare: Solid personal tools, CLI apps, simple CRUD apps, basic libraries
+• epic: Production-grade apps with multiple features, good architecture, tests, auth, databases, APIs
+• legendary: ANY of the following — distributed systems, real-time features (WebSockets/Pusher), AI/LLM integration, multi-user platforms, payment systems, complex state management, microservices, competitive/gamified systems, open-source with community usage, full-stack with 5+ integrated services. IF it has a database + auth + real-time + AI + multiple user flows, it is LEGENDARY. Period.
+
+XP VALUE RUBRIC — DO NOT be stingy:
+• common: 50-150 XP
+• rare: 200-500 XP
+• epic: 600-1500 XP
+• legendary: 2000-5000 XP (complex full-stack platforms deserve 3000+, distributed systems 4000+)
+
 Generate a project card with:
 - name: project name (max 30 chars)
 - description: one compelling sentence about what it does (max 100 chars)
-- rarity: common | rare | epic | legendary (based on complexity, uniqueness, and polish)
-- xpValue: XP this project grants its owner. Be generous but fair:
-  • common (toy/script/prototype): 50-150 XP
-  • rare (solid tool/library/personal app): 200-400 XP
-  • epic (production-grade, multi-feature, well-architected): 500-1000 XP
-  • legendary (open-source with stars, complex system, innovative): 1200-3000 XP
-  Consider: code quality, architecture, tests, docs, real-world utility, uniqueness, scope
-- icon: a lucide-react icon name that represents this project type
+- rarity: common | rare | epic | legendary (use the rubric above, BE GENEROUS)
+- xpValue: XP value based on rarity rubric
+- icon: a lucide-react icon name
 - language: primary programming language`;
+
 
   const defaultCard: z.infer<typeof ProjectCardSchema> = {
     name: repoName.slice(0, 30),
@@ -118,7 +132,7 @@ Generate a project card with:
     name: card.name.slice(0, 30),
     description: card.description.slice(0, 100),
     rarity: card.rarity,
-    xpValue: Math.max(25, Math.min(5000, Math.round(card.xpValue))),
+    xpValue: Math.max(25, Math.min(6000, Math.round(card.xpValue))),
     icon: card.icon,
     language: card.language,
   };

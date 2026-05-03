@@ -392,7 +392,7 @@ function extractJSON(text: string): any {
 
   let parsed: any;
 
-  const codeBlockMatch = text.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/);
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (codeBlockMatch) {
     try {
       parsed = JSON.parse(codeBlockMatch[1].trim());
@@ -400,7 +400,7 @@ function extractJSON(text: string): any {
   }
 
   if (!parsed) {
-    const objectMatch = text.match(/\\{[\\s\\S]*\\}/);
+    const objectMatch = text.match(/\{[\s\S]*\}/);
     if (objectMatch) {
       try {
         parsed = JSON.parse(objectMatch[0]);
@@ -409,7 +409,7 @@ function extractJSON(text: string): any {
   }
 
   if (!parsed) {
-    const arrayMatch = text.match(/\\[[\\s\\S]*\\]/);
+    const arrayMatch = text.match(/\[[\s\S]*\]/);
     if (arrayMatch) {
       try {
         parsed = JSON.parse(arrayMatch[0]);
