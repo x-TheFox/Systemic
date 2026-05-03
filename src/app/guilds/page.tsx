@@ -19,6 +19,19 @@ interface Guild {
   _count: { members: number };
 }
 
+function processSvgForStorage(svg: string): string {
+  // Remove XML declaration
+  svg = svg.replace(/<\?xml[^?]*\?>\s*/i, '');
+  // Remove DOCTYPE
+  svg = svg.replace(/<!DOCTYPE[^>]*>\s*/i, '');
+  // Add responsive styles to svg tag — make it fill container
+  svg = svg.replace(
+    /<svg\b/i,
+    '<svg style="width:100%;height:100%;display:block;"'
+  );
+  return svg.trim();
+}
+
 export default function GuildsPage() {
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [loading, setLoading] = useState(true);
