@@ -348,9 +348,16 @@
 }
 
 .react-flow__edge-path {
-  stroke: hsl(var(--muted-fg) / 0.5);
+  stroke: rgba(255, 255, 255, 0.45) !important;
+  stroke-width: 2px !important;
 }
 
 .react-flow__edge-path.selected {
-  stroke: hsl(var(--accent));
+  stroke: hsl(var(--accent)) !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 4px hsl(var(--accent) / 0.6)) !important;
+}
+
+.react-flow__connectionline-path {
+  stroke: hsl(var(--accent) / 0.6) !important;
 }

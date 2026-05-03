@@ -272,11 +272,11 @@ export default function ProfilePage() {
                 View All
               </button>
             </div>
-            {/* Weekly badges horizontal scroll */}
+            {/* Weekly badges */}
             {weeklyBadges.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 mb-4 scrollbar-thin">
+              <div className="space-y-3 mb-4">
                 {weeklyBadges.map((badge: any) => (
-                  <div key={badge.id} className="shrink-0 w-48 cursor-pointer" onClick={() => setSelectedBadge(badge)}>
+                  <div key={badge.id} className="cursor-pointer" onClick={() => setSelectedBadge(badge)}>
                     <BadgeCard badge={badge} />
                   </div>
                 ))}
