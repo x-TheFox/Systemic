@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Users, Plus, Crown, Shield, Upload, X } from "lucide-react";
+import { Users, Plus, Shield, Upload, X, Loader2 } from "lucide-react";
 import { pageEntrance, staggerItem } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -19,24 +19,12 @@ interface Guild {
   _count: { members: number };
 }
 
-function processSvgForStorage(svg: string): string {
-  // Remove XML declaration
-  svg = svg.replace(/<\?xml[^?]*\?>\s*/i, '');
-  // Remove DOCTYPE
-  svg = svg.replace(/<!DOCTYPE[^>]*>\s*/i, '');
-  // Add responsive styles to svg tag — make it fill container
-  svg = svg.replace(
-    /<svg\b/i,
-    '<svg style="width:100%;height:100%;display:block;"'
-  );
-  return svg.trim();
-}
-
 export default function GuildsPage() {
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", slug: "", description: "", iconUrl: "" });
+  const [uploading, setUploading] = useState(false);
   const [myGuildId, setMyGuildId] = useState<string | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,7 +54,7 @@ export default function GuildsPage() {
     load();
   }, []);
 
-  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -75,18 +63,27 @@ export default function GuildsPage() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (!content.trim().match(/<svg[\s>]/i)) {
-        toast.error("Invalid SVG file — must contain a <svg> tag.");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || "Upload failed");
         return;
       }
-      const cleaned = processSvgForStorage(content);
-      setForm((prev) => ({ ...prev, iconUrl: cleaned }));
+
+      setForm((prev) => ({ ...prev, iconUrl: data.url }));
       toast.success("SVG uploaded!");
-    };
-    reader.readAsText(file);
+    } catch {
+      toast.error("Upload failed.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function clearIcon() {
@@ -105,7 +102,6 @@ export default function GuildsPage() {
       toast.success("Guild created!");
       setShowCreate(false);
       setForm({ name: "", slug: "", description: "", iconUrl: "" });
-      // Refresh
       const refresh = await fetch("/api/guilds");
       const data = await refresh.json();
       setGuilds(data.guilds || []);
@@ -119,7 +115,6 @@ export default function GuildsPage() {
       const res = await fetch(`/api/guilds/${slug}/join`, { method: "POST" });
       if (!res.ok) throw new Error("Failed");
       toast.success("Joined guild!");
-      // Refresh profile to update guild status
       const profileRes = await fetch("/api/profile");
       if (profileRes.ok) {
         const data = await profileRes.json();
@@ -134,7 +129,6 @@ export default function GuildsPage() {
     const guild = guilds.find((g) => g.id === guildId);
     if (!guild) return;
 
-    // Check if user is admin of this guild
     const isAdmin = guild.adminId === myUserId;
     if (isAdmin) {
       const confirmed = confirm(
@@ -149,7 +143,6 @@ export default function GuildsPage() {
       const data = await res.json();
       toast.success(data.deleted ? `Guild "${guild.name}" deleted.` : "Left guild!");
       setMyGuildId(null);
-      // Refresh list
       const refresh = await fetch("/api/guilds");
       const refreshData = await refresh.json();
       setGuilds(refreshData.guilds || []);
@@ -216,14 +209,10 @@ export default function GuildsPage() {
                 {form.iconUrl ? (
                   <div className="flex items-center gap-3 p-3 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06]">
                     <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                      {form.iconUrl.trim().match(/<svg[\s>]/i) ? (
-                        <div dangerouslySetInnerHTML={{ __html: form.iconUrl }} className="h-full w-full" />
-                      ) : (
-                        <img src={form.iconUrl} alt="Preview" className="h-full w-full object-cover" />
-                      )}
+                      <img src={form.iconUrl} alt="Preview" className="h-full w-full object-contain" />
                     </div>
                     <span className="text-sm text-fg-dim flex-1 truncate">
-                      {form.iconUrl.length > 60 ? "SVG uploaded" : form.iconUrl.slice(0, 40)}
+                      Icon uploaded
                     </span>
                     <button
                       onClick={clearIcon}
@@ -231,6 +220,11 @@ export default function GuildsPage() {
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
+                  </div>
+                ) : uploading ? (
+                  <div className="w-full h-10 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06] border-dashed text-fg-muted inline-flex items-center justify-center gap-2 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Uploading...
                   </div>
                 ) : (
                   <button
@@ -272,11 +266,7 @@ export default function GuildsPage() {
                   <div className="flex-shrink-0">
                     {guild.iconUrl ? (
                       <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                        {guild.iconUrl.trim().match(/<svg[\s>]/i) ? (
-                          <div dangerouslySetInnerHTML={{ __html: guild.iconUrl }} className="h-full w-full" />
-                        ) : (
-                          <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-cover" />
-                        )}
+                        <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain" />
                       </div>
                     ) : (
                       <div className="h-10 w-10 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/20 flex items-center justify-center">

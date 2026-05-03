@@ -544,11 +544,7 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
               <div className="relative flex-shrink-0">
                 {profile.guild.iconUrl ? (
                   <div className="h-14 w-14 rounded-[var(--radius-standard)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                    {profile.guild.iconUrl.trim().match(/<svg[\s>]/i) ? (
-                      <div dangerouslySetInnerHTML={{ __html: profile.guild.iconUrl }} className="h-full w-full" />
-                    ) : (
-                      <img src={profile.guild.iconUrl} alt={profile.guild.name} className="h-full w-full object-cover" />
-                    )}
+                    <img src={profile.guild.iconUrl} alt={profile.guild.name} className="h-full w-full object-contain" />
                   </div>
                 ) : (
                   <div className="h-14 w-14 rounded-[var(--radius-standard)] bg-accent/10 border border-accent/20 flex items-center justify-center">
