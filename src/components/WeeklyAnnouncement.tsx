@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Megaphone, Trophy, TrendingDown } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { cascadeVariants, fadeInUp } from '@/lib/motion';
 
 interface WeeklyReport {
   id: string;
@@ -25,9 +23,9 @@ interface WeeklyReport {
 function renderInline(text: string): string {
   return text
     .replace(/\*\*\*(.+?)\*\*\*/g, '<em><strong>$1</strong></em>')
-    .replace(/\*\*(.+?)\*\*/g, `<strong style="color:var(--color-text-primary);font-weight:600">$1</strong>`)
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, `<code style="padding:2px 4px;border-radius:4px;background:var(--color-accent-secondary-dim);color:var(--color-accent-secondary);font-size:12px;font-family:monospace">$1</code>`);
+    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-white/10 text-purple-300 text-xs font-mono">$1</code>');
 }
 
 function MarkdownRender({ text }: { text: string }) {
@@ -56,31 +54,17 @@ function MarkdownRender({ text }: { text: string }) {
         <div key={`table-${i}`} className="overflow-x-auto my-3">
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--color-border-default)' }}>
+              <tr className="border-b border-white/10">
                 {headerCells.map((cell, ci) => (
-                  <th
-                    key={ci}
-                    className="px-3 py-2 text-left font-medium whitespace-nowrap"
-                    style={{ color: 'var(--color-text-muted)' }}
-                    dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }}
-                  />
+                  <th key={ci} className="px-3 py-2 text-left text-white/60 font-medium whitespace-nowrap" dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }} />
                 ))}
               </tr>
             </thead>
             <tbody>
               {bodyRows.map((row, ri) => (
-                <tr
-                  key={ri}
-                  className="hover:brightness-110 transition-all"
-                  style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
-                >
+                <tr key={ri} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                   {row.map((cell, ci) => (
-                    <td
-                      key={ci}
-                      className="px-3 py-2 whitespace-nowrap"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                      dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }}
-                    />
+                    <td key={ci} className="px-3 py-2 text-white/70 whitespace-nowrap" dangerouslySetInnerHTML={{ __html: renderInline(cell.trim()) }} />
                   ))}
                 </tr>
               ))}
@@ -93,15 +77,15 @@ function MarkdownRender({ text }: { text: string }) {
 
     // Headers
     if (line.startsWith('### ')) {
-      elements.push(<h3 key={i} className="text-lg font-bold mt-4 mb-2" style={{ color: 'var(--color-text-primary)' }} dangerouslySetInnerHTML={{ __html: renderInline(line.slice(4)) }} />);
+      elements.push(<h3 key={i} className="text-lg font-bold text-white mt-4 mb-2" dangerouslySetInnerHTML={{ __html: renderInline(line.slice(4)) }} />);
     } else if (line.startsWith('## ')) {
-      elements.push(<h2 key={i} className="text-xl font-bold mt-5 mb-2" style={{ color: 'var(--color-text-primary)' }} dangerouslySetInnerHTML={{ __html: renderInline(line.slice(3)) }} />);
+      elements.push(<h2 key={i} className="text-xl font-bold text-white mt-5 mb-2" dangerouslySetInnerHTML={{ __html: renderInline(line.slice(3)) }} />);
     } else if (line.startsWith('# ')) {
-      elements.push(<h1 key={i} className="text-2xl font-bold mt-6 mb-3" style={{ color: 'var(--color-text-primary)' }} dangerouslySetInnerHTML={{ __html: renderInline(line.slice(2)) }} />);
+      elements.push(<h1 key={i} className="text-2xl font-bold text-white mt-6 mb-3" dangerouslySetInnerHTML={{ __html: renderInline(line.slice(2)) }} />);
     }
     // Divider
     else if (line.trim() === '---') {
-      elements.push(<hr key={i} style={{ borderColor: 'var(--color-border-default)' }} className="my-4" />);
+      elements.push(<hr key={i} className="border-white/10 my-4" />);
     }
     // Unordered list
     else if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
@@ -111,7 +95,7 @@ function MarkdownRender({ text }: { text: string }) {
         i++;
       }
       elements.push(
-        <ul key={i} className="list-disc list-inside space-y-1 my-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+        <ul key={i} className="list-disc list-inside space-y-1 my-2 text-sm text-white/70">
           {listItems.map((item, idx) => (
             <li key={idx} dangerouslySetInnerHTML={{ __html: renderInline(item) }} />
           ))}
@@ -127,7 +111,7 @@ function MarkdownRender({ text }: { text: string }) {
         i++;
       }
       elements.push(
-        <ol key={i} className="list-decimal list-inside space-y-1 my-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+        <ol key={i} className="list-decimal list-inside space-y-1 my-2 text-sm text-white/70">
           {listItems.map((item, idx) => (
             <li key={idx} dangerouslySetInnerHTML={{ __html: renderInline(item) }} />
           ))}
@@ -143,14 +127,7 @@ function MarkdownRender({ text }: { text: string }) {
         i++;
       }
       elements.push(
-        <blockquote
-          key={i}
-          className="pl-3 my-2 text-sm italic"
-          style={{
-            borderLeft: `2px solid var(--color-accent-secondary)`,
-            color: 'var(--color-text-muted)',
-          }}
-        >
+        <blockquote key={i} className="border-l-2 border-purple-500/40 pl-3 my-2 text-sm text-white/50 italic">
           {quoteLines.map((ql, qi) => (
             <p key={qi} dangerouslySetInnerHTML={{ __html: renderInline(ql) }} />
           ))}
@@ -165,7 +142,7 @@ function MarkdownRender({ text }: { text: string }) {
     // Regular paragraph
     else {
       elements.push(
-        <p key={i} className="text-sm leading-relaxed my-1.5" style={{ color: 'var(--color-text-secondary)' }} dangerouslySetInnerHTML={{ __html: renderInline(line) }} />
+        <p key={i} className="text-sm text-white/70 leading-relaxed my-1.5" dangerouslySetInnerHTML={{ __html: renderInline(line) }} />
       );
     }
     i++;
@@ -178,8 +155,6 @@ export function WeeklyAnnouncement() {
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
-  const [readProgress, setReadProgress] = useState(0);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -197,40 +172,19 @@ export function WeeklyAnnouncement() {
     load();
   }, []);
 
-  // Reading progress tracking
-  const handleScroll = useCallback(() => {
-    if (!contentRef.current) return;
-    const el = contentRef.current;
-    const scrollTop = el.scrollTop;
-    const scrollHeight = el.scrollHeight - el.clientHeight;
-    if (scrollHeight > 0) {
-      setReadProgress(Math.min((scrollTop / scrollHeight) * 100, 100));
-    }
-  }, []);
-
   if (loading) {
     return <Skeleton className="h-32 w-full rounded-xl" />;
   }
 
   if (!report) {
     return (
-      <motion.div
-        variants={cascadeVariants}
-        initial="hidden"
-        animate="visible"
-        custom={0}
-        className="prismatic-card p-6 flex items-center gap-4"
-      >
-        <Megaphone className="h-6 w-6" style={{ color: 'var(--color-accent-secondary)' }} />
+      <div className="glass-card p-6 flex items-center gap-4">
+        <Megaphone className="h-6 w-6 text-purple-400" />
         <div>
-          <h3 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            Weekly Post-Mortem
-          </h3>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            The Ghost hasn&apos;t published a report yet. Check back after Sunday!
-          </p>
+          <h3 className="text-white font-semibold">Weekly Post-Mortem</h3>
+          <p className="text-sm text-white/40">The Ghost hasn&apos;t published a report yet. Check back after Sunday!</p>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
@@ -238,188 +192,84 @@ export function WeeklyAnnouncement() {
   const previewLines = lines.slice(0, 10);
 
   return (
-    <motion.div
-      variants={cascadeVariants}
-      initial="hidden"
-      animate="visible"
-      custom={0}
-      className="hero-card relative overflow-hidden p-6"
-    >
-      {/* Reading progress bar */}
-      <div
-        className="absolute top-0 left-0 h-[3px] z-10"
-        style={{
-          width: `${readProgress}%`,
-          background: 'var(--color-accent-primary)',
-          boxShadow: '0 0 8px var(--color-accent-primary-glow)',
-          transition: 'width 0.1s ease-out',
-        }}
-      />
-
-      {/* Section header with secondary strip */}
-      <div className="section-strip-secondary mb-4 pt-3">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Megaphone className="h-5 w-5" style={{ color: 'var(--color-accent-secondary)' }} />
-            <span
-              className="absolute -top-1 -right-1 h-2 w-2 rounded-full animate-pulse"
-              style={{ background: 'var(--color-accent-success)' }}
-            />
+    <div className="glass-card p-6 relative overflow-hidden">
+      {/* Top bar */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative">
+          <Megaphone className="h-5 w-5 text-purple-400" />
+          <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-400 rounded-full animate-pulse" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-white font-semibold">The Ghost&apos;s Weekly Post-Mortem</h3>
+            <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/10">
+              Week {report.weekNumber}, {report.year}
+            </Badge>
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                The Ghost&apos;s Weekly Post-Mortem
-              </h3>
-              <Badge
-                variant="outline"
-                className="text-[9px] font-medium"
-                style={{
-                  borderColor: 'var(--color-accent-secondary)',
-                  color: 'var(--color-accent-secondary)',
-                  background: 'var(--color-accent-secondary-dim)',
-                }}
-              >
-                Week {report.weekNumber}, {report.year}
-              </Badge>
-            </div>
-            <p className="text-[11px]" style={{ color: 'var(--color-text-dim)' }}>
-              {report.participants} grinders · {report.totalXP.toLocaleString()} XP gained
-            </p>
-          </div>
+          <p className="text-[11px] text-white/30">
+            {report.participants} grinders · {report.totalXP.toLocaleString()} XP gained
+          </p>
         </div>
       </div>
 
       {/* MVP / Lurker quick stats */}
-      <motion.div
-        variants={fadeInUp}
-        initial="hidden"
-        animate="visible"
-        custom={0.1}
-        className="grid grid-cols-2 gap-3 mb-4"
-      >
-        {/* MVP card — accent-achievement/gold with glow-achievement */}
-        <div
-          className="p-3 rounded-lg glow-achievement"
-          style={{
-            background: `linear-gradient(to right, var(--color-accent-achievement-dim), transparent)`,
-            border: `1px solid rgba(251, 191, 36, 0.2)`,
-          }}
-        >
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="p-3 rounded-lg bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/20">
           <div className="flex items-center gap-1.5 mb-1">
-            <Trophy className="h-3.5 w-3.5" style={{ color: 'var(--color-accent-achievement)' }} />
-            <span
-              className="text-[10px] uppercase tracking-wider font-medium"
-              style={{ color: 'var(--color-accent-achievement)' }}
-            >
-              MVP
-            </span>
+            <Trophy className="h-3.5 w-3.5 text-yellow-400" />
+            <span className="text-[10px] uppercase tracking-wider text-yellow-400/70 font-medium">MVP</span>
           </div>
-          <p className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {report.mvpName || 'N/A'}
-          </p>
-          <p className="text-xs stat-value" style={{ color: 'var(--color-accent-achievement)' }}>
-            +{report.mvpXp.toLocaleString()} XP
-          </p>
+          <p className="text-sm font-bold text-white">{report.mvpName || 'N/A'}</p>
+          <p className="text-xs text-white/40">+{report.mvpXp.toLocaleString()} XP</p>
         </div>
-
-        {/* Lurker card — accent-primary/coral with glow-primary */}
-        <div
-          className="p-3 rounded-lg glow-primary"
-          style={{
-            background: `linear-gradient(to right, var(--color-accent-primary-dim), transparent)`,
-            border: `1px solid rgba(255, 97, 84, 0.2)`,
-          }}
-        >
+        <div className="p-3 rounded-lg bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20">
           <div className="flex items-center gap-1.5 mb-1">
-            <TrendingDown className="h-3.5 w-3.5" style={{ color: 'var(--color-accent-primary)' }} />
-            <span
-              className="text-[10px] uppercase tracking-wider font-medium"
-              style={{ color: 'var(--color-accent-primary)' }}
-            >
-              Lurker
-            </span>
+            <TrendingDown className="h-3.5 w-3.5 text-red-400" />
+            <span className="text-[10px] uppercase tracking-wider text-red-400/70 font-medium">Lurker</span>
           </div>
-          <p className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {report.lurkerName || 'N/A'}
-          </p>
-          <p className="text-xs stat-value" style={{ color: 'var(--color-accent-primary)' }}>
-            +{report.lurkerXp.toLocaleString()} XP
-          </p>
+          <p className="text-sm font-bold text-white">{report.lurkerName || 'N/A'}</p>
+          <p className="text-xs text-white/40">+{report.lurkerXp.toLocaleString()} XP</p>
         </div>
-      </motion.div>
+      </div>
 
       {/* Report content */}
-      <div
-        ref={contentRef}
-        onScroll={handleScroll}
-        className="max-w-none overflow-y-auto"
-        style={{ maxHeight: expanded ? '600px' : 'none' }}
-      >
+      <div className="max-w-none">
         {expanded ? (
           <MarkdownRender text={report.content} />
         ) : (
-          <div style={{ opacity: 0.6 }}>
+          <div className="opacity-60">
             <MarkdownRender text={previewLines.join('\n')} />
           </div>
         )}
       </div>
 
-      {/* Expand/collapse toggle — accent-secondary color */}
-      <motion.button
-        variants={fadeInUp}
-        initial="hidden"
-        animate="visible"
-        custom={0.2}
+      {/* Expand toggle */}
+      <button
         onClick={() => setExpanded(!expanded)}
-        className="mt-3 text-xs font-medium transition-colors"
-        style={{ color: 'var(--color-accent-secondary)' }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-accent-tertiary)')}
-        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-accent-secondary)')}
+        className="mt-3 text-xs text-purple-400 hover:text-purple-300 transition-colors font-medium"
       >
         {expanded ? 'Show less' : 'Read full report'}
-      </motion.button>
+      </button>
 
       {/* Mini leaderboard */}
       {report.rankings && report.rankings.length > 0 && (
-        <motion.div
-          variants={fadeInUp}
-          initial="hidden"
-          animate="visible"
-          custom={0.3}
-          className="mt-4 pt-4"
-          style={{ borderTop: '1px solid var(--color-border-subtle)' }}
-        >
-          <p className="stat-label mb-2">Top Grinders This Week</p>
+        <div className="mt-4 pt-4 border-t border-white/[0.06]">
+          <p className="text-[10px] uppercase tracking-wider text-white/20 mb-2">Top Grinders This Week</p>
           <div className="space-y-1.5">
             {report.rankings.slice(0, 5).map((r, i) => (
               <div key={i} className="flex items-center gap-2 text-xs">
-                <span
-                  className="w-5 text-right font-mono"
-                  style={{
-                    color:
-                      i === 0
-                        ? 'var(--color-accent-achievement)'
-                        : i === 1
-                        ? 'var(--color-text-primary)'
-                        : i === 2
-                        ? 'var(--color-accent-achievement)'
-                        : 'var(--color-text-dim)',
-                  }}
-                >
+                <span className={`w-5 text-right font-mono ${
+                  i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-500' : 'text-white/30'
+                }`}>
                   {i + 1}
                 </span>
-                <span className="truncate flex-1" style={{ color: 'var(--color-text-secondary)' }}>
-                  {r.name}
-                </span>
-                <span className="stat-value" style={{ color: 'var(--color-text-muted)' }}>
-                  {r.xp.toLocaleString()} XP
-                </span>
+                <span className="text-white/70 truncate flex-1">{r.name}</span>
+                <span className="text-white/30">{r.xp.toLocaleString()} XP</span>
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
-    </motion.div>
+    </div>
   );
 }

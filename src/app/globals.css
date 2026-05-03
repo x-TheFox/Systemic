@@ -4,107 +4,39 @@
 
 @layer base {
   :root {
-    /* ═══════════════════════════════════════════
-       SYSTEMICS — Prismatic Trophy Case Tokens
-       ═══════════════════════════════════════════ */
-
-    /* Surface layers — warm indigo-black depth */
-    --color-base: #0B0D17;
-    --color-surface: #0F1119;
-    --color-elevated: #151825;
-    --color-overlay: #1C1F33;
-    --color-float: #252840;
-
-    /* Accent system — warm, vibrant, screenshot-worthy */
-    --color-accent-primary: #FF6154;
-    --color-accent-primary-dim: rgba(255, 97, 84, 0.12);
-    --color-accent-primary-glow: rgba(255, 97, 84, 0.25);
-
-    --color-accent-secondary: #A855F7;
-    --color-accent-secondary-dim: rgba(168, 85, 247, 0.12);
-    --color-accent-secondary-glow: rgba(168, 85, 247, 0.25);
-
-    --color-accent-tertiary: #22D3EE;
-    --color-accent-tertiary-dim: rgba(34, 211, 238, 0.12);
-    --color-accent-tertiary-glow: rgba(34, 211, 238, 0.25);
-
-    --color-accent-achievement: #FBBF24;
-    --color-accent-achievement-dim: rgba(251, 191, 36, 0.12);
-    --color-accent-achievement-glow: rgba(251, 191, 36, 0.25);
-
-    --color-accent-success: #34D399;
-    --color-accent-success-dim: rgba(52, 211, 153, 0.12);
-    --color-accent-success-glow: rgba(52, 211, 153, 0.25);
-
-    /* Semantic */
-    --color-destructive: #EF4444;
-    --color-destructive-dim: rgba(239, 68, 68, 0.12);
-    --color-warning: #F59E0B;
-
-    /* Text luminosity hierarchy */
-    --color-text-primary: #F0F0F5;
-    --color-text-secondary: #9CA3B8;
-    --color-text-muted: #5E6380;
-    --color-text-dim: #363950;
-
-    /* Borders */
-    --color-border-subtle: rgba(255, 255, 255, 0.05);
-    --color-border-default: rgba(255, 255, 255, 0.10);
-    --color-border-strong: rgba(255, 255, 255, 0.18);
-
-    /* Easing */
-    --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-
-    /* Durations */
-    --duration-instant: 100ms;
-    --duration-fast: 200ms;
-    --duration-standard: 400ms;
-    --duration-slow: 700ms;
-
-    /* Border radius */
-    --radius-compact: 8px;
-    --radius-standard: 14px;
-    --radius-container: 24px;
-
-    /* ═══════════════════════════════════════════
-       shadcn Compatibility Mappings
-       ═══════════════════════════════════════════ */
-
-    --background: 230 30% 5%;
-    --foreground: 230 20% 94%;
-    --card: 230 25% 8%;
-    --card-foreground: 230 20% 94%;
-    --popover: 230 25% 10%;
-    --popover-foreground: 230 20% 94%;
-    --primary: 4 100% 62%;
-    --primary-foreground: 230 30% 5%;
-    --secondary: 230 20% 14%;
-    --secondary-foreground: 230 20% 94%;
-    --muted: 230 20% 14%;
-    --muted-foreground: 230 15% 45%;
-    --accent: 4 100% 62%;
-    --accent-foreground: 230 30% 5%;
-    --destructive: 0 84% 60%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 263 70% 50%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 230 20% 14%;
-    --input: 230 20% 14%;
-    --ring: 4 100% 62%;
-    --radius: 0.875rem;
-    --chart-1: 4 100% 62%;
-    --chart-2: 270 70% 60%;
-    --chart-3: 190 85% 50%;
-    --chart-4: 45 97% 55%;
-    --chart-5: 160 70% 55%;
-    --sidebar-background: 230 25% 7%;
-    --sidebar-foreground: 230 20% 94%;
-    --sidebar-primary: 4 100% 62%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 263 70% 50%;
+    --radius: 0.75rem;
+    --chart-1: 263 70% 50%;
+    --chart-2: 187 85% 43%;
+    --chart-3: 24 95% 53%;
+    --chart-4: 142 71% 45%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 263 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 20% 14%;
-    --sidebar-accent-foreground: 230 20% 94%;
-    --sidebar-border: 230 20% 14%;
-    --sidebar-ring: 4 100% 62%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 263 70% 50%;
   }
 
   * {
@@ -112,8 +44,8 @@
   }
 
   body {
-    @apply bg-[var(--color-base)] text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+    @apply bg-[#0a0a0f] text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   html {
@@ -126,470 +58,127 @@
     text-wrap: balance;
   }
 
-  /* ═══════════════════════════════════════════
-     Surface Utilities — Luminance Layering
-     ═══════════════════════════════════════════ */
-
-  .surface-base {
-    background-color: var(--color-base);
-  }
-  .surface-surface {
-    background-color: var(--color-surface);
-  }
-  .surface-elevated {
-    background-color: var(--color-elevated);
-  }
-  .surface-overlay {
-    background-color: var(--color-overlay);
-  }
-  .surface-float {
-    background-color: var(--color-float);
+  .glass-card {
+    @apply relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl;
+    box-shadow: 
+      0 0 0 1px rgba(255,255,255,0.03),
+      0 4px 24px -1px rgba(0,0,0,0.3),
+      inset 0 1px 0 rgba(255,255,255,0.05);
   }
 
-  /* ═══════════════════════════════════════════
-     Prismatic Card — Signature Component
-     Frosted glass with prismatic edge refraction
-     ═══════════════════════════════════════════ */
-
-  .prismatic-card {
-    @apply relative overflow-hidden backdrop-blur-xl;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.04) 0%,
-      rgba(255, 255, 255, 0.02) 50%,
-      rgba(255, 255, 255, 0.01) 100%
-    );
-    border-radius: var(--radius-standard);
-    border: 1px solid var(--color-border-default);
-    box-shadow:
-      0 4px 32px -8px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  }
-
-  .prismatic-card::before {
+  .glass-card::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: conic-gradient(
-      from var(--prismatic-angle, 0deg),
-      rgba(255, 97, 84, 0.3) 0%,
-      rgba(168, 85, 247, 0.3) 25%,
-      rgba(34, 211, 238, 0.3) 50%,
-      rgba(251, 191, 36, 0.3) 75%,
-      rgba(255, 97, 84, 0.3) 100%
-    );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-    animation: prismatic-rotate 8s linear infinite;
-  }
-
-  /* ═══════════════════════════════════════════
-     Hero Card — For XP Hero, Podium Cards
-     Larger, more dramatic treatment
-     ═══════════════════════════════════════════ */
-
-  .hero-card {
-    @apply relative overflow-hidden backdrop-blur-xl;
     background: linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.06) 0%,
-      rgba(255, 255, 255, 0.03) 40%,
-      rgba(255, 255, 255, 0.01) 100%
-    );
-    border-radius: var(--radius-container);
-    border: 1px solid var(--color-border-strong);
-    box-shadow:
-      0 8px 48px -12px rgba(0, 0, 0, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-
-  .hero-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1.5px;
-    background: conic-gradient(
-      from var(--prismatic-angle, 0deg),
-      rgba(255, 97, 84, 0.4) 0%,
-      rgba(168, 85, 247, 0.4) 25%,
-      rgba(34, 211, 238, 0.4) 50%,
-      rgba(251, 191, 36, 0.4) 75%,
-      rgba(255, 97, 84, 0.4) 100%
+      135deg,
+      rgba(168, 85, 247, 0.15) 0%,
+      rgba(6, 182, 212, 0.08) 50%,
+      transparent 100%
     );
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
-    animation: prismatic-rotate 6s linear infinite;
   }
 
-  /* ═══════════════════════════════════════════
-     Glow Well — Accent elements emit light
-     ═══════════════════════════════════════════ */
-
-  .glow-primary {
-    box-shadow: 0 0 24px var(--color-accent-primary-glow), 0 0 48px rgba(255, 97, 84, 0.1);
-  }
-  .glow-secondary {
-    box-shadow: 0 0 24px var(--color-accent-secondary-glow), 0 0 48px rgba(168, 85, 247, 0.1);
-  }
-  .glow-achievement {
-    box-shadow: 0 0 24px var(--color-accent-achievement-glow), 0 0 48px rgba(251, 191, 36, 0.1);
-  }
-  .glow-success {
-    box-shadow: 0 0 24px var(--color-accent-success-glow), 0 0 48px rgba(52, 211, 153, 0.1);
-  }
-  .glow-tertiary {
-    box-shadow: 0 0 24px var(--color-accent-tertiary-glow), 0 0 48px rgba(34, 211, 238, 0.1);
+  .glow-text {
+    text-shadow: 
+      0 0 20px rgba(168, 85, 247, 0.5),
+      0 0 40px rgba(168, 85, 247, 0.3),
+      0 0 60px rgba(168, 85, 247, 0.1);
   }
 
-  /* ═══════════════════════════════════════════
-     Gradient Text — Brand Typography
-     ═══════════════════════════════════════════ */
+  .glow-border {
+    box-shadow: 
+      0 0 0 1px rgba(168, 85, 247, 0.2),
+      0 0 20px rgba(168, 85, 247, 0.1),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
 
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #FF6154 0%, #A855F7 40%, #22D3EE 70%, #FBBF24 100%);
+    background-image: linear-gradient(135deg, #c084fc 0%, #22d3ee 50%, #f472b6 100%);
   }
-
-  .gradient-text-warm {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #FF6154 0%, #FBBF24 50%, #FF6154 100%);
-  }
-
-  .gradient-text-cool {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #22D3EE 0%, #A855F7 50%, #34D399 100%);
-  }
-
-  /* ═══════════════════════════════════════════
-     Gradient Mesh — Atmospheric Backgrounds
-     ═══════════════════════════════════════════ */
-
-  .mesh-gradient-primary {
-    background:
-      radial-gradient(ellipse 80% 50% at 20% 40%, rgba(255, 97, 84, 0.08) 0%, transparent 70%),
-      radial-gradient(ellipse 60% 40% at 80% 20%, rgba(168, 85, 247, 0.06) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 60% at 50% 80%, rgba(34, 211, 238, 0.05) 0%, transparent 70%);
-  }
-
-  .mesh-gradient-arena {
-    background:
-      radial-gradient(ellipse 70% 50% at 30% 30%, rgba(251, 191, 36, 0.08) 0%, transparent 70%),
-      radial-gradient(ellipse 60% 40% at 70% 60%, rgba(255, 97, 84, 0.06) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 50% at 50% 90%, rgba(168, 85, 247, 0.04) 0%, transparent 70%);
-  }
-
-  .mesh-gradient-garden {
-    background:
-      radial-gradient(ellipse 60% 50% at 40% 40%, rgba(52, 211, 153, 0.06) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 40% at 70% 30%, rgba(34, 211, 238, 0.05) 0%, transparent 70%),
-      radial-gradient(ellipse 70% 60% at 30% 80%, rgba(168, 85, 247, 0.04) 0%, transparent 70%);
-  }
-
-  /* ═══════════════════════════════════════════
-     Noise Texture — Breaks AI-clean look
-     ═══════════════════════════════════════════ */
-
-  .noise-overlay::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    opacity: 0.03;
-    pointer-events: none;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  }
-
-  /* ═══════════════════════════════════════════
-     Shimmer Sweep — Treasure gleaming effect
-     ═══════════════════════════════════════════ */
-
-  .shimmer-sweep {
-    position: relative;
-    overflow: hidden;
-  }
-  .shimmer-sweep::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.08) 40%,
-      rgba(255, 255, 255, 0.15) 50%,
-      rgba(255, 255, 255, 0.08) 60%,
-      transparent 100%
-    );
-    animation: shimmer-sweep 3s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  /* ═══════════════════════════════════════════
-     Energy Bar — Living progress indicator
-     ═══════════════════════════════════════════ */
-
-  .energy-bar-track {
-    @apply relative overflow-hidden rounded-full;
-    background: var(--color-border-subtle);
-    height: 4px;
-  }
-
-  .energy-bar-fill {
-    @apply relative h-full rounded-full;
-    background: linear-gradient(90deg, var(--color-accent-primary), var(--color-accent-achievement));
-    box-shadow: 0 0 8px var(--color-accent-primary-glow);
-  }
-
-  .energy-bar-fill::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.3) 50%,
-      transparent 100%
-    );
-    animation: energy-shimmer 1.5s ease-in-out infinite;
-  }
-
-  /* ═══════════════════════════════════════════
-     Section Color-Coding Strip
-     ═══════════════════════════════════════════ */
-
-  .section-strip-primary {
-    border-top: 2px solid var(--color-accent-primary);
-  }
-  .section-strip-secondary {
-    border-top: 2px solid var(--color-accent-secondary);
-  }
-  .section-strip-achievement {
-    border-top: 2px solid var(--color-accent-achievement);
-  }
-  .section-strip-success {
-    border-top: 2px solid var(--color-accent-success);
-  }
-  .section-strip-tertiary {
-    border-top: 2px solid var(--color-accent-tertiary);
-  }
-
-  /* ═══════════════════════════════════════════
-     Ambient Glow Sections
-     ═══════════════════════════════════════════ */
-
-  .ambient-coral {
-    box-shadow: inset 0 0 80px -40px rgba(255, 97, 84, 0.06);
-  }
-  .ambient-violet {
-    box-shadow: inset 0 0 80px -40px rgba(168, 85, 247, 0.06);
-  }
-  .ambient-gold {
-    box-shadow: inset 0 0 80px -40px rgba(251, 191, 36, 0.06);
-  }
-  .ambient-cyan {
-    box-shadow: inset 0 0 80px -40px rgba(34, 211, 238, 0.06);
-  }
-  .ambient-emerald {
-    box-shadow: inset 0 0 80px -40px rgba(52, 211, 153, 0.06);
-  }
-
-  /* ═══════════════════════════════════════════
-     Subtle Grid Background
-     ═══════════════════════════════════════════ */
 
   .subtle-grid {
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-image: 
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
     background-size: 60px 60px;
   }
 
-  /* ═══════════════════════════════════════════
-     Stat Typography
-     ═══════════════════════════════════════════ */
-
-  .stat-value {
-    font-family: var(--font-geist-mono), monospace;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
   }
 
-  .stat-label {
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
+  .animate-pulse-slow {
+    animation: pulse-slow 4s ease-in-out infinite;
   }
 
-  /* ═══════════════════════════════════════════
-     Badge Rarity Glow
-     ═══════════════════════════════════════════ */
-
-  .badge-glow-legendary {
-    box-shadow: 0 0 40px rgba(251, 191, 36, 0.3), 0 0 80px rgba(251, 191, 36, 0.15), inset 0 0 20px rgba(251, 191, 36, 0.05);
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
   }
-  .badge-glow-epic {
-    box-shadow: 0 0 30px rgba(168, 85, 247, 0.3), 0 0 60px rgba(168, 85, 247, 0.12), inset 0 0 15px rgba(168, 85, 247, 0.05);
-  }
-  .badge-glow-rare {
-    box-shadow: 0 0 25px rgba(34, 211, 238, 0.25), 0 0 50px rgba(34, 211, 238, 0.1);
-  }
-  .badge-glow-common {
-    box-shadow: 0 0 15px rgba(156, 163, 184, 0.15);
-  }
-
-  /* ═══════════════════════════════════════════
-     3D Tilt Hover — For cards and badges
-     ═══════════════════════════════════════════ */
-
-  .tilt-hover {
-    transform-style: preserve-3d;
-    perspective: 800px;
-    transition: transform var(--duration-fast) var(--ease-smooth);
-  }
-  .tilt-hover:hover {
-    transform: perspective(800px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) scale(1.02);
-  }
-
-  /* ═══════════════════════════════════════════
-     Edge Lighting — Interactive elements
-     ═══════════════════════════════════════════ */
-
-  .edge-light:hover {
-    border-color: var(--color-accent-primary) !important;
-    box-shadow: 0 0 12px var(--color-accent-primary-dim), inset 0 0 12px var(--color-accent-primary-dim);
-  }
-}
-
-/* ═══════════════════════════════════════════
-   Keyframe Animations
-   ═══════════════════════════════════════════ */
-
-@keyframes prismatic-rotate {
-  from { --prismatic-angle: 0deg; }
-  to { --prismatic-angle: 360deg; }
-}
-
-@property --prismatic-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-@keyframes shimmer-sweep {
-  0% { left: -100%; }
-  50% { left: 100%; }
-  100% { left: 100%; }
-}
-
-@keyframes energy-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+  50% { transform: translateY(-10px); }
 }
 
-@keyframes pulse-glow {
+@keyframes pulse-slow {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
 }
 
-@keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.005); }
+@keyframes glow {
+  from { 
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.2), 0 0 40px rgba(168, 85, 247, 0.1);
+  }
+  to { 
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.4), 0 0 60px rgba(168, 85, 247, 0.2);
+  }
 }
 
-@keyframes badge-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(16px); }
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes count-up-pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+.animate-slide-in {
+  animation: slide-in 0.5s ease-out forwards;
 }
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-.animate-breathe {
-  animation: breathe 3s ease-in-out infinite;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.5s var(--ease-out-expo) forwards;
-}
-
-.animate-badge-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-  background-size: 200% 100%;
-  animation: badge-shimmer 3s ease-in-out infinite;
-}
-
-/* ═══════════════════════════════════════════
-   React Flow Overrides — Skill Tree
-   ═══════════════════════════════════════════ */
 
 .react-flow__attribution {
   display: none !important;
 }
 
 .react-flow__minimap {
-  background: var(--color-elevated) !important;
-  border-radius: var(--radius-standard) !important;
-  border: 1px solid var(--color-border-default) !important;
+  background: #111118 !important;
+  border-radius: 8px !important;
 }
 
 .react-flow__controls {
-  border-radius: var(--radius-compact) !important;
+  border-radius: 8px !important;
   overflow: hidden;
-  border: 1px solid var(--color-border-default) !important;
 }
 
 .react-flow__controls-button {
-  background: var(--color-elevated) !important;
-  border-bottom: 1px solid var(--color-border-subtle) !important;
-  fill: var(--color-text-muted) !important;
+  background: #111118 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  fill: rgba(255,255,255,0.5) !important;
 }
 
 .react-flow__controls-button:hover {
-  background: var(--color-overlay) !important;
-  fill: var(--color-text-primary) !important;
+  background: #1a1a24 !important;
 }
 
 .react-flow__edge-path {
-  stroke: var(--color-border-strong) !important;
+  stroke: rgba(255,255,255,0.15) !important;
 }
 
 .react-flow__edge-path.selected {
-  stroke: var(--color-accent-primary) !important;
-}
-
-.react-flow__background {
-  background: var(--color-base) !important;
+  stroke: #a855f7 !important;
 }

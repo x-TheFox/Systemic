@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 interface WeeklyBadge {
   id: string;
@@ -33,99 +32,18 @@ interface LeaderboardUser {
   codeforcesRating: number;
   skillTreeState?: { currentGrind: string | null } | null;
   badges?: WeeklyBadge[];
-  rankChange?: number;
 }
 
 const podiumConfig: Record<number, { src: string; title: string; subtitle: string; color: string; ring: string; shadow: string; border: string; nameColor: string }> = {
-  1: {
-    src: '/badges/mvp.svg',
-    title: 'THE HONORED ONE',
-    subtitle: '1ST PLACE',
-    color: 'var(--color-accent-achievement)',
-    ring: 'ring-2 ring-amber-400/80',
-    shadow: '0 0 40px rgba(251,191,36,0.5), 0 0 80px rgba(251,191,36,0.2), 0 0 120px rgba(251,191,36,0.08)',
-    border: 'border-amber-400/40',
-    nameColor: 'text-amber-400',
-  },
-  2: {
-    src: '/badges/2nd.svg',
-    title: 'SILVER RUNNER',
-    subtitle: '2ND PLACE',
-    color: 'var(--color-accent-secondary)',
-    ring: 'ring-2 ring-purple-500/80',
-    shadow: '0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.15)',
-    border: 'border-purple-500/40',
-    nameColor: 'text-purple-400',
-  },
-  3: {
-    src: '/badges/3rd.svg',
-    title: 'BRONZE CHALLENGER',
-    subtitle: '3RD PLACE',
-    color: '#22D3EE',
-    ring: 'ring-2 ring-cyan-400/80',
-    shadow: '0 0 25px rgba(34,211,238,0.35), 0 0 50px rgba(34,211,238,0.1)',
-    border: 'border-cyan-400/40',
-    nameColor: 'text-cyan-400',
-  },
+  1: { src: '/badges/mvp.svg', title: 'THE HONORED ONE', subtitle: '1ST PLACE', color: '#f59e0b', ring: 'ring-2 ring-yellow-500/80', shadow: '0 0 40px rgba(245,158,11,0.5), 0 0 80px rgba(245,158,11,0.2)', border: 'border-yellow-500/40', nameColor: 'text-yellow-400' },
+  2: { src: '/badges/2nd.svg', title: 'SILVER RUNNER', subtitle: '2ND PLACE', color: '#a855f7', ring: 'ring-2 ring-purple-500/80', shadow: '0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.15)', border: 'border-purple-500/40', nameColor: 'text-purple-400' },
+  3: { src: '/badges/3rd.svg', title: 'BRONZE CHALLENGER', subtitle: '3RD PLACE', color: '#3b82f6', ring: 'ring-2 ring-blue-500/80', shadow: '0 0 25px rgba(59,130,246,0.35), 0 0 50px rgba(59,130,246,0.1)', border: 'border-blue-500/40', nameColor: 'text-blue-400' },
 };
 
 const bottomBadgeConfig: Record<string, { src: string; label: string; color: string; border: string; shadow: string }> = {
-  'svg:last1': {
-    src: '/badges/last1.svg',
-    label: 'THE LURKER',
-    color: 'var(--color-text-muted)',
-    border: 'border-[var(--color-border-subtle)]',
-    shadow: '0 0 15px rgba(107,114,128,0.25)',
-  },
-  'svg:last2': {
-    src: '/badges/last2.svg',
-    label: 'THE PENULTIMATE',
-    color: 'var(--color-text-muted)',
-    border: 'border-[var(--color-border-subtle)]',
-    shadow: '0 0 15px rgba(107,114,128,0.25)',
-  },
+  'svg:last1': { src: '/badges/last1.svg', label: 'THE LURKER', color: '#6b7280', border: 'border-gray-500/30', shadow: '0 0 15px rgba(107,114,128,0.25)' },
+  'svg:last2': { src: '/badges/last2.svg', label: 'THE PENULTIMATE', color: '#6b7280', border: 'border-gray-500/30', shadow: '0 0 15px rgba(107,114,128,0.25)' },
 };
-
-/* ── Animation presets ── */
-const containerStagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
-  visible: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
-  },
-};
-
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.85, filter: 'blur(4px)' },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    filter: 'blur(0px)',
-    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
-  },
-};
-
-const podiumVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.15 } },
-};
-
-const podiumItem = (rank: number) => ({
-  hidden: { opacity: 0, y: rank === 1 ? 40 : 28, scale: rank === 1 ? 0.9 : 0.92 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] as [number, number, number, number], delay: (3 - rank) * 0.08 },
-  },
-});
 
 export function LeaderboardTable() {
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
@@ -151,7 +69,7 @@ export function LeaderboardTable() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 w-full" style={{ borderRadius: 'var(--radius-standard)' }} />
+          <Skeleton key={i} className="h-20 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -159,14 +77,9 @@ export function LeaderboardTable() {
 
   if (users.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-center py-12"
-        style={{ color: 'var(--color-text-dim)' }}
-      >
+      <div className="text-center py-12 text-white/30">
         No players yet. Be the first to sync!
-      </motion.div>
+      </div>
     );
   }
 
@@ -182,411 +95,134 @@ export function LeaderboardTable() {
     return null;
   }
 
-  function RankChangeIndicator({ change }: { change?: number }) {
-    if (change === undefined || change === 0) return null;
-    const isUp = change > 0;
-    return (
-      <span
-        className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${
-          isUp ? 'text-emerald-400' : 'text-red-400'
-        }`}
-      >
-        {isUp ? '▲' : '▼'}
-        {Math.abs(change)}
-      </span>
-    );
-  }
-
-  /* Reorder podium for asymmetric visual: 2nd | 1st | 3rd */
-  const podiumOrder = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3;
-
   return (
-    <motion.div
-      className="space-y-6"
-      variants={containerStagger}
-      initial="hidden"
-      animate="visible"
-    >
-      {/* ── Podium — Top 3 ── */}
-      <motion.div
-        className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end"
-        variants={podiumVariants}
-      >
-        {podiumOrder.map((user) => {
-          const rank = users.indexOf(user) + 1;
+    <div className="space-y-6">
+      {/* Podium — Top 3 */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {top3.map((user, i) => {
+          const rank = i + 1;
           const cfg = podiumConfig[rank];
           const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : '#';
           const isClickable = !!user.githubHandle;
           const Wrapper = isClickable ? Link : 'div';
           const wrapperProps = isClickable ? { href: profileUrl } : {};
-          const isFirst = rank === 1;
 
           return (
             // @ts-expect-error dynamic wrapper
             <Wrapper key={user.id} {...wrapperProps} className="block">
-              <motion.div
-                variants={podiumItem(rank)}
-                className={`hero-card relative flex flex-col items-center rounded-2xl border backdrop-blur-sm transition-all hover:scale-[1.02] cursor-pointer ${
-                  isFirst ? 'p-8 pb-10' : 'p-6 pb-8'
-                } ${cfg.border}`}
-                style={{
-                  boxShadow: cfg.shadow,
-                  background: isFirst
-                    ? 'linear-gradient(to bottom, rgba(251,191,36,0.08), rgba(251,191,36,0.02))'
-                    : 'linear-gradient(to bottom, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
-                  borderRadius: 'var(--radius-container)',
-                }}
+              <div
+                className={`relative flex flex-col items-center p-6 pb-8 rounded-2xl bg-gradient-to-b from-white/[0.06] to-white/[0.02] border ${cfg.border} backdrop-blur-sm transition-all hover:scale-[1.02] cursor-pointer`}
+                style={{ boxShadow: cfg.shadow }}
               >
-                {/* Crown for 1st */}
-                {isFirst && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.5, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ delay: 0.5, duration: 0.4, type: 'spring' }}
-                    className="absolute -top-4 left-1/2 -translate-x-1/2 text-3xl drop-shadow-lg"
-                  >
+                {rank === 1 && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl drop-shadow-lg">
                     👑
-                  </motion.div>
+                  </div>
                 )}
 
-                {/* Badge image with glow */}
-                <motion.div
-                  initial={{ scale: 0.7, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2 + (3 - rank) * 0.1, duration: 0.5, type: 'spring' }}
-                  className={`rounded-2xl overflow-hidden ${cfg.ring} mb-4 flex items-center justify-center ${
-                    isFirst ? 'h-40 w-40' : 'h-32 w-32'
-                  }`}
-                  style={{
-                    boxShadow: cfg.shadow,
-                    background: isFirst
-                      ? 'radial-gradient(circle, rgba(251,191,36,0.12) 0%, transparent 70%)'
-                      : rank === 2
-                        ? 'radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%)'
-                        : 'radial-gradient(circle, rgba(34,211,238,0.08) 0%, transparent 70%)',
-                  }}
-                >
-                  <img
-                    src={cfg.src}
-                    alt={cfg.title}
-                    className="h-full w-full object-contain"
-                    style={{
-                      filter: isFirst
-                        ? 'drop-shadow(0 0 16px rgba(251,191,36,0.6))'
-                        : rank === 2
-                          ? 'drop-shadow(0 0 12px rgba(168,85,247,0.5))'
-                          : 'drop-shadow(0 0 10px rgba(34,211,238,0.5))',
-                    }}
-                  />
-                </motion.div>
+                <div className={`h-32 w-32 rounded-2xl overflow-hidden ${cfg.ring} mb-3`} style={{ boxShadow: cfg.shadow }}>
+                  <img src={cfg.src} alt={cfg.title} className="h-full w-full object-contain" />
+                </div>
 
-                {/* Title & subtitle */}
                 <div className="text-center mb-2">
-                  <div
-                    className={`text-xs font-black tracking-[0.2em] ${cfg.nameColor} opacity-80`}
-                  >
+                  <div className={`text-xs font-black tracking-[0.2em] ${cfg.nameColor} opacity-80`}>
                     {cfg.title}
                   </div>
-                  <div
-                    className="text-[10px] tracking-wider"
-                    style={{ color: 'var(--color-text-dim)' }}
-                  >
+                  <div className="text-[10px] text-white/30 tracking-wider">
                     {cfg.subtitle}
                   </div>
                 </div>
 
-                {/* Avatar */}
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.4 + (3 - rank) * 0.08, type: 'spring' }}
-                >
-                  <Avatar
-                    className={`border-2 mb-2 ${isFirst ? 'h-12 w-12' : 'h-11 w-11'}`}
-                    style={{ borderColor: 'var(--color-border-default)' }}
-                  >
-                    <AvatarImage src={user.imageUrl || undefined} />
-                    <AvatarFallback
-                      className="text-white text-sm font-bold"
-                      style={{ background: 'linear-gradient(to bottom right, var(--color-accent-secondary), #22D3EE)' }}
-                    >
-                      {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </motion.div>
+                <Avatar className="h-11 w-11 border-2 border-white/15 mb-2">
+                  <AvatarImage src={user.imageUrl || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-purple-600 to-cyan-600 text-white text-sm font-bold">
+                    {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
 
-                {/* Name & stats */}
                 <div className="text-center">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <span
-                      className="font-bold truncate max-w-[180px]"
-                      style={{ color: 'var(--color-text-primary)', fontSize: isFirst ? '1.05rem' : '0.95rem' }}
-                    >
-                      {user.name || user.email.split('@')[0]}
-                    </span>
-                    <RankChangeIndicator change={user.rankChange} />
+                  <div className="text-white font-bold text-base truncate max-w-[180px]">
+                    {user.name || user.email.split('@')[0]}
                   </div>
-
                   {user.title && (
-                    <span
-                      className="inline-block mt-1 px-3 py-0.5 rounded-full text-[11px] font-semibold"
-                      style={{
-                        background: 'linear-gradient(to right, rgba(251,191,36,0.2), rgba(251,191,36,0.05))',
-                        border: '1px solid rgba(251,191,36,0.3)',
-                        color: 'var(--color-accent-achievement)',
-                        borderRadius: 'var(--radius-compact)',
-                      }}
-                    >
+                    <span className="inline-block mt-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gradient-to-r from-amber-500/20 to-amber-500/5 border border-amber-500/30 text-amber-300">
                       {user.title}
                     </span>
                   )}
                   {!user.title && user.skillTreeState?.currentGrind && (
-                    <span
-                      className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px]"
-                      style={{
-                        border: '1px solid rgba(168,85,247,0.3)',
-                        color: 'var(--color-accent-secondary)',
-                        background: 'rgba(168,85,247,0.1)',
-                        borderRadius: 'var(--radius-compact)',
-                      }}
-                    >
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] border border-purple-500/30 text-purple-400 bg-purple-500/10">
                       {user.skillTreeState.currentGrind}
                     </span>
                   )}
-
-                  <div className="mt-2">
-                    <span className="stat-value" style={{ color: 'var(--color-text-primary)', fontSize: isFirst ? '1.65rem' : '1.5rem' }}>
-                      {user.xp.toLocaleString()}
-                    </span>
-                    <span className="stat-label" style={{ color: 'var(--color-accent-secondary)', fontSize: '0.8rem', marginLeft: '4px' }}>
-                      XP
-                    </span>
+                  <div className="text-white font-bold text-2xl mt-2">
+                    {user.xp.toLocaleString()} <span className="text-purple-400 text-sm font-medium">XP</span>
                   </div>
-
-                  <div className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                  <div className="text-white/30 text-[11px] mt-0.5">
                     {user.totalCommits} commits · {user.totalPRs} PRs · {user.leetcodeHard}H
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </Wrapper>
           );
         })}
-      </motion.div>
+      </div>
 
-      {/* ── Middle — Rank 4+ ── */}
+      {/* Middle — Rank 4+ */}
       {middleUsers.length > 0 && (
-        <motion.div
-          className="space-y-2"
-          variants={containerStagger}
-          initial="hidden"
-          animate="visible"
-        >
-          {middleUsers.map((user, idx) => {
+        <div className="space-y-2">
+          {middleUsers.map((user) => {
             const rank = users.indexOf(user) + 1;
             const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : '#';
             const isClickable = !!user.githubHandle;
 
-            return (
-              <motion.div key={user.id} variants={fadeUp} custom={idx}>
-                {isClickable ? (
-                  <Link href={profileUrl} className="block">
-                    <div
-                      className="prismatic-card flex items-center gap-3 p-3 border backdrop-blur-sm transition-all hover:scale-[1.005] hover:bg-white/[0.05]"
-                      style={{
-                        background: 'rgba(255,255,255,0.03)',
-                        borderColor: 'var(--color-border-subtle)',
-                        borderRadius: 'var(--radius-standard)',
-                      }}
-                    >
-                      <div
-                        className="flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold flex-shrink-0"
-                        style={{
-                          background: 'var(--color-surface)',
-                          color: 'var(--color-text-muted)',
-                        }}
-                      >
-                        {rank}
-                      </div>
-
-                      <Avatar className="h-8 w-8 flex-shrink-0" style={{ border: '1px solid var(--color-border-subtle)' }}>
-                        <AvatarImage src={user.imageUrl || undefined} />
-                        <AvatarFallback
-                          className="text-white text-xs font-bold"
-                          style={{ background: 'linear-gradient(to bottom right, var(--color-accent-secondary), #22D3EE)' }}
-                        >
-                          {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
-                            {user.name || user.email.split('@')[0]}
-                          </span>
-                          <RankChangeIndicator change={user.rankChange} />
-                          {user.title && (
-                            <Badge
-                              variant="outline"
-                              className="text-[9px] font-semibold tracking-wide"
-                              style={{
-                                borderColor: 'rgba(251,191,36,0.4)',
-                                color: 'var(--color-accent-achievement)',
-                                background: 'rgba(251,191,36,0.15)',
-                              }}
-                            >
-                              {user.title}
-                            </Badge>
-                          )}
-                          {user.skillTreeState?.currentGrind && !user.title && (
-                            <Badge
-                              variant="outline"
-                              className="text-[9px]"
-                              style={{
-                                borderColor: 'rgba(168,85,247,0.3)',
-                                color: 'var(--color-accent-secondary)',
-                                background: 'rgba(168,85,247,0.1)',
-                              }}
-                            >
-                              {user.skillTreeState.currentGrind}
-                            </Badge>
-                          )}
-                        </div>
-                        <Progress
-                          value={(user.xp / maxXP) * 100}
-                          className="h-1 mt-1"
-                          style={{ background: 'var(--color-surface)' }}
-                        />
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div>
-                          <span className="stat-value font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                            {user.xp.toLocaleString()}
-                          </span>
-                          <span className="stat-label" style={{ color: 'var(--color-accent-secondary)', fontSize: '10px', marginLeft: '2px' }}>
-                            XP
-                          </span>
-                        </div>
-                        <div className="text-[9px]" style={{ color: 'var(--color-text-dim)' }}>
-                          {user.totalCommits}c · {user.totalPRs}p · {user.leetcodeHard}H
-                        </div>
-                      </div>
-
-                      <ExternalLink className="h-3 w-3 flex-shrink-0" style={{ color: 'var(--color-text-dim)' }} />
-                    </div>
-                  </Link>
-                ) : (
-                  <div
-                    className="prismatic-card flex items-center gap-3 p-3 border backdrop-blur-sm"
-                    style={{
-                      background: 'rgba(255,255,255,0.03)',
-                      borderColor: 'var(--color-border-subtle)',
-                      borderRadius: 'var(--radius-standard)',
-                    }}
-                  >
-                    <div
-                      className="flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold flex-shrink-0"
-                      style={{
-                        background: 'var(--color-surface)',
-                        color: 'var(--color-text-muted)',
-                      }}
-                    >
-                      {rank}
-                    </div>
-
-                    <Avatar className="h-8 w-8 flex-shrink-0" style={{ border: '1px solid var(--color-border-subtle)' }}>
-                      <AvatarImage src={user.imageUrl || undefined} />
-                      <AvatarFallback
-                        className="text-white text-xs font-bold"
-                        style={{ background: 'linear-gradient(to bottom right, var(--color-accent-secondary), #22D3EE)' }}
-                      >
-                        {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
-                          {user.name || user.email.split('@')[0]}
-                        </span>
-                        <RankChangeIndicator change={user.rankChange} />
-                        {user.title && (
-                          <Badge
-                            variant="outline"
-                            className="text-[9px] font-semibold tracking-wide"
-                            style={{
-                              borderColor: 'rgba(251,191,36,0.4)',
-                              color: 'var(--color-accent-achievement)',
-                              background: 'rgba(251,191,36,0.15)',
-                            }}
-                          >
-                            {user.title}
-                          </Badge>
-                        )}
-                        {user.skillTreeState?.currentGrind && !user.title && (
-                          <Badge
-                            variant="outline"
-                            className="text-[9px]"
-                            style={{
-                              borderColor: 'rgba(168,85,247,0.3)',
-                              color: 'var(--color-accent-secondary)',
-                              background: 'rgba(168,85,247,0.1)',
-                            }}
-                          >
-                            {user.skillTreeState.currentGrind}
-                          </Badge>
-                        )}
-                      </div>
-                      <Progress
-                        value={(user.xp / maxXP) * 100}
-                        className="h-1 mt-1"
-                        style={{ background: 'var(--color-surface)' }}
-                      />
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <div>
-                        <span className="stat-value font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                          {user.xp.toLocaleString()}
-                        </span>
-                        <span className="stat-label" style={{ color: 'var(--color-accent-secondary)', fontSize: '10px', marginLeft: '2px' }}>
-                          XP
-                        </span>
-                      </div>
-                      <div className="text-[9px]" style={{ color: 'var(--color-text-dim)' }}>
-                        {user.totalCommits}c · {user.totalPRs}p · {user.leetcodeHard}H
-                      </div>
-                    </div>
+            const content = (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm transition-all hover:scale-[1.005] hover:bg-white/[0.05]">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 text-white/30 text-xs font-bold flex-shrink-0">
+                  {rank}
+                </div>
+                <Avatar className="h-8 w-8 border border-white/10 flex-shrink-0">
+                  <AvatarImage src={user.imageUrl || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-purple-600 to-cyan-600 text-white text-xs font-bold">
+                    {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-white text-sm font-medium truncate">{user.name || user.email.split('@')[0]}</span>
+                    {user.title && (
+                      <Badge variant="outline" className="text-[9px] border-amber-500/40 text-amber-300 bg-amber-500/15 font-semibold tracking-wide">
+                        {user.title}
+                      </Badge>
+                    )}
+                    {user.skillTreeState?.currentGrind && !user.title && (
+                      <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/10">
+                        {user.skillTreeState.currentGrind}
+                      </Badge>
+                    )}
                   </div>
-                )}
-              </motion.div>
+                  <Progress value={(user.xp / maxXP) * 100} className="h-1 bg-white/5 mt-1" />
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-white font-bold text-sm">{user.xp.toLocaleString()} <span className="text-purple-400 text-[10px]">XP</span></div>
+                  <div className="text-white/25 text-[9px]">{user.totalCommits}c · {user.totalPRs}p · {user.leetcodeHard}H</div>
+                </div>
+                {isClickable && <ExternalLink className="h-3 w-3 text-white/15 flex-shrink-0" />}
+              </div>
             );
+
+            if (isClickable) {
+              return <Link key={user.id} href={profileUrl} className="block">{content}</Link>;
+            }
+            return <div key={user.id}>{content}</div>;
           })}
-        </motion.div>
+        </div>
       )}
 
-      {/* ── Bottom — Last 2 ── */}
+      {/* Bottom — Last 2 */}
       {bottom2.length > 0 && (
-        <motion.div
-          variants={containerStagger}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4"
-        >
-          <motion.div
-            variants={fadeUp}
-            className="text-[10px] uppercase tracking-[0.25em] text-center"
-            style={{ color: 'var(--color-text-dim)' }}
-          >
-            The Shadows Below
-          </motion.div>
-
-          <motion.div
-            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-            variants={containerStagger}
-            initial="hidden"
-            animate="visible"
-          >
+        <>
+          <div className="text-[10px] uppercase tracking-[0.25em] text-white/15 text-center">The Shadows Below</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {bottom2.map((user) => {
               const badgeInfo = getBottomBadge(user);
               const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : '#';
@@ -597,105 +233,43 @@ export function LeaderboardTable() {
               return (
                 // @ts-expect-error dynamic wrapper
                 <Wrapper key={user.id} {...wrapperProps} className="block">
-                  <motion.div
-                    variants={scaleIn}
-                    className="prismatic-card relative flex flex-col items-center p-6 pb-8 border backdrop-blur-sm transition-all hover:scale-[1.01] cursor-pointer"
-                    style={{
-                      background: 'linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
-                      borderColor: 'var(--color-border-subtle)',
-                      borderRadius: 'var(--radius-container)',
-                    }}
-                  >
+                  <div className="relative flex flex-col items-center p-6 pb-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.06] backdrop-blur-sm transition-all hover:scale-[1.01] cursor-pointer">
                     {badgeInfo && (
                       <>
-                        <motion.div
-                          initial={{ scale: 0.7, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: 0.2, duration: 0.45, type: 'spring' }}
-                          className="h-24 w-24 rounded-xl overflow-hidden mb-2 flex items-center justify-center"
-                          style={{
-                            border: '1px solid var(--color-border-subtle)',
-                            boxShadow: badgeInfo.shadow,
-                            background: 'radial-gradient(circle, rgba(107,114,128,0.08) 0%, transparent 70%)',
-                            borderRadius: 'var(--radius-standard)',
-                          }}
-                        >
-                          <img
-                            src={badgeInfo.src}
-                            alt={badgeInfo.label}
-                            className="h-full w-full object-contain"
-                            style={{ filter: 'drop-shadow(0 0 8px rgba(107,114,128,0.35))' }}
-                          />
-                        </motion.div>
-                        <div
-                          className="text-[10px] font-black tracking-[0.2em] mb-2"
-                          style={{ color: 'var(--color-text-muted)', opacity: 0.7 }}
-                        >
+                        <div className={`h-24 w-24 rounded-xl overflow-hidden ${badgeInfo.border} mb-2`} style={{ boxShadow: badgeInfo.shadow }}>
+                          <img src={badgeInfo.src} alt={badgeInfo.label} className="h-full w-full object-contain" />
+                        </div>
+                        <div className="text-[10px] font-black tracking-[0.2em] text-gray-400/70 mb-2">
                           {badgeInfo.label}
                         </div>
                       </>
                     )}
-
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.35, type: 'spring' }}
-                    >
-                      <Avatar
-                        className="h-10 w-10 mb-2"
-                        style={{ border: '1px solid var(--color-border-subtle)' }}
-                      >
-                        <AvatarImage src={user.imageUrl || undefined} />
-                        <AvatarFallback
-                          className="text-white text-xs font-bold"
-                          style={{ background: 'linear-gradient(to bottom right, var(--color-text-muted), var(--color-text-dim))' }}
-                        >
-                          {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </motion.div>
-
+                    <Avatar className="h-10 w-10 border border-white/10 mb-2">
+                      <AvatarImage src={user.imageUrl || undefined} />
+                      <AvatarFallback className="bg-gradient-to-br from-gray-600 to-gray-700 text-white text-xs font-bold">
+                        {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span
-                          className="text-sm font-medium truncate max-w-[160px]"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
-                          {user.name || user.email.split('@')[0]}
-                        </span>
-                        <RankChangeIndicator change={user.rankChange} />
+                      <div className="text-white/70 text-sm font-medium truncate max-w-[160px]">
+                        {user.name || user.email.split('@')[0]}
                       </div>
-
                       {user.title && (
-                        <span
-                          className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px]"
-                          style={{
-                            border: '1px solid rgba(251,191,36,0.2)',
-                            color: 'rgba(251,191,36,0.5)',
-                            background: 'rgba(251,191,36,0.1)',
-                            borderRadius: 'var(--radius-compact)',
-                          }}
-                        >
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] border border-amber-500/20 text-amber-300/50 bg-amber-500/10">
                           {user.title}
                         </span>
                       )}
-
-                      <div className="mt-1">
-                        <span className="stat-value font-bold text-xl" style={{ color: 'var(--color-text-secondary)' }}>
-                          {user.xp.toLocaleString()}
-                        </span>
-                        <span className="stat-label" style={{ color: 'var(--color-accent-secondary)', fontSize: '10px', marginLeft: '3px', opacity: 0.5 }}>
-                          XP
-                        </span>
+                      <div className="text-white/50 font-bold text-xl mt-1">
+                        {user.xp.toLocaleString()} <span className="text-purple-400/50 text-[10px]">XP</span>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 </Wrapper>
               );
             })}
-          </motion.div>
-        </motion.div>
+          </div>
+        </>
       )}
-    </motion.div>
+    </div>
   );
 }
