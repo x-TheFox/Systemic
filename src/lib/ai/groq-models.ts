@@ -1,6 +1,6 @@
 import { createGroq } from '@ai-sdk/groq';
 import { generateText, generateObject } from 'ai';
-import { z, ZodType } from 'zod';
+import { z } from 'zod';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -60,7 +60,6 @@ export async function groqGenerateText(prompt: string, options?: { maxTokens?: n
       const { text } = await generateText({
         model: groq(model),
         prompt,
-        maxTokens: options?.maxTokens,
       });
       return text;
     } catch (error: any) {
@@ -93,7 +92,6 @@ export async function groqGenerateObject<T extends z.ZodType>(
         model: groq(model),
         schema,
         prompt,
-        maxTokens: options?.maxTokens,
       });
       return object as z.infer<T>;
     } catch (error: any) {

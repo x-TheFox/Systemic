@@ -96,7 +96,7 @@ export async function generatePersonalizedSkillTree(
     unlocked: n.unlocked,
   }));
 
-  const { object } = await groqGenerateObject(z.object({
+  const object = await groqGenerateObject(z.object({
       newNodes: z.array(nodeSchema).max(3).describe('0-3 new nodes. Empty array if nothing new.'),
     }), `You are the AI Architect of Systemics, a competitive developer skill tree.
 
@@ -171,7 +171,7 @@ export async function generateInitialTreeFromDeepDive(
     .map(([k, v]) => `${k}: ${v}`)
     .join(', ');
 
-  const { object } = await groqGenerateObject(z.object({
+  const object = await groqGenerateObject(z.object({
       nodes: z.array(deepDiveNodeSchema).min(5).max(15).describe('5-15 nodes forming a personalized skill tree for this user.'),
     }), `You are the AI Architect of Systemics, building a PERSONALIZED skill tree for a developer based on their ENTIRE GitHub history.
 
@@ -289,7 +289,7 @@ export async function generateInitialSkillTree(): Promise<GeneratedNode[]> {
 export async function recommendNextPath(
   activities: Array<{ platform: string; description: string }>
 ): Promise<string> {
-  const { object } = await groqGenerateObject(z.object({
+  const object = await groqGenerateObject(z.object({
       recommendedPath: z.enum(['Frontend Wizard', 'Systems Engineer', 'Data Scientist', 'Fullstack Legend', 'DevOps Architect']),
       reasoning: z.string(),
     }), `Based on this developer's recent activity, recommend their optimal grind path.
