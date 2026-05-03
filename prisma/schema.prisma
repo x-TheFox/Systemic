@@ -67,7 +67,8 @@ model User {
   projects          Project[]
   projectQueues     ProjectQueue[]
   guildId           String?
-  guild             Guild?   @relation(fields: [guildId], references: [id])
+  guild             Guild?   @relation("GuildMembers", fields: [guildId], references: [id])
+  adminOfGuilds     Guild[]  @relation("GuildAdmin")
 
   @@index([xp])
   @@index([clerkId])
@@ -316,6 +317,7 @@ model Guild {
   iconUrl     String?
   isPublic    Boolean  @default(true)
   adminId     String
+  admin       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
 
   members           User[]
@@ -324,6 +326,7 @@ model Guild {
   duelsAsOpponent   GuildDuel[] @relation("OpponentGuild")
 
   @@index([slug])
+  @@index([adminId])
 }
 
 model GuildDuel {
