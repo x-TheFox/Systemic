@@ -3,7 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Trophy, LayoutDashboard, User, Shield, ExternalLink } from "lucide-react";
-import { motion } from "framer-motion";
 
 function GitHubIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -22,47 +21,38 @@ const platforms = [
 ];
 
 const navLinks = [
-  { href: "/", label: "Home", icon: LayoutDashboard },
-  { href: "/leaderboard", label: "The Arena", icon: Trophy },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
 export function Footer() {
   return (
-    <motion.footer
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6 }}
-      className="relative border-t border-[var(--color-border-subtle)] bg-[var(--color-surface)]/60 backdrop-blur-xl mt-auto"
-    >
-      {/* Prismatic top border decoration */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--color-accent-primary)]/30 to-transparent" />
-
+    <footer className="border-t border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-xl mt-auto">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="relative flex h-8 w-8 items-center justify-center rounded-[var(--radius-compact)] overflow-hidden ring-1 ring-[var(--color-accent-primary)]/20">
+              <div className="relative flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden">
                 <Image src="/icon.svg" alt="Systemics" width={32} height={32} className="object-contain" />
               </div>
               <span className="text-lg font-bold gradient-text">Systemics</span>
             </Link>
-            <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-              AI-augmented competitive developer progression. Track your grind, earn badges, unlock skill trees.
+            <p className="text-sm text-white/30 leading-relaxed">
+              AI-augmented competitive developer leaderboard. Track your grind, earn badges, unlock skill trees.
             </p>
           </div>
 
           {/* Navigation */}
           <div>
-            <h3 className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-semibold mb-4">Navigation</h3>
+            <h3 className="text-xs uppercase tracking-wider text-white/40 font-semibold mb-4">Navigation</h3>
             <ul className="space-y-2">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 return (
                   <li key={link.href}>
-                    <Link href={link.href} className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors duration-200">
+                    <Link href={link.href} className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors">
                       <Icon className="h-3.5 w-3.5" />
                       {link.label}
                     </Link>
@@ -74,13 +64,13 @@ export function Footer() {
 
           {/* Platforms */}
           <div>
-            <h3 className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-semibold mb-4">Platforms</h3>
+            <h3 className="text-xs uppercase tracking-wider text-white/40 font-semibold mb-4">Platforms</h3>
             <ul className="space-y-2">
               {platforms.map((p) => {
                 const Icon = p.icon;
                 return (
                   <li key={p.name}>
-                    <a href={p.href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors duration-200">
+                    <a href={p.href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors">
                       <Icon className="h-3.5 w-3.5" />
                       {p.name}
                     </a>
@@ -92,8 +82,8 @@ export function Footer() {
 
           {/* Features */}
           <div>
-            <h3 className="text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-muted)] font-semibold mb-4">Features</h3>
-            <ul className="space-y-2 text-sm text-[var(--color-text-muted)]">
+            <h3 className="text-xs uppercase tracking-wider text-white/40 font-semibold mb-4">Features</h3>
+            <ul className="space-y-2 text-sm text-white/50">
               <li>AI-Forged Badges</li>
               <li>Dynamic Skill Trees</li>
               <li>Weekly Post-Mortems</li>
@@ -105,15 +95,15 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-[var(--color-border-subtle)] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-[var(--color-text-dim)]">
+        <div className="mt-10 pt-6 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-white/20">
             Built with dark energy. Powered by Groq AI.
           </p>
-          <p className="text-xs text-[var(--color-text-dim)]">
+          <p className="text-xs text-white/20">
             XP never regresses.
           </p>
         </div>
       </div>
-    </motion.footer>
+    </footer>
   );
 }

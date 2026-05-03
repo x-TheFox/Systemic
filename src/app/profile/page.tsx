@@ -8,26 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import {
-  ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink,
-  Brain, X, Crown, Sparkles, Clock, Shield, Swords,
-  FileText, GitPullRequest,
-} from 'lucide-react';
+import { ArrowLeft, Code2, Trophy, Zap, RefreshCw, ExternalLink, Brain, X, Crown, Sparkles, Clock, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { BadgeGrid, BadgeCard } from '@/components/BadgeGrid';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  cascadeVariants, heroCascadeVariants, childCascadeVariants,
-  fadeInUp, scaleIn, cardHover, durations,
-} from '@/lib/motion';
 
-/* ═══════════════════════════════════════════
-   Platform config — Lucide icons, no emoji
-   ═══════════════════════════════════════════ */
 const platformIcons: Record<string, any> = {
   githubHandle: <Code2 className="h-4 w-4" />,
-  leetcodeHandle: <Brain className="h-4 w-4" />,
+  leetcodeHandle: <Code2 className="h-4 w-4" />,
   codeforcesHandle: <Trophy className="h-4 w-4" />,
   hackerrankHandle: <Zap className="h-4 w-4" />,
   tryhackmeHandle: <Shield className="h-4 w-4" />,
@@ -41,71 +29,6 @@ const platformLabels: Record<string, string> = {
   tryhackmeHandle: 'TryHackMe',
 };
 
-/* ═══════════════════════════════════════════
-   Title rarity → mesh background map
-   ═══════════════════════════════════════════ */
-const rarityMeshMap: Record<string, string> = {
-  legendary: 'mesh-gradient-arena',
-  epic: 'mesh-gradient-primary',
-  rare: 'mesh-gradient-garden',
-  common: 'mesh-gradient-primary',
-};
-
-/* ═══════════════════════════════════════════
-   StatCard accent color map
-   ═══════════════════════════════════════════ */
-const statAccentMap: Record<string, { color: string; dim: string; glow: string; strip: string }> = {
-  coral: {
-    color: 'var(--color-accent-primary)',
-    dim: 'var(--color-accent-primary-dim)',
-    glow: 'glow-primary',
-    strip: 'section-strip-primary',
-  },
-  cyan: {
-    color: 'var(--color-accent-tertiary)',
-    dim: 'var(--color-accent-tertiary-dim)',
-    glow: 'glow-tertiary',
-    strip: 'section-strip-tertiary',
-  },
-  emerald: {
-    color: 'var(--color-accent-success)',
-    dim: 'var(--color-accent-success-dim)',
-    glow: 'glow-success',
-    strip: 'section-strip-success',
-  },
-  violet: {
-    color: 'var(--color-accent-secondary)',
-    dim: 'var(--color-accent-secondary-dim)',
-    glow: 'glow-secondary',
-    strip: 'section-strip-secondary',
-  },
-  gold: {
-    color: 'var(--color-accent-achievement)',
-    dim: 'var(--color-accent-achievement-dim)',
-    glow: 'glow-achievement',
-    strip: 'section-strip-achievement',
-  },
-};
-
-/* ═══════════════════════════════════════════
-   Stat definitions — Lucide icons, accent colors
-   ═══════════════════════════════════════════ */
-const statDefs: Array<{
-  key: string;
-  label: string;
-  icon: React.ReactNode;
-  accent: keyof typeof statAccentMap;
-}> = [
-  { key: 'xp', label: 'Total XP', icon: <Zap className="h-4 w-4" />, accent: 'coral' },
-  { key: 'totalCommits', label: 'Commits', icon: <FileText className="h-4 w-4" />, accent: 'cyan' },
-  { key: 'totalPRs', label: 'PRs', icon: <GitPullRequest className="h-4 w-4" />, accent: 'emerald' },
-  { key: 'leetcodeHard', label: 'LC Hard', icon: <Brain className="h-4 w-4" />, accent: 'violet' },
-  { key: 'codeforcesRating', label: 'CF Rating', icon: <Trophy className="h-4 w-4" />, accent: 'gold' },
-  { key: 'hackerrankBadges', label: 'HR Badges', icon: <Trophy className="h-4 w-4" />, accent: 'gold' },
-  { key: 'tryhackmePoints', label: 'THM Points', icon: <Shield className="h-4 w-4" />, accent: 'emerald' },
-  { key: 'tryhackmeRank', label: 'THM Rank', icon: <Swords className="h-4 w-4" />, accent: 'coral' },
-];
-
 interface PastTitle {
   id: string;
   title: string;
@@ -114,9 +37,6 @@ interface PastTitle {
   createdAt: string;
 }
 
-/* ═══════════════════════════════════════════
-   PROFILE PAGE
-   ═══════════════════════════════════════════ */
 export default function ProfilePage() {
   const { user: clerkUser, isLoaded } = useUser();
   const searchParams = useSearchParams();
@@ -236,7 +156,7 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <main className="min-h-screen flex items-center justify-center" style={{ color: 'var(--color-text-muted)' }}>
+      <main className="min-h-screen flex items-center justify-center text-white/60">
         {githubHandleParam ? `User "${githubHandleParam}" not found.` : 'Please sign in to view your profile.'}
       </main>
     );
@@ -248,357 +168,146 @@ export default function ProfilePage() {
   const weeklyBadges = (profile.badges || []).filter((b: any) => b.category === 'weekly_leaderboard').sort(sortByRarity);
   const aiBadges = (profile.badges || []).filter((b: any) => b.category !== 'weekly_leaderboard').sort(sortByRarity);
 
-  // Determine hero mesh from title rarity
-  const titleRarity = (profile.titleRarity || 'common').toLowerCase();
-  const heroMesh = rarityMeshMap[titleRarity] || rarityMeshMap.common;
-
   return (
     <main className="min-h-screen p-4 md:p-8">
-      <div className="mx-auto max-w-4xl space-y-8">
-
-        {/* ──────────────────────────────────────
-            HERO SECTION
-            Full-width atmospheric hero with
-            gradient mesh matching title rarity
-            ────────────────────────────────────── */}
-        <motion.section
-          variants={heroCascadeVariants}
-          initial="hidden"
-          animate="visible"
-          className={`hero-card ${heroMesh} p-6 sm:p-8`}
-        >
-          <div className="flex items-center gap-5">
-            <Link href="/">
-              <Button
-                variant="outline"
-                size="icon"
-                className="transition-all flex-shrink-0"
-                style={{
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-muted)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
-                  e.currentTarget.style.color = 'var(--color-accent-primary)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                  e.currentTarget.style.color = 'var(--color-text-muted)';
-                }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-
-            <motion.div
-              variants={fadeInUp}
-              initial="hidden"
-              animate="visible"
-              custom={0.1}
-            >
-              <Avatar
-                className="h-20 w-20 border-2 flex-shrink-0"
-                style={{ borderColor: 'var(--color-accent-secondary)' }}
-              >
-                <AvatarImage src={profile.imageUrl || undefined} />
-                <AvatarFallback
-                  className="text-white text-2xl font-bold"
-                  style={{
-                    background: 'linear-gradient(to bottom right, var(--color-accent-secondary), var(--color-accent-tertiary))',
-                  }}
-                >
-                  {(profile.name || profile.email).charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </motion.div>
-
-            <motion.div
-              variants={fadeInUp}
-              initial="hidden"
-              animate="visible"
-              custom={0.15}
-              className="flex-1 min-w-0"
-            >
-              <h1 className="text-3xl font-bold gradient-text-warm truncate">
-                {profile.name || profile.email}
-              </h1>
-              {profile.title ? (
-                <div className="flex items-center gap-2 mt-1">
-                  <Sparkles
-                    className="h-4 w-4"
-                    style={{ color: 'var(--color-accent-achievement)' }}
-                  />
-                  <span
-                    className="text-base font-semibold tracking-wide"
-                    style={{ color: 'var(--color-accent-achievement)' }}
-                  >
-                    {profile.title}
-                  </span>
-                </div>
-              ) : profile.skillTreeState?.currentGrind ? (
-                <p
-                  className="text-sm mt-0.5"
-                  style={{ color: 'var(--color-accent-secondary)' }}
-                >
-                  {profile.skillTreeState.currentGrind}
-                </p>
-              ) : null}
-            </motion.div>
-
-            {profile.githubHandle && (
-              <motion.a
-                variants={fadeInUp}
-                initial="hidden"
-                animate="visible"
-                custom={0.2}
-                href={`https://github.com/${profile.githubHandle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 transition-all"
-                  style={{
-                    borderColor: 'var(--color-border-default)',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  <Code2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">{profile.githubHandle}</span>
-                </Button>
-              </motion.a>
-            )}
+      <div className="mx-auto max-w-4xl space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Link href="/">
+            <Button variant="outline" size="icon" className="border-white/10 hover:bg-white/5">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Avatar className="h-14 w-14 border-2 border-purple-500/40 flex-shrink-0">
+            <AvatarImage src={profile.imageUrl || undefined} />
+            <AvatarFallback className="bg-gradient-to-br from-purple-600 to-cyan-600 text-white text-xl font-bold">
+              {(profile.name || profile.email).charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold gradient-text">{profile.name || profile.email}</h1>
+            {profile.title ? (
+              <div className="flex items-center gap-2 mt-1">
+                <Sparkles className="h-4 w-4 text-amber-400" />
+                <span className="text-base font-semibold text-amber-400 tracking-wide">{profile.title}</span>
+              </div>
+            ) : profile.skillTreeState?.currentGrind ? (
+              <p className="text-sm text-purple-400 mt-0.5">{profile.skillTreeState.currentGrind}</p>
+            ) : null}
           </div>
-        </motion.section>
+          {profile.githubHandle && (
+            <a href={`https://github.com/${profile.githubHandle}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5 gap-2">
+                <Code2 className="h-4 w-4" />
+                <span className="hidden sm:inline">{profile.githubHandle}</span>
+              </Button>
+            </a>
+          )}
+        </div>
 
-        {/* ──────────────────────────────────────
-            TITLE HISTORY
-            prismatic-card + section-strip-secondary
-            ────────────────────────────────────── */}
+        {/* Past Titles */}
         {pastTitles.length > 0 && (
-          <motion.section
-            variants={cascadeVariants}
-            initial="hidden"
-            animate="visible"
-            custom={1}
-            className="prismatic-card p-5"
-          >
-            <div className="section-strip-secondary pt-3 mb-3 flex items-center gap-2">
-              <Clock
-                className="h-4 w-4"
-                style={{ color: 'var(--color-accent-secondary)' }}
-              />
-              <h2
-                className="text-sm font-semibold uppercase tracking-wider"
-                style={{ color: 'var(--color-accent-secondary)' }}
-              >
-                Title History
-              </h2>
+          <div className="glass-card p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-white/40" />
+              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Title History</h2>
             </div>
             <div className="flex flex-wrap gap-2">
-              {pastTitles.slice(0, 8).map((pt: PastTitle, i: number) => (
-                <motion.div
+              {pastTitles.slice(0, 8).map((pt: PastTitle) => (
+                <div
                   key={pt.id}
-                  variants={childCascadeVariants}
-                  initial="hidden"
-                  animate="visible"
-                  custom={i}
-                  className="px-3 py-1.5 rounded-full cursor-default transition-all hover:scale-[1.03]"
-                  style={{
-                    background: 'var(--color-border-subtle)',
-                    border: '1px solid var(--color-border-default)',
-                    color: 'var(--color-text-muted)',
-                  }}
+                  className="px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-sm text-white/50 hover:text-white/70 hover:border-white/20 transition-all cursor-default"
                   title={`Week ${pt.weekNumber}, ${pt.year}`}
                 >
-                  <span className="text-sm">{pt.title}</span>
-                </motion.div>
+                  {pt.title}
+                </div>
               ))}
               {pastTitles.length > 8 && (
-                <div
-                  className="px-3 py-1.5 rounded-full text-sm"
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid var(--color-border-subtle)',
-                    color: 'var(--color-text-dim)',
-                  }}
-                >
+                <div className="px-3 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.06] text-sm text-white/30">
                   +{pastTitles.length - 8} more
                 </div>
               )}
             </div>
-          </motion.section>
+          </div>
         )}
 
-        {/* ──────────────────────────────────────
-            BADGES (2/3) + STATS GRID (1/3)
-            Asymmetric on desktop
-            ────────────────────────────────────── */}
-        <motion.section
-          variants={cascadeVariants}
-          initial="hidden"
-          animate="visible"
-          custom={2}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-        >
-          {/* Badges — 2/3 */}
-          {profile.badges && profile.badges.length > 0 && (
-            <motion.div
-              variants={fadeInUp}
-              initial="hidden"
-              animate="visible"
-              custom={0.1}
-              className="lg:col-span-2 prismatic-card p-6"
-            >
-              <div className="section-strip-achievement pt-3 mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Trophy
-                    className="h-5 w-5"
-                    style={{ color: 'var(--color-accent-achievement)' }}
-                  />
-                  <h2
-                    className="text-lg font-semibold"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    Badges
-                  </h2>
-                  <Badge
-                    variant="outline"
-                    className="text-[9px]"
-                    style={{
-                      borderColor: 'var(--color-accent-secondary)',
-                      color: 'var(--color-accent-secondary)',
-                      background: 'var(--color-accent-secondary-dim)',
-                    }}
-                  >
-                    {profile.badges.length}
-                  </Badge>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedBadge(profile.badges[0])}
-                  className="text-xs transition-all"
-                  style={{
-                    borderColor: 'var(--color-border-default)',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  View All
-                </Button>
+        {/* Badges with modal trigger */}
+        {profile.badges && profile.badges.length > 0 && (
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-amber-400" />
+                <h2 className="text-lg font-semibold text-white">Badges</h2>
+                <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/10 ml-2">
+                  {profile.badges.length}
+                </Badge>
               </div>
-
-              <div className="space-y-2">
-                {weeklyBadges.slice(0, 2).map((badge: any) => (
-                  <div
-                    key={badge.id}
-                    className="cursor-pointer hover:scale-[1.01] transition-transform"
-                    onClick={() => setSelectedBadge(badge)}
-                  >
-                    <BadgeCard badge={badge} />
-                  </div>
-                ))}
-                {aiBadges.slice(0, 2).map((badge: any) => (
-                  <div
-                    key={badge.id}
-                    className="cursor-pointer hover:scale-[1.01] transition-transform"
-                    onClick={() => setSelectedBadge(badge)}
-                  >
-                    <BadgeCard badge={badge} />
-                  </div>
-                ))}
-                {(weeklyBadges.length + aiBadges.length > 4) && (
-                  <button
-                    onClick={() => setSelectedBadge(profile.badges[0])}
-                    className="w-full py-2 text-center text-xs transition-colors"
-                    style={{ color: 'var(--color-text-dim)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-text-muted)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-dim)')}
-                  >
-                    +{weeklyBadges.length + aiBadges.length - 4} more badges — tap to see all
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Stats Grid — 1/3 */}
-          <motion.div
-            variants={fadeInUp}
-            initial="hidden"
-            animate="visible"
-            custom={0.2}
-            className={profile.badges && profile.badges.length > 0 ? '' : 'lg:col-span-3'}
-          >
-            <div className="prismatic-card p-5">
-              <div className="section-strip-primary pt-3 mb-4">
-                <h2
-                  className="text-lg font-semibold"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  Stats
-                </h2>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {statDefs.map((s) => {
-                  const a = statAccentMap[s.accent];
-                  const rawVal = (profile as any)?.[s.key] || 0;
-                  return (
-                    <motion.div
-                      key={s.key}
-                      variants={cardHover}
-                      initial="rest"
-                      whileHover="hover"
-                      className={`prismatic-card ${a.strip} p-3 transition-shadow`}
-                      style={{ borderLeft: `2px solid ${a.color}` }}
-                    >
-                      <div className="mb-1" style={{ color: a.color }}>
-                        {s.icon}
-                      </div>
-                      <div
-                        className="stat-value text-xl"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        {typeof rawVal === 'number' ? rawVal.toLocaleString() : rawVal}
-                      </div>
-                      <div className="stat-label mt-0.5">{s.label}</div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-          </motion.div>
-        </motion.section>
-
-        {/* ──────────────────────────────────────
-            PLATFORM HANDLES
-            prismatic-card + section-strip-tertiary
-            ────────────────────────────────────── */}
-        {isOwnProfile && (
-          <motion.section
-            variants={cascadeVariants}
-            initial="hidden"
-            animate="visible"
-            custom={3}
-            className="prismatic-card p-6 space-y-5"
-          >
-            <div className="section-strip-tertiary pt-3 flex items-center justify-between">
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: 'var(--color-text-primary)' }}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedBadge(profile.badges[0])}
+                className="border-white/10 hover:bg-white/5 text-white/60 hover:text-white text-xs"
               >
-                Platform Handles
-              </h2>
+                View All
+              </Button>
+            </div>
+            {/* Show top 2 weekly + top 2 AI badges inline */}
+            <div className="space-y-2">
+              {weeklyBadges.slice(0, 2).map((badge: any) => (
+                <div
+                  key={badge.id}
+                  className="cursor-pointer hover:scale-[1.01] transition-transform"
+                  onClick={() => setSelectedBadge(badge)}
+                >
+                  <BadgeCard badge={badge} />
+                </div>
+              ))}
+              {aiBadges.slice(0, 2).map((badge: any) => (
+                <div
+                  key={badge.id}
+                  className="cursor-pointer hover:scale-[1.01] transition-transform"
+                  onClick={() => setSelectedBadge(badge)}
+                >
+                  <BadgeCard badge={badge} />
+                </div>
+              ))}
+              {(weeklyBadges.length + aiBadges.length > 4) && (
+                <button
+                  onClick={() => setSelectedBadge(profile.badges[0])}
+                  className="w-full py-2 text-center text-xs text-white/30 hover:text-white/50 transition-colors"
+                >
+                  +{weeklyBadges.length + aiBadges.length - 4} more badges — tap to see all
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="glass-card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Stats</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard label="Total XP" value={profile?.xp || 0} icon="⚡" color="purple" />
+            <StatCard label="Commits" value={profile?.totalCommits || 0} icon="📝" color="cyan" />
+            <StatCard label="PRs" value={profile?.totalPRs || 0} icon="🔀" color="green" />
+            <StatCard label="LC Hard" value={profile?.leetcodeHard || 0} icon="🧠" color="pink" />
+            <StatCard label="CF Rating" value={profile?.codeforcesRating || 0} icon="🏆" color="amber" />
+            <StatCard label="HR Badges" value={profile?.hackerrankBadges || 0} icon="⚡" color="yellow" />
+            <StatCard label="THM Points" value={profile?.tryhackmePoints || 0} icon="🛡" color="emerald" />
+            <StatCard label="THM Rank" value={profile?.tryhackmeRank || 0} icon="⚔" color="red" />
+          </div>
+        </div>
+
+        {/* Platform Handles */}
+        {isOwnProfile && (
+          <div className="glass-card p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Platform Handles</h2>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => editing ? handleSave() : setEditing(true)}
-                className="transition-all"
-                style={{
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-muted)',
-                }}
+                className="border-white/10 hover:bg-white/5"
               >
                 {editing ? 'Save' : 'Edit'}
               </Button>
@@ -607,56 +316,22 @@ export default function ProfilePage() {
             {editing ? (
               <div className="space-y-4">
                 <div>
-                  <label
-                    className="text-sm mb-1 block"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    Display Name
-                  </label>
+                  <label className="text-sm text-white/50 mb-1 block">Display Name</label>
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="transition-all"
-                    style={{
-                      background: 'var(--color-border-subtle)',
-                      borderColor: 'var(--color-border-default)',
-                    }}
+                    className="bg-white/5 border-white/10 focus:border-purple-500"
                     placeholder="Your name"
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
-                      e.currentTarget.style.boxShadow = '0 0 12px var(--color-accent-primary-dim)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
                   />
                 </div>
                 {Object.entries(platformLabels).map(([key, label]) => (
                   <div key={key}>
-                    <label
-                      className="text-sm mb-1 block"
-                      style={{ color: 'var(--color-text-muted)' }}
-                    >
-                      {label}
-                    </label>
+                    <label className="text-sm text-white/50 mb-1 block">{label}</label>
                     <Input
                       value={(formData as any)[key]}
                       onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                      className="transition-all"
-                      style={{
-                        background: 'var(--color-border-subtle)',
-                        borderColor: 'var(--color-border-default)',
-                      }}
+                      className="bg-white/5 border-white/10 focus:border-purple-500"
                       placeholder={`Your ${label} username`}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
-                        e.currentTarget.style.boxShadow = '0 0 12px var(--color-accent-primary-dim)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
                     />
                   </div>
                 ))}
@@ -664,64 +339,27 @@ export default function ProfilePage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {Object.entries(platformLabels).map(([key, label]) => (
-                  <div
-                    key={key}
-                    className="flex items-center gap-3 p-3 rounded-lg transition-all"
-                    style={{
-                      background: 'var(--color-border-subtle)',
-                      border: '1px solid var(--color-border-subtle)',
-                    }}
-                  >
-                    <div style={{ color: 'var(--color-accent-secondary)' }}>
-                      {platformIcons[key]}
-                    </div>
+                  <div key={key} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                    <div className="text-purple-400">{platformIcons[key]}</div>
                     <div className="flex-1 min-w-0">
-                      <p className="stat-label">{label}</p>
-                      <p
-                        className="text-sm font-medium truncate"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        {(profile as any)?.[key] || (
-                          <span style={{ color: 'var(--color-text-dim)' }} className="italic">
-                            Not linked
-                          </span>
-                        )}
-                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-white/30">{label}</p>
+                      <p className="text-sm font-medium truncate">{(profile as any)?.[key] || <span className="text-white/20 italic">Not linked</span>}</p>
                     </div>
-                    {(profile as any)?.[key] && (
-                      <ExternalLink
-                        className="h-3 w-3"
-                        style={{ color: 'var(--color-text-dim)' }}
-                      />
-                    )}
+                    {(profile as any)?.[key] && <ExternalLink className="h-3 w-3 text-white/20" />}
                   </div>
                 ))}
               </div>
             )}
-          </motion.section>
+          </div>
         )}
 
-        {/* ──────────────────────────────────────
-            ACTION BUTTONS (own profile only)
-            Sync = gradient primary→secondary
-            Deep Dive = accent-secondary outline
-            ────────────────────────────────────── */}
+        {/* Action Buttons (own profile only) */}
         {isOwnProfile && (
-          <motion.section
-            variants={cascadeVariants}
-            initial="hidden"
-            animate="visible"
-            custom={4}
-            className="prismatic-card p-6"
-          >
-            <div className="space-y-3">
+          <div className="glass-card p-6">
+            <div className="space-y-2">
               <Button
                 onClick={triggerSync}
-                className="w-full text-white border-0 shadow-lg transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary))',
-                  boxShadow: '0 4px 20px var(--color-accent-primary-dim), 0 4px 20px var(--color-accent-secondary-dim)',
-                }}
+                className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white border-0 shadow-lg shadow-purple-500/20"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Sync Now
@@ -729,211 +367,101 @@ export default function ProfilePage() {
               <Button
                 onClick={triggerDeepDive}
                 variant="outline"
-                className="w-full transition-all"
-                style={{
-                  borderColor: 'var(--color-accent-secondary)',
-                  color: 'var(--color-accent-secondary)',
-                  background: 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--color-accent-secondary-dim)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
+                className="w-full border-white/10 hover:bg-white/5 text-white/70 hover:text-white"
               >
                 <Brain className="h-4 w-4 mr-2" />
                 Deep Dive (AI Research)
               </Button>
             </div>
-          </motion.section>
+          </div>
         )}
 
-        {/* ──────────────────────────────────────
-            ACHIEVEMENTS
-            ────────────────────────────────────── */}
+        {/* Achievements */}
         {profile?.achievements?.length > 0 && (
-          <motion.section
-            variants={cascadeVariants}
-            initial="hidden"
-            animate="visible"
-            custom={5}
-            className="prismatic-card p-6"
-          >
-            <div className="section-strip-achievement pt-3 mb-4">
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                Achievements
-              </h2>
-            </div>
+          <div className="glass-card p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Achievements</h2>
             <div className="space-y-2">
               {profile.achievements.map((ach: any) => (
-                <div
-                  key={ach.id}
-                  className="flex items-center gap-3 p-3 rounded-lg transition-all"
-                  style={{
-                    background: 'var(--color-border-subtle)',
-                    border: '1px solid var(--color-border-subtle)',
-                  }}
-                >
-                  <Trophy
-                    className="h-5 w-5 flex-shrink-0"
-                    style={{ color: 'var(--color-accent-achievement)' }}
-                  />
+                <div key={ach.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <div className="text-xl">🏆</div>
                   <div className="flex-1 min-w-0">
-                    <p
-                      className="text-sm font-medium"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      {ach.title}
-                    </p>
-                    <p
-                      className="text-xs"
-                      style={{ color: 'var(--color-text-muted)' }}
-                    >
-                      {ach.description}
-                    </p>
+                    <p className="text-sm font-medium text-white">{ach.title}</p>
+                    <p className="text-xs text-white/40">{ach.description}</p>
                   </div>
                   {ach.xpBonus > 0 && (
-                    <Badge
-                      className="text-xs"
-                      style={{
-                        background: 'var(--color-accent-secondary-dim)',
-                        color: 'var(--color-accent-secondary)',
-                        border: '1px solid rgba(168,85,247,0.3)',
-                      }}
-                    >
-                      +{ach.xpBonus} XP
-                    </Badge>
+                    <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 text-xs">+{ach.xpBonus} XP</Badge>
                   )}
                 </div>
               ))}
             </div>
-          </motion.section>
+          </div>
         )}
 
-        {/* ──────────────────────────────────────
-            UNLOCKED SKILL NODES
-            ────────────────────────────────────── */}
+        {/* Unlocked Skill Nodes */}
         {profile?.dynamicNodes && profile.dynamicNodes.length > 0 && (
-          <motion.section
-            variants={cascadeVariants}
-            initial="hidden"
-            animate="visible"
-            custom={6}
-            className="prismatic-card p-6"
-          >
-            <div className="section-strip-success pt-3 mb-4">
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                Unlocked Skills
-              </h2>
-            </div>
+          <div className="glass-card p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Unlocked Skills</h2>
             <div className="flex flex-wrap gap-2">
               {profile.dynamicNodes.map((node: any) => (
                 <Badge
                   key={node.id}
                   variant="outline"
-                  className="text-xs px-3 py-1"
-                  style={{
-                    borderColor: 'var(--color-accent-secondary)',
-                    color: 'var(--color-accent-secondary)',
-                    background: 'var(--color-accent-secondary-dim)',
-                  }}
+                  className="text-xs border-purple-500/30 text-purple-400 bg-purple-500/10 px-3 py-1"
                 >
                   {node.name}
                 </Badge>
               ))}
             </div>
-          </motion.section>
+          </div>
         )}
       </div>
 
-      {/* ──────────────────────────────────────
-          BADGE MODAL
-          Float surface + noise-overlay +
-          prismatic border + scale-in animation
-          ────────────────────────────────────── */}
-      <AnimatePresence>
-        {selectedBadge && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedBadge(null)}
-          >
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: durations.fast }}
-              className="absolute inset-0"
-              style={{
-                background: 'rgba(0, 0, 0, 0.7)',
-                backdropFilter: 'blur(8px)',
-              }}
-            />
-
-            {/* Modal panel */}
-            <motion.div
-              variants={scaleIn}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto prismatic-card noise-overlay p-5 sm:p-7"
-              style={{
-                background: 'var(--color-float)',
-                borderRadius: 'var(--radius-container)',
-              }}
+      {/* Badge Modal */}
+      {selectedBadge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedBadge(null)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#0a0a12]/95 backdrop-blur-xl p-5 sm:p-7" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedBadge(null)}
+              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors z-10"
             >
-              <button
-                onClick={() => setSelectedBadge(null)}
-                className="absolute top-4 right-4 z-10 transition-colors"
-                style={{ color: 'var(--color-text-muted)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-muted)')}
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <X className="h-5 w-5" />
+            </button>
 
-              <div
-                className="flex items-center gap-2 mb-5 sticky top-0 pb-3 pt-1 z-[1]"
-                style={{
-                  background: 'var(--color-float)',
-                }}
-              >
-                <Crown
-                  className="h-5 w-5"
-                  style={{ color: 'var(--color-accent-achievement)' }}
-                />
-                <h2
-                  className="text-lg font-semibold"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  All Badges
-                </h2>
-                <Badge
-                  variant="outline"
-                  className="text-[9px]"
-                  style={{
-                    borderColor: 'var(--color-accent-secondary)',
-                    color: 'var(--color-accent-secondary)',
-                    background: 'var(--color-accent-secondary-dim)',
-                  }}
-                >
-                  {profile.badges.length}
-                </Badge>
-              </div>
+            <div className="flex items-center gap-2 mb-5 sticky top-0 bg-[#0a0a12]/95 backdrop-blur-xl pb-3 -mt-1 pt-1 z-[1]">
+              <Crown className="h-5 w-5 text-amber-400" />
+              <h2 className="text-lg font-semibold text-white">All Badges</h2>
+              <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 bg-purple-500/10">
+                {profile.badges.length}
+              </Badge>
+            </div>
 
-              <BadgeGrid badges={profile.badges} />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <BadgeGrid badges={profile.badges} />
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+function StatCard({ label, value, icon, color }: { label: string; value: number; icon: string; color: string }) {
+  const colorClasses: Record<string, string> = {
+    purple: 'from-purple-500/20 to-purple-500/5 border-purple-500/20 text-purple-400',
+    cyan: 'from-cyan-500/20 to-cyan-500/5 border-cyan-500/20 text-cyan-400',
+    green: 'from-green-500/20 to-green-500/5 border-green-500/20 text-green-400',
+    pink: 'from-pink-500/20 to-pink-500/5 border-pink-500/20 text-pink-400',
+    amber: 'from-amber-500/20 to-amber-500/5 border-amber-500/20 text-amber-400',
+    yellow: 'from-yellow-500/20 to-yellow-500/5 border-yellow-500/20 text-yellow-400',
+    emerald: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20 text-emerald-400',
+    red: 'from-red-500/20 to-red-500/5 border-red-500/20 text-red-400',
+  };
+  const cls = colorClasses[color] || colorClasses.purple;
+
+  return (
+    <div className={`p-4 rounded-xl bg-gradient-to-b ${cls} border text-center`}>
+      <div className="text-xl mb-1">{icon}</div>
+      <div className="text-2xl font-bold">{value.toLocaleString()}</div>
+      <div className="text-[10px] uppercase tracking-wider text-white/40 mt-1">{label}</div>
+    </div>
   );
 }
