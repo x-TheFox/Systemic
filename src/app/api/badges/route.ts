@@ -52,6 +52,19 @@ async function generateBadgesForUser(userId: string, commits?: string[], isFirst
     ? `\nCOMMIT MESSAGES (${isFirstBadgeSync ? 'ALL HISTORICAL' : 'NEW ONLY'}):\n${commits!.slice(0, 50).map((c, i) => `${i + 1}. ${c}`).join('\n')}`
     : '';
 
+  // Rarity rubric based on absolute stats — the AI must calibrate rarity to actual achievement
+  const totalStats = user.totalCommits + user.totalPRs * 5 + user.leetcodeHard * 10 + user.leetcodeMedium * 5 + user.codeforcesSolved;
+  let rarityGuidance = '';
+  if (totalStats >= 400) {
+    rarityGuidance = `This user is ELITE-TIER (total score ${totalStats}). MOST badges should be LEGENDARY or EPIC. Only give COMMON for the most trivial/basic skills. Legendary should dominate (~40-50% of badges), Epic next (~30%), Rare for solid but not exceptional work (~15%), Common only for beginner/foundation-level stuff (~5%).`;
+  } else if (totalStats >= 150) {
+    rarityGuidance = `This user is VETERAN-TIER (total score ${totalStats}). Badges should skew EPIC and RARE. Legendary only for their absolute best work (~10%). Epic for mastery (~30%). Rare for notable achievements (~35%). Common for basic skills/foundations (~25%).`;
+  } else if (totalStats >= 50) {
+    rarityGuidance = `This user is MID-TIER (total score ${totalStats}). MOST badges should be COMMON and RARE. Legendary ONLY if they did something truly exceptional (~2-3 max). Epic only for clear mastery moments (~10%). Rare for solid work (~30%). Common for everything else (~55-60%).`;
+  } else {
+    rarityGuidance = `This user is BEGINNER-TIER (total score ${totalStats}). ALMOST ALL badges must be COMMON. Rare ONLY for genuinely notable moments (~10% max). Epic/Legendary are FORBIDDEN unless they did something truly insane — and even then, cap at 1 epic max. Do NOT inflate rarity.`;
+  }
+
   const prompt = `You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
 
 USER: ${user.name || user.email}
@@ -77,16 +90,21 @@ ${unlockedNodes}
 DEEP DIVE ARCHETYPE: ${deepDiveData?.archetype || 'Unknown'}
 GRIND PATH: ${deepDiveData?.grindPath || 'Unknown'}
 
+RARITY RUBRIC — THIS IS CRITICAL. Rarity must reflect ACTUAL achievement level, not be spread evenly:
+${rarityGuidance}
+
+ABSOLUTE RARITY DEFINITIONS:
+- LEGENDARY (#f59e0b gold): Once-in-a-gang feats. Major systems built, 100+ commit projects shipped, architectural decisions that changed everything, mastery that few possess. NEVER give legendary for basic work.
+- EPIC (#a855f7 purple): Clear mastery in a domain. Complex features shipped, deep expertise demonstrated, significant impact. Not for "wrote some code" — for "wrote code that mattered."
+- RARE (#3b82f6 blue): Notable achievements. Solid contributions, good problem solving, above-average work. The "they know their stuff" tier.
+- COMMON (#6b7280 gray): Basic skill recognition. Any real work gets common, but it's still an achievement. Foundation-level, first steps, minor contributions.
+
 RULES:
 1. Generate as many badges as warranted — NO LIMIT. Look at every commit message and create a badge for significant work, patterns, or skills shown.
 2. Each badge must be UNIQUE — do NOT repeat existing badge names listed above.
 3. Descriptions MUST reference specific commit messages, patterns, or actual work done — tie each badge to real evidence.
 4. Names must be HYPE and GAMING-STYLE (e.g., "Cache Commander", "DOM Dominator", "Pipeline Warlord").
-5. Assign rarity freely based on actual impressiveness of the work:
-   - common = minor but real skill recognition
-   - rare = notable achievement
-   - epic = mastery
-   - legendary = once-in-a-gang feat
+5. RARITY MUST FOLLOW THE RUBRIC ABOVE. Do NOT spread rarities evenly. A beginner does NOT get legendary badges. An elite user does NOT get flooded with common badges.
 6. Colors: common=#6b7280 gray, rare=#3b82f6 blue, epic=#a855f7 purple, legendary=#f59e0b gold
 7. Icons: pick simple lucide-react icon names (e.g., "Zap", "Shield", "Cpu", "Flame", "Target", "Code", "Database", "Globe")
 8. Categories: skill | grind | social | special
