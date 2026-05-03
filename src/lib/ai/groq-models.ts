@@ -1,47 +1,106 @@
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { decrypt } from '@/lib/crypto';
 
 // ---------------------------------------------------------------------------
-// Multi-key pool: parse comma-separated API keys from GROQ_API_KEYS env var.
+// Multi-key pool: env keys + user-donated keys from the database.
 // Each key gets its own Groq client.  We round-robin across keys AND models
 // so rate limits scale linearly with the number of keys.
 // ---------------------------------------------------------------------------
 
-function buildKeyPool(): { client: ReturnType<typeof createGroq>; keyIndex: number }[] {
+interface KeyEntry {
+  client: ReturnType<typeof createGroq>;
+  keyIndex: number;
+  source: 'env' | 'donated';
+  id?: string; // DB id for donated keys
+}
+
+function getEnvKeys(): string[] {
   const raw = process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY || '';
-  const keys = raw
+  return raw
     .split(',')
     .map((k) => k.trim())
     .filter(Boolean);
+}
 
-  if (keys.length === 0) {
+async function getDonatedKeys(): Promise<{ id: string; key: string }[]> {
+  try {
+    const rows = await prisma.donatedKey.findMany({
+      where: { provider: 'groq', isActive: true },
+      select: { id: true, keyCipher: true },
+      orderBy: { useCount: 'asc' },
+    });
+    return rows.map((r) => ({ id: r.id, key: decrypt(r.keyCipher) }));
+  } catch (err) {
+    console.warn('[Groq] Failed to load donated keys:', err);
+    return [];
+  }
+}
+
+async function buildKeyPool(): Promise<KeyEntry[]> {
+  const envKeys = getEnvKeys();
+  const donated = await getDonatedKeys();
+
+  const entries: KeyEntry[] = [];
+
+  envKeys.forEach((key, i) => {
+    entries.push({
+      client: createGroq({ apiKey: key }),
+      keyIndex: i,
+      source: 'env',
+    });
+  });
+
+  donated.forEach((d, i) => {
+    entries.push({
+      client: createGroq({ apiKey: d.key }),
+      keyIndex: envKeys.length + i,
+      source: 'donated',
+      id: d.id,
+    });
+  });
+
+  if (entries.length === 0) {
     throw new Error(
-      '[Groq] No API keys found. Set GROQ_API_KEYS (comma-separated) or GROQ_API_KEY.'
+      '[Groq] No API keys found. Set GROQ_API_KEYS (comma-separated) or donate a key via /donate-key.'
     );
   }
 
-  return keys.map((key, i) => ({
-    client: createGroq({ apiKey: key }),
-    keyIndex: i,
-  }));
+  console.log(`[Groq] Key pool loaded: ${envKeys.length} env keys + ${donated.length} donated keys = ${entries.length} total`);
+  return entries;
 }
 
-const KEY_POOL = buildKeyPool();
+// Lazy-loaded pool (async init on first use)
+let _poolPromise: Promise<KeyEntry[]> | null = null;
+let _pool: KeyEntry[] | null = null;
+
+async function getPool(): Promise<KeyEntry[]> {
+  if (_pool) return _pool;
+  if (!_poolPromise) {
+    _poolPromise = buildKeyPool().then((pool) => {
+      _pool = pool;
+      return pool;
+    });
+  }
+  return _poolPromise;
+}
+
 let keyIndex = 0;
 
-function nextKey() {
-  const entry = KEY_POOL[keyIndex % KEY_POOL.length];
-  keyIndex = (keyIndex + 1) % KEY_POOL.length;
+function nextKey(pool: KeyEntry[]) {
+  const entry = pool[keyIndex % pool.length];
+  keyIndex = (keyIndex + 1) % pool.length;
   return entry;
 }
 
-function currentKey() {
-  return KEY_POOL[keyIndex % KEY_POOL.length];
+function currentKey(pool: KeyEntry[]) {
+  return pool[keyIndex % pool.length];
 }
 
 // Convenience: single groq export for backward-compat (uses current key)
-const groq = currentKey().client;
+const groq = createGroq({ apiKey: getEnvKeys()[0] || 'dummy' });
 
 const MODELS = [
   'openai/gpt-oss-120b',
@@ -168,6 +227,17 @@ function extractJSON(text: string): any {
   return recursivelyCleanObject(parsed);
 }
 
+async function incrementKeyUsage(keyId: string) {
+  try {
+    await prisma.donatedKey.update({
+      where: { id: keyId },
+      data: { useCount: { increment: 1 }, lastUsedAt: new Date() },
+    });
+  } catch {
+    // silent fail — don't block LLM call
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Core retry loop: tries every (key × model) combination before giving up.
 // With N keys and M models we have N×M attempts.
@@ -177,43 +247,51 @@ async function generateWithRetry(
   prompt: string,
   options?: { maxAttempts?: number }
 ): Promise<string> {
-  const maxAttempts = options?.maxAttempts ?? MODELS.length * KEY_POOL.length;
+  const pool = await getPool();
+  const maxAttempts = options?.maxAttempts ?? MODELS.length * pool.length;
   let lastError: any;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const model = attempt === 0 ? currentModel() : nextModel();
-    const keyEntry = attempt === 0 ? currentKey() : nextKey();
+    const keyEntry = attempt === 0 ? currentKey(pool) : nextKey(pool);
 
     try {
       const { text } = await generateText({
         model: keyEntry.client(model),
         prompt,
       });
+
+      // Track donated key usage
+      if (keyEntry.source === 'donated' && keyEntry.id) {
+        incrementKeyUsage(keyEntry.id);
+      }
+
       return stripLLMWrappers(text);
     } catch (error: any) {
       lastError = error;
 
       if (isRateLimitError(error)) {
         console.warn(
-          `[Groq] Rate limited on key #${keyEntry.keyIndex + 1}/${KEY_POOL.length} + model ${model}. Rotating...`
+          `[Groq] Rate limited on ${keyEntry.source} key #${keyEntry.keyIndex + 1}/${pool.length} + model ${model}. Rotating...`
         );
         continue;
       }
 
       console.warn(
-        `[Groq] Error on key #${keyEntry.keyIndex + 1} + ${model}: ${error?.message?.slice(0, 100)}`
+        `[Groq] Error on ${keyEntry.source} key #${keyEntry.keyIndex + 1} + ${model}: ${error?.message?.slice(0, 100)}`
       );
       continue;
     }
   }
 
   // All combos exhausted — wait for the current key's retry-after then try once more
-  const lastKey = currentKey();
+  const finalPool = await getPool();
+  const lastKey = currentKey(finalPool);
   const lastModelName = currentModel();
   const waitSeconds = Math.min(getRetryAfter(lastError), 120);
 
   console.warn(
-    `[Groq] All ${KEY_POOL.length} keys × ${MODELS.length} models exhausted. Waiting ${waitSeconds}s for key #${lastKey.keyIndex + 1} + ${lastModelName}...`
+    `[Groq] All ${finalPool.length} keys × ${MODELS.length} models exhausted. Waiting ${waitSeconds}s for key #${lastKey.keyIndex + 1} + ${lastModelName}...`
   );
   await sleep(waitSeconds * 1000);
 
@@ -239,13 +317,14 @@ export async function groqGenerateObject<T extends z.ZodType>(
 ): Promise<z.infer<T>> {
   const jsonPrompt = `${prompt}\n\nIMPORTANT: Return ONLY valid JSON. Do not wrap in markdown code blocks. Do not add any explanatory text before or after the JSON.`;
 
+  const pool = await getPool();
+  const maxAttempts = MODELS.length * pool.length;
   let lastError: any;
   let lastRaw: string | null = null;
-  const maxAttempts = MODELS.length * KEY_POOL.length;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const model = attempt === 0 ? currentModel() : nextModel();
-    const keyEntry = attempt === 0 ? currentKey() : nextKey();
+    const keyEntry = attempt === 0 ? currentKey(pool) : nextKey(pool);
 
     try {
       const text = await generateWithRetry(jsonPrompt, { maxAttempts: 1 });
@@ -258,23 +337,23 @@ export async function groqGenerateObject<T extends z.ZodType>(
 
       if (isRateLimitError(error)) {
         console.warn(
-          `[Groq] Rate limited on key #${keyEntry.keyIndex + 1} + ${model} (object mode). Rotating...`
+          `[Groq] Rate limited on ${keyEntry.source} key #${keyEntry.keyIndex + 1} + ${model} (object mode). Rotating...`
         );
         continue;
       }
 
       console.warn(
-        `[Groq] JSON/Zod error on key #${keyEntry.keyIndex + 1} + ${model}: ${error?.message?.slice(0, 120)} | raw: ${lastRaw?.slice(0, 200)}`
+        `[Groq] JSON/Zod error on ${keyEntry.source} key #${keyEntry.keyIndex + 1} + ${model}: ${error?.message?.slice(0, 120)} | raw: ${lastRaw?.slice(0, 200)}`
       );
       continue;
     }
   }
 
   // All combos exhausted — final attempt after wait
-  const lastKey = currentKey();
+  const lastKey = currentKey(pool);
   const waitSeconds = Math.min(getRetryAfter(lastError), 120);
   console.warn(
-    `[Groq] All ${KEY_POOL.length} keys × ${MODELS.length} models exhausted (object mode). Waiting ${waitSeconds}s for key #${lastKey.keyIndex + 1}...`
+    `[Groq] All ${pool.length} keys × ${MODELS.length} models exhausted (object mode). Waiting ${waitSeconds}s for key #${lastKey.keyIndex + 1}...`
   );
   await sleep(waitSeconds * 1000);
 
@@ -294,4 +373,4 @@ export async function groqGenerateObject<T extends z.ZodType>(
   }
 }
 
-export { groq, MODELS, currentModel, nextModel, KEY_POOL };
+export { groq, MODELS, currentModel, nextModel };

@@ -69,6 +69,7 @@ model User {
   guildId           String?
   guild             Guild?   @relation("GuildMembers", fields: [guildId], references: [id])
   adminOfGuilds     Guild[]  @relation("GuildAdmin")
+  donatedKeys       DonatedKey[]
 
   @@index([xp])
   @@index([clerkId])
@@ -350,6 +351,23 @@ model GuildDuel {
   @@index([challengerGuildId])
   @@index([opponentGuildId])
   @@index([status])
+}
+
+model DonatedKey {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  String   @default("groq") // groq | openai | etc
+  keyHash   String   // bcrypt hash of the key for verification
+  keyCipher String   // encrypted key (AES-256-GCM via APP_ENCRYPTION_KEY)
+  isActive  Boolean  @default(true)
+  useCount  Int      @default(0)
+  lastUsedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([provider, isActive])
 }
 
 model GuildBadge {

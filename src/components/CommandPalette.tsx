@@ -3,12 +3,22 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, Trophy, User, Search, Zap } from "lucide-react";
+import {
+  LayoutDashboard, Trophy, User, Search, Zap,
+  Activity, Swords, Shield, BarChart3, KeyRound,
+  GitBranch, Sparkles, MessageSquare, Radio,
+} from "lucide-react";
 
 const commands = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/", shortcut: "D" },
   { id: "leaderboard", label: "Leaderboard", icon: Trophy, href: "/leaderboard", shortcut: "L" },
+  { id: "pulse", label: "Pulse", icon: Activity, href: "/pulse", shortcut: "U" },
+  { id: "duels", label: "Duels", icon: Swords, href: "/duels", shortcut: "E" },
+  { id: "guilds", label: "Guilds", icon: Shield, href: "/guilds", shortcut: "G" },
   { id: "profile", label: "Profile", icon: User, href: "/profile", shortcut: "P" },
+  { id: "compare", label: "Compare", icon: BarChart3, href: "/compare", shortcut: "C" },
+  { id: "donate-key", label: "Donate API Key", icon: KeyRound, href: "/donate-key", shortcut: "K" },
+  { id: "skill-tree", label: "Skill Tree", icon: Sparkles, href: "/", shortcut: "S" },
 ];
 
 export function CommandPalette() {
@@ -73,7 +83,7 @@ export function CommandPalette() {
               />
               <span className="text-[10px] text-fg-muted font-mono border border-white/[0.08] px-1.5 py-0.5 rounded">ESC</span>
             </div>
-            <div className="p-1.5">
+            <div className="p-1.5 max-h-80 overflow-y-auto">
               {filtered.map((cmd) => (
                 <button
                   key={cmd.id}
