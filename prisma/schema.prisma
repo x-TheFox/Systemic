@@ -317,10 +317,10 @@ model Guild {
   iconUrl     String?
   isPublic    Boolean  @default(true)
   adminId     String
-  admin       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  admin       User     @relation("GuildAdmin", fields: [adminId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
 
-  members           User[]
+  members           User[]  @relation("GuildMembers")
   badges            GuildBadge[]
   duelsAsChallenger GuildDuel[] @relation("ChallengerGuild")
   duelsAsOpponent   GuildDuel[] @relation("OpponentGuild")
