@@ -52,48 +52,95 @@ async function sleep(ms: number): Promise<void> {
 }
 
 function stripLLMWrappers(text: string): string {
-  // Remove <think>...</think> tags (Qwen, DeepSeek reasoning models)
-  text = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
-  // Remove other common wrapper tags
-  text = text.replace(/<output>[\s\S]*?<\/output>/gi, '');
-  text = text.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '');
+  // Aggressively remove reasoning/wrapper tag blocks that models like Qwen, DeepSeek emit.
+  // These can appear ANYWHERE in the output — even inside JSON string values.
+  const wrapperTags = [
+    'think', 'thinking', 'thought', 'reasoning', 'output', 'analysis',
+    'preliminary_analysis', 'reflection', 'eval',
+  ];
+
+  for (const tag of wrapperTags) {
+    // Remove properly closed blocks: <tag>...</tag>
+    const closed = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
+    text = text.replace(closed, '');
+    // Remove self-closing: <tag/>
+    const selfClosing = new RegExp(`<${tag}\\b[^>]*/>`, 'gi');
+    text = text.replace(selfClosing, '');
+  }
+
+  // If an opening tag is left unclosed (model stopped mid-reasoning), strip everything from it onward.
+  // This prevents trailing garbage from poisoning JSON.
+  const unclosed = new RegExp(
+    `<(?:${wrapperTags.join('|')})\\b[^>]*>[\\s\\S]*$`,
+    'i'
+  );
+  text = text.replace(unclosed, '');
+
   return text;
+}
+
+function recursivelyCleanObject(obj: any): any {
+  if (typeof obj === 'string') {
+    return stripLLMWrappers(obj).trim();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(recursivelyCleanObject);
+  }
+  if (obj && typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      cleaned[key] = recursivelyCleanObject(value);
+    }
+    return cleaned;
+  }
+  return obj;
 }
 
 function extractJSON(text: string): any {
   text = stripLLMWrappers(text);
 
+  let parsed: any;
+
   // Try to find JSON in markdown code blocks first
   const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (codeBlockMatch) {
     try {
-      return JSON.parse(codeBlockMatch[1].trim());
+      parsed = JSON.parse(codeBlockMatch[1].trim());
     } catch {
       // fallback to raw text
     }
   }
 
   // Try to find the first JSON object or array in the raw text
-  const objectMatch = text.match(/\{[\s\S]*\}/);
-  if (objectMatch) {
-    try {
-      return JSON.parse(objectMatch[0]);
-    } catch {
-      // try array
+  if (!parsed) {
+    const objectMatch = text.match(/\{[\s\S]*\}/);
+    if (objectMatch) {
+      try {
+        parsed = JSON.parse(objectMatch[0]);
+      } catch {
+        // try array
+      }
     }
   }
 
-  const arrayMatch = text.match(/\[[\s\S]*\]/);
-  if (arrayMatch) {
-    try {
-      return JSON.parse(arrayMatch[0]);
-    } catch {
-      // last resort
+  if (!parsed) {
+    const arrayMatch = text.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+      try {
+        parsed = JSON.parse(arrayMatch[0]);
+      } catch {
+        // last resort
+      }
     }
   }
 
   // Last resort: try the whole text
-  return JSON.parse(text.trim());
+  if (!parsed) {
+    parsed = JSON.parse(text.trim());
+  }
+
+  // Deep-clean any reasoning tags that leaked into JSON string values
+  return recursivelyCleanObject(parsed);
 }
 
 export async function groqGenerateText(prompt: string): Promise<string> {
@@ -105,7 +152,7 @@ export async function groqGenerateText(prompt: string): Promise<string> {
         model: groq(model),
         prompt,
       });
-      return text;
+      return stripLLMWrappers(text);
     } catch (error: any) {
       lastError = error;
       if (isRateLimitError(error)) {
@@ -128,7 +175,7 @@ export async function groqGenerateText(prompt: string): Promise<string> {
       model: groq(lastModel),
       prompt,
     });
-    return text;
+    return stripLLMWrappers(text);
   } catch (error: any) {
     throw lastError;
   }
