@@ -2,7 +2,46 @@ import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 import { z } from 'zod';
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+// ---------------------------------------------------------------------------
+// Multi-key pool: parse comma-separated API keys from GROQ_API_KEYS env var.
+// Each key gets its own Groq client.  We round-robin across keys AND models
+// so rate limits scale linearly with the number of keys.
+// ---------------------------------------------------------------------------
+
+function buildKeyPool(): { client: ReturnType<typeof createGroq>; keyIndex: number }[] {
+  const raw = process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY || '';
+  const keys = raw
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean);
+
+  if (keys.length === 0) {
+    throw new Error(
+      '[Groq] No API keys found. Set GROQ_API_KEYS (comma-separated) or GROQ_API_KEY.'
+    );
+  }
+
+  return keys.map((key, i) => ({
+    client: createGroq({ apiKey: key }),
+    keyIndex: i,
+  }));
+}
+
+const KEY_POOL = buildKeyPool();
+let keyIndex = 0;
+
+function nextKey() {
+  const entry = KEY_POOL[keyIndex % KEY_POOL.length];
+  keyIndex = (keyIndex + 1) % KEY_POOL.length;
+  return entry;
+}
+
+function currentKey() {
+  return KEY_POOL[keyIndex % KEY_POOL.length];
+}
+
+// Convenience: single groq export for backward-compat (uses current key)
+const groq = currentKey().client;
 
 const MODELS = [
   'openai/gpt-oss-120b',
@@ -32,6 +71,8 @@ function isRateLimitError(error: any): boolean {
     error?.message?.includes('rate_limit') ||
     error?.message?.includes('Rate limit') ||
     error?.message?.includes('TPD') ||
+    error?.message?.includes('quota') ||
+    error?.message?.includes('limit') ||
     error?.cause?.statusCode === 429
   );
 }
@@ -52,24 +93,18 @@ async function sleep(ms: number): Promise<void> {
 }
 
 function stripLLMWrappers(text: string): string {
-  // Aggressively remove reasoning/wrapper tag blocks that models like Qwen, DeepSeek emit.
-  // These can appear ANYWHERE in the output — even inside JSON string values.
   const wrapperTags = [
     'think', 'thinking', 'thought', 'reasoning', 'output', 'analysis',
     'preliminary_analysis', 'reflection', 'eval',
   ];
 
   for (const tag of wrapperTags) {
-    // Remove properly closed blocks: <tag>...</tag>
     const closed = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
     text = text.replace(closed, '');
-    // Remove self-closing: <tag/>
     const selfClosing = new RegExp(`<${tag}\\b[^>]*/>`, 'gi');
     text = text.replace(selfClosing, '');
   }
 
-  // If an opening tag is left unclosed (model stopped mid-reasoning), strip everything from it onward.
-  // This prevents trailing garbage from poisoning JSON.
   const unclosed = new RegExp(
     `<(?:${wrapperTags.join('|')})\\b[^>]*>[\\s\\S]*$`,
     'i'
@@ -101,25 +136,19 @@ function extractJSON(text: string): any {
 
   let parsed: any;
 
-  // Try to find JSON in markdown code blocks first
   const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (codeBlockMatch) {
     try {
       parsed = JSON.parse(codeBlockMatch[1].trim());
-    } catch {
-      // fallback to raw text
-    }
+    } catch { /* noop */ }
   }
 
-  // Try to find the first JSON object or array in the raw text
   if (!parsed) {
     const objectMatch = text.match(/\{[\s\S]*\}/);
     if (objectMatch) {
       try {
         parsed = JSON.parse(objectMatch[0]);
-      } catch {
-        // try array
-      }
+      } catch { /* noop */ }
     }
   }
 
@@ -128,51 +157,69 @@ function extractJSON(text: string): any {
     if (arrayMatch) {
       try {
         parsed = JSON.parse(arrayMatch[0]);
-      } catch {
-        // last resort
-      }
+      } catch { /* noop */ }
     }
   }
 
-  // Last resort: try the whole text
   if (!parsed) {
     parsed = JSON.parse(text.trim());
   }
 
-  // Deep-clean any reasoning tags that leaked into JSON string values
   return recursivelyCleanObject(parsed);
 }
 
-export async function groqGenerateText(prompt: string): Promise<string> {
+// ---------------------------------------------------------------------------
+// Core retry loop: tries every (key × model) combination before giving up.
+// With N keys and M models we have N×M attempts.
+// ---------------------------------------------------------------------------
+
+async function generateWithRetry(
+  prompt: string,
+  options?: { maxAttempts?: number }
+): Promise<string> {
+  const maxAttempts = options?.maxAttempts ?? MODELS.length * KEY_POOL.length;
   let lastError: any;
-  for (let attempt = 0; attempt < MODELS.length; attempt++) {
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const model = attempt === 0 ? currentModel() : nextModel();
+    const keyEntry = attempt === 0 ? currentKey() : nextKey();
+
     try {
       const { text } = await generateText({
-        model: groq(model),
+        model: keyEntry.client(model),
         prompt,
       });
       return stripLLMWrappers(text);
     } catch (error: any) {
       lastError = error;
+
       if (isRateLimitError(error)) {
-        console.warn(`[Groq] Rate limited on ${model}, switching to next model...`);
+        console.warn(
+          `[Groq] Rate limited on key #${keyEntry.keyIndex + 1}/${KEY_POOL.length} + model ${model}. Rotating...`
+        );
         continue;
       }
-      console.warn(`[Groq] Error on ${model}: ${error?.message?.slice(0, 100)}`);
+
+      console.warn(
+        `[Groq] Error on key #${keyEntry.keyIndex + 1} + ${model}: ${error?.message?.slice(0, 100)}`
+      );
       continue;
     }
   }
 
-  // All models exhausted — last resort: wait for the last model's retry-after then try once more
-  const lastModel = currentModel();
+  // All combos exhausted — wait for the current key's retry-after then try once more
+  const lastKey = currentKey();
+  const lastModelName = currentModel();
   const waitSeconds = Math.min(getRetryAfter(lastError), 120);
-  console.warn(`[Groq] All models hit rate limits. Waiting ${waitSeconds}s for ${lastModel}...`);
+
+  console.warn(
+    `[Groq] All ${KEY_POOL.length} keys × ${MODELS.length} models exhausted. Waiting ${waitSeconds}s for key #${lastKey.keyIndex + 1} + ${lastModelName}...`
+  );
   await sleep(waitSeconds * 1000);
 
   try {
     const { text } = await generateText({
-      model: groq(lastModel),
+      model: lastKey.client(lastModelName),
       prompt,
     });
     return stripLLMWrappers(text);
@@ -181,56 +228,70 @@ export async function groqGenerateText(prompt: string): Promise<string> {
   }
 }
 
+export async function groqGenerateText(prompt: string): Promise<string> {
+  return generateWithRetry(prompt);
+}
+
 export async function groqGenerateObject<T extends z.ZodType>(
   schema: T,
   prompt: string,
   fallback?: z.infer<T>
 ): Promise<z.infer<T>> {
-  // Append JSON formatting instruction to the prompt
   const jsonPrompt = `${prompt}\n\nIMPORTANT: Return ONLY valid JSON. Do not wrap in markdown code blocks. Do not add any explanatory text before or after the JSON.`;
 
   let lastError: any;
   let lastRaw: string | null = null;
+  const maxAttempts = MODELS.length * KEY_POOL.length;
 
-  for (let attempt = 0; attempt < MODELS.length; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const model = attempt === 0 ? currentModel() : nextModel();
+    const keyEntry = attempt === 0 ? currentKey() : nextKey();
+
     try {
-      const text = await groqGenerateText(jsonPrompt);
+      const text = await generateWithRetry(jsonPrompt, { maxAttempts: 1 });
       lastRaw = text.slice(0, 500);
       const raw = extractJSON(text);
       const parsed = schema.parse(raw);
       return parsed as z.infer<T>;
     } catch (error: any) {
       lastError = error;
+
       if (isRateLimitError(error)) {
-        console.warn(`[Groq] Rate limited on ${model}, switching to next model...`);
+        console.warn(
+          `[Groq] Rate limited on key #${keyEntry.keyIndex + 1} + ${model} (object mode). Rotating...`
+        );
         continue;
       }
-      // JSON parse or Zod validation error — log and retry with next model
-      console.warn(`[Groq] JSON parse/Zod error on ${model}: ${error?.message?.slice(0, 120)} | raw: ${lastRaw?.slice(0, 200)}`);
+
+      console.warn(
+        `[Groq] JSON/Zod error on key #${keyEntry.keyIndex + 1} + ${model}: ${error?.message?.slice(0, 120)} | raw: ${lastRaw?.slice(0, 200)}`
+      );
       continue;
     }
   }
 
-  // All models exhausted — try one final time after waiting
-  const lastModel = currentModel();
+  // All combos exhausted — final attempt after wait
+  const lastKey = currentKey();
   const waitSeconds = Math.min(getRetryAfter(lastError), 120);
-  console.warn(`[Groq] All models exhausted. Waiting ${waitSeconds}s for ${lastModel}...`);
+  console.warn(
+    `[Groq] All ${KEY_POOL.length} keys × ${MODELS.length} models exhausted (object mode). Waiting ${waitSeconds}s for key #${lastKey.keyIndex + 1}...`
+  );
   await sleep(waitSeconds * 1000);
 
   try {
-    const text = await groqGenerateText(jsonPrompt);
+    const text = await generateWithRetry(jsonPrompt, { maxAttempts: 1 });
     const raw = extractJSON(text);
     const parsed = schema.parse(raw);
     return parsed as z.infer<T>;
   } catch (error: any) {
-    // If a fallback was provided, return it instead of crashing
     if (fallback !== undefined) {
-      console.error(`[Groq] All models failed. Using fallback. Last error: ${lastError?.message?.slice(0, 200)} | raw: ${lastRaw?.slice(0, 300)}`);
+      console.error(
+        `[Groq] All keys failed. Using fallback. Last error: ${lastError?.message?.slice(0, 200)} | raw: ${lastRaw?.slice(0, 300)}`
+      );
       return fallback;
     }
     throw lastError;
   }
 }
 
-export { groq, MODELS, currentModel, nextModel };
+export { groq, MODELS, currentModel, nextModel, KEY_POOL };

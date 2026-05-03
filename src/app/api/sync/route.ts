@@ -20,20 +20,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const users = await prisma.user.findMany();
-    const results = [];
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
 
-    for (const user of users) {
+    // SINGLE USER SYNC — called by GitHub Actions loop
+    if (userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
       try {
         await syncUser(user);
-        results.push({ userId: user.id, email: user.email, status: 'ok' });
+        return NextResponse.json({ success: true, userId: user.id, email: user.email, status: 'ok' });
       } catch (err: any) {
         console.error(`Sync failed for user ${user.id}:`, err);
-        results.push({ userId: user.id, email: user.email, status: 'error', error: err.message });
+        return NextResponse.json({ success: false, userId: user.id, error: err.message }, { status: 500 });
       }
     }
 
-    return NextResponse.json({ success: true, processedUsers: users.length, results });
+    // ORCHESTRATION MODE — return list of users needing sync
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true },
+      orderBy: { updatedAt: 'asc' }, // sync stalest first
+    });
+
+    return NextResponse.json({ users, count: users.length });
   } catch (error: any) {
     console.error('Sync error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

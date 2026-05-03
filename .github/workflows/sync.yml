@@ -10,12 +10,38 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Sync API
+      - name: Sync all users (one per request)
         run: |
-          curl -X POST "${{ secrets.VERCEL_URL }}/api/sync" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            --fail
+          set -e
+          BASE_URL="${{ secrets.VERCEL_URL }}"
+          AUTH="Bearer ${{ secrets.CRON_SECRET }}"
+
+          echo "=== Fetching user list ==="
+          USERS_JSON=$(curl -s -X POST "${BASE_URL}/api/sync" \
+            -H "Authorization: ${AUTH}" \
+            -H "Content-Type: application/json")
+
+          echo "Users response: $USERS_JSON"
+
+          COUNT=$(echo "$USERS_JSON" | jq -r '.count // 0')
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No users to sync."
+            exit 0
+          fi
+
+          echo "=== Syncing $COUNT users one-by-one ==="
+
+          echo "$USERS_JSON" | jq -r '.users[].id' | while read -r USER_ID; do
+            echo "→ Syncing user $USER_ID..."
+            RESPONSE=$(curl -s -X POST "${BASE_URL}/api/sync?userId=${USER_ID}" \
+              -H "Authorization: ${AUTH}" \
+              -H "Content-Type: application/json")
+            echo "  Response: $RESPONSE"
+            sleep 2  # brief pause between users
+          done
+
+          echo "=== Sync complete ==="
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
