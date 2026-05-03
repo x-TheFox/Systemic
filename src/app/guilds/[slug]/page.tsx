@@ -42,7 +42,6 @@ function processSvgForStorage(svg: string): string {
   );
   return svg.trim();
 }
-}
 
 export default function GuildDetailPage() {
   const params = useParams();
