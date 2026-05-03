@@ -52,16 +52,7 @@ async function generateTitleForUser(userId: string): Promise<number> {
 
   if (!user) return 0;
 
-  // Archive current title before overwriting (only if it actually changes)
-  if (user.title) {
-    const now = new Date();
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const weekNumber = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
-
-    // We'll compare after generating the new title, but we need the old one now
-    // Store old title for comparison after generation
-    // Archiving happens below after we know the new title
-  }
+  const oldTitle = user.title;
 
   const deepDiveSnapshot = user.ghostSnapshots.find((s: any) => {
     const ac = s.activityCounts as any;
