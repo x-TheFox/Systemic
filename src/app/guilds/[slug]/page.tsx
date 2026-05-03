@@ -161,13 +161,22 @@ export default function GuildDetailPage() {
             </div>
           </div>
           {isAdmin && (
-            <button
-              onClick={leaveGuild}
-              className="h-9 px-3 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors inline-flex items-center gap-1.5"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Delete Guild
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setEditing(!editing)}
+                className="h-9 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:bg-white/[0.06] transition-colors inline-flex items-center gap-1.5"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </button>
+              <button
+                onClick={leaveGuild}
+                className="h-9 px-3 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors inline-flex items-center gap-1.5"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Delete Guild
+              </button>
+            </div>
           )}
           {!isAdmin && guild.members.some((m) => m.id === myUserId) && (
             <button
@@ -179,6 +188,56 @@ export default function GuildDetailPage() {
             </button>
           )}
         </motion.div>
+
+        {/* Edit Form */}
+        {editing && isAdmin && (
+          <motion.div variants={staggerItem} className="glass-card p-6 space-y-4">
+            <h2 className="text-heading text-white">Edit Guild</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-label text-fg-muted mb-1 block">Guild Name</label>
+                <input
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full h-10 px-3 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50"
+                />
+              </div>
+              <div>
+                <label className="text-label text-fg-muted mb-1 block">Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50 resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-label text-fg-muted mb-1 block">Guild Icon SVG / URL</label>
+                <textarea
+                  value={editForm.iconUrl}
+                  onChange={(e) => setEditForm({ ...editForm, iconUrl: e.target.value })}
+                  placeholder="Paste <svg>...</svg> or an image URL"
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50 resize-none font-mono text-xs"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={saveGuildEdit}
+                  className="h-9 px-4 rounded-[var(--radius-compact)] bg-accent text-white text-sm font-semibold"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={() => setEditing(false)}
+                  className="h-9 px-4 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Stats */}
         <motion.div variants={staggerItem} className="grid grid-cols-3 gap-3">

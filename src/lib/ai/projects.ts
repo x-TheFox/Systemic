@@ -16,7 +16,8 @@ export async function analyzeProject(
   repoName: string,
   repoDescription: string | null,
   repoLanguage: string | null,
-  token?: string
+  token?: string,
+  forkInfo?: { isFork: boolean; aheadBy: number; parentFullName: string | null }
 ): Promise<ProjectCard> {
   const model = nextModel();
 
@@ -24,12 +25,17 @@ export async function analyzeProject(
   const tree = await fetchRepoTree(owner, repoName, token);
   const truncatedTree = tree.slice(0, 200); // Limit tree size
 
+  // Build fork context for the LLM
+  const forkContext = forkInfo?.isFork
+    ? `\nFORK STATUS: This is a fork of ${forkInfo.parentFullName || 'an upstream repo'}. It has ${forkInfo.aheadBy} unique commits ahead of upstream.`
+    : '';
+
   // Step 2: Ask LLM which files to read
   const fileSelectionPrompt = `You are analyzing a GitHub repository. Here is the file tree (first 200 files):
 
 Repo: ${repoName}
 Description: ${repoDescription || 'N/A'}
-Language: ${repoLanguage || 'Unknown'}
+Language: ${repoLanguage || 'Unknown'}${forkContext}
 
 Files:
 ${truncatedTree.join('\n')}
@@ -65,7 +71,7 @@ List the 5-10 most important files to read to understand what this project does.
 
 Repo: ${repoName}
 Description: ${repoDescription || 'N/A'}
-Language: ${repoLanguage || 'Unknown'}
+Language: ${repoLanguage || 'Unknown'}${forkContext}
 
 Key files:
 ${filesContext}

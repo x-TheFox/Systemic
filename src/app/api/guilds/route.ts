@@ -91,6 +91,7 @@ export async function POST(req: Request) {
         name,
         slug: slug.toLowerCase(),
         description,
+        iconUrl: body.iconUrl || null,
         isPublic,
         adminId: dbUser.id,
         members: { connect: { id: dbUser.id } },
@@ -100,6 +101,60 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, guild });
   } catch (error: any) {
     console.error('Guilds POST error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId: user.id },
+      select: { id: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const slug = searchParams.get('slug');
+    if (!slug) {
+      return NextResponse.json({ error: 'slug required' }, { status: 400 });
+    }
+
+    const guild = await prisma.guild.findUnique({
+      where: { slug },
+      select: { id: true, adminId: true },
+    });
+
+    if (!guild) {
+      return NextResponse.json({ error: 'Guild not found' }, { status: 404 });
+    }
+
+    if (guild.adminId !== dbUser.id) {
+      return NextResponse.json({ error: 'Only admin can edit guild' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { name, description, iconUrl } = body;
+
+    const updated = await prisma.guild.update({
+      where: { id: guild.id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(iconUrl !== undefined && { iconUrl: iconUrl || null }),
+      },
+    });
+
+    return NextResponse.json({ success: true, guild: updated });
+  } catch (error: any) {
+    console.error('Guilds PUT error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

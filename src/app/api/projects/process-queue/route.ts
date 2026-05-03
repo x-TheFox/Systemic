@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { analyzeProject, pickBestProjects, summarizeProjectForBadges } from '@/lib/ai/projects';
-import { fetchRepoTree, fetchRepoFile } from '@/lib/fetchers/github-repos';
+import { fetchRepoTree, fetchRepoFile, checkForkContribution } from '@/lib/fetchers/github-repos';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,8 +77,24 @@ export async function POST(req: Request) {
 
         const [, owner, repoName] = match;
 
-        // Analyze project
-        const card = await analyzeProject(owner, repoName, null, null, process.env.GITHUB_TOKEN);
+        // Check fork status for LLM context
+        const forkStatus = await checkForkContribution(owner, repoName, process.env.GITHUB_TOKEN);
+
+        // Analyze project (pass fork info so LLM knows context)
+        const card = await analyzeProject(
+          owner,
+          repoName,
+          null,
+          null,
+          process.env.GITHUB_TOKEN,
+          forkStatus.isFork
+            ? {
+                isFork: forkStatus.isFork,
+                aheadBy: forkStatus.aheadBy,
+                parentFullName: forkStatus.parentFullName,
+              }
+            : undefined
+        );
 
         // Get file tree for summary
         const tree = await fetchRepoTree(owner, repoName, process.env.GITHUB_TOKEN);

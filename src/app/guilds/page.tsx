@@ -25,6 +25,7 @@ export default function GuildsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", slug: "", description: "", iconUrl: "" });
   const [myGuildId, setMyGuildId] = useState<string | null>(null);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -40,6 +41,7 @@ export default function GuildsPage() {
         if (profileRes.ok) {
           const data = await profileRes.json();
           setMyGuildId(data.user?.guildId || null);
+          setMyUserId(data.user?.id || null);
         }
       } catch {
         setGuilds([]);

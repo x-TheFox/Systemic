@@ -9,6 +9,8 @@ export interface GitHubRepo {
   forks_count: number;
   updated_at: string;
   pushed_at: string;
+  fork: boolean;
+  default_branch?: string;
 }
 
 export async function fetchGitHubRepos(handle: string, token?: string): Promise<GitHubRepo[]> {
@@ -101,5 +103,74 @@ export async function fetchRepoFile(owner: string, repo: string, path: string, t
     return null;
   } catch {
     return null;
+  }
+}
+
+export interface ForkStatus {
+  isFork: boolean;
+  hasContribution: boolean;
+  aheadBy: number;
+  parentFullName: string | null;
+}
+
+export async function checkForkContribution(owner: string, repo: string, token?: string): Promise<ForkStatus> {
+  const authToken = token || process.env.GITHUB_TOKEN;
+  if (!authToken) {
+    return { isFork: false, hasContribution: true, aheadBy: 0, parentFullName: null };
+  }
+
+  try {
+    // Get repo details to check if it's a fork and find parent
+    const repoRes = await fetch(`${GITHUB_REST}/repos/${owner}/${repo}`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (!repoRes.ok) {
+      return { isFork: false, hasContribution: true, aheadBy: 0, parentFullName: null };
+    }
+
+    const repoData = await repoRes.json();
+    if (!repoData.fork) {
+      return { isFork: false, hasContribution: true, aheadBy: 0, parentFullName: null };
+    }
+
+    const parent = repoData.parent;
+    if (!parent) {
+      return { isFork: true, hasContribution: true, aheadBy: 0, parentFullName: null };
+    }
+
+    // Compare fork's default branch with parent's default branch
+    const forkBranch = repoData.default_branch || 'master';
+    const parentBranch = parent.default_branch || 'master';
+    const compareUrl = `${GITHUB_REST}/repos/${owner}/${repo}/compare/${parent.owner.login}:${parentBranch}...${owner}:${forkBranch}`;
+
+    const compareRes = await fetch(compareUrl, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (!compareRes.ok) {
+      // Compare API failed — err on side of including, but warn
+      console.warn(`[ForkCheck] Compare API failed for ${owner}/${repo}, assuming fork has contributions`);
+      return { isFork: true, hasContribution: true, aheadBy: 0, parentFullName: parent.full_name };
+    }
+
+    const compareData = await compareRes.json();
+    const aheadBy = compareData.ahead_by || 0;
+
+    return {
+      isFork: true,
+      hasContribution: aheadBy > 0,
+      aheadBy,
+      parentFullName: parent.full_name,
+    };
+  } catch (err: any) {
+    console.warn(`[ForkCheck] Error checking ${owner}/${repo}:`, err.message);
+    return { isFork: false, hasContribution: true, aheadBy: 0, parentFullName: null };
   }
 }

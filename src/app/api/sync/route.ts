@@ -176,13 +176,16 @@ async function syncUser(user: any) {
       // QUEUE PROJECTS for AI analysis
       if (process.env.GITHUB_TOKEN) {
         try {
-          const { fetchGitHubRepos } = await import('@/lib/fetchers/github-repos');
+          const { fetchGitHubRepos, checkForkContribution } = await import('@/lib/fetchers/github-repos');
           const repos = await fetchGitHubRepos(user.githubHandle, process.env.GITHUB_TOKEN);
           const existingProjects = await prisma.project.findMany({
             where: { userId: user.id },
             select: { repoUrl: true },
           });
           const existingUrls = new Set(existingProjects.map((p) => p.repoUrl));
+
+          let queued = 0;
+          let skippedForks = 0;
 
           for (const repo of repos) {
             const repoUrl = repo.html_url;
@@ -191,24 +194,35 @@ async function syncUser(user: any) {
             const lastPushed = new Date(repo.pushed_at);
             const shouldQueue = !isExisting || (Date.now() - lastPushed.getTime() < 30 * 24 * 60 * 60 * 1000);
 
-            if (shouldQueue) {
-              // Check if already queued
-              const alreadyQueued = await prisma.projectQueue.findFirst({
-                where: { userId: user.id, repoName: repo.name, status: 'pending' },
-              });
-              if (!alreadyQueued) {
-                await prisma.projectQueue.create({
-                  data: {
-                    userId: user.id,
-                    repoName: repo.name,
-                    repoUrl,
-                    status: 'pending',
-                  },
-                });
+            if (!shouldQueue) continue;
+
+            // Check if it's a dead fork (fork with no unique contributions)
+            if (repo.fork) {
+              const forkStatus = await checkForkContribution(user.githubHandle!, repo.name, process.env.GITHUB_TOKEN);
+              if (!forkStatus.hasContribution) {
+                console.log(`[Sync] Skipping dead fork ${repo.name} (0 commits ahead of ${forkStatus.parentFullName})`);
+                skippedForks++;
+                continue;
               }
             }
+
+            // Check if already queued
+            const alreadyQueued = await prisma.projectQueue.findFirst({
+              where: { userId: user.id, repoName: repo.name, status: 'pending' },
+            });
+            if (!alreadyQueued) {
+              await prisma.projectQueue.create({
+                data: {
+                  userId: user.id,
+                  repoName: repo.name,
+                  repoUrl,
+                  status: 'pending',
+                },
+              });
+              queued++;
+            }
           }
-          console.log(`[Sync] Queued ${repos.length} projects for ${user.githubHandle}`);
+          console.log(`[Sync] Queued ${queued} projects for ${user.githubHandle} (skipped ${skippedForks} dead forks)`);
         } catch (err) {
           console.warn('[Sync] Project queue failed for', user.githubHandle, err);
         }
