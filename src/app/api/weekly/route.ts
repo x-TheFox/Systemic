@@ -255,27 +255,6 @@ export async function POST(req: Request) {
       await Promise.all(weeklyBadges);
     }
 
-    // Archive current titles to past titles before weekly title regeneration
-    const usersWithTitles = await prisma.user.findMany({
-      where: { title: { not: null } },
-      select: { id: true, title: true },
-    });
-    for (const u of usersWithTitles) {
-      const existing = await prisma.pastTitle.findFirst({
-        where: { userId: u.id, weekNumber, year },
-      });
-      if (!existing) {
-        await prisma.pastTitle.create({
-          data: {
-            userId: u.id,
-            title: u.title!,
-            weekNumber,
-            year,
-          },
-        });
-      }
-    }
-
     // Upsert into WeeklyReport
     await prisma.weeklyReport.upsert({
       where: { weekNumber_year: { weekNumber, year } },

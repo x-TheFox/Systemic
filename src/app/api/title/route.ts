@@ -94,6 +94,22 @@ RULES:
 
   const cleanTitle = title.trim().replace(/^["']|["']$/g, '').replace(/\*\*/g, '').slice(0, 50);
 
+  // Archive old title only if it actually changed
+  if (oldTitle && oldTitle !== cleanTitle) {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const weekNumber = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+
+    await prisma.pastTitle.create({
+      data: {
+        userId: user.id,
+        title: oldTitle,
+        weekNumber,
+        year: now.getFullYear(),
+      },
+    });
+  }
+
   await prisma.user.update({
     where: { id: user.id },
     data: { title: cleanTitle },
