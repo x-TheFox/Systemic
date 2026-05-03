@@ -33,6 +33,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/compare',
   '/api/guilds(.*)',
   '/api/projects',
+  '/api/projects(.*)',
   '/api/v1(.*)',
   '/:handle',
 ]);
