@@ -172,6 +172,47 @@ async function syncUser(user: any) {
           console.error('Deep dive failed for', user.githubHandle, err);
         }
       }
+
+      // QUEUE PROJECTS for AI analysis
+      if (process.env.GITHUB_TOKEN) {
+        try {
+          const { fetchGitHubRepos } = await import('@/lib/fetchers/github-repos');
+          const repos = await fetchGitHubRepos(user.githubHandle, process.env.GITHUB_TOKEN);
+          const existingProjects = await prisma.project.findMany({
+            where: { userId: user.id },
+            select: { repoUrl: true },
+          });
+          const existingUrls = new Set(existingProjects.map((p) => p.repoUrl));
+
+          for (const repo of repos) {
+            const repoUrl = repo.html_url;
+            const isExisting = existingUrls.has(repoUrl);
+            // Queue if new or updated in last 30 days
+            const lastPushed = new Date(repo.pushed_at);
+            const shouldQueue = !isExisting || (Date.now() - lastPushed.getTime() < 30 * 24 * 60 * 60 * 1000);
+
+            if (shouldQueue) {
+              // Check if already queued
+              const alreadyQueued = await prisma.projectQueue.findFirst({
+                where: { userId: user.id, repoName: repo.name, status: 'pending' },
+              });
+              if (!alreadyQueued) {
+                await prisma.projectQueue.create({
+                  data: {
+                    userId: user.id,
+                    repoName: repo.name,
+                    repoUrl,
+                    status: 'pending',
+                  },
+                });
+              }
+            }
+          }
+          console.log(`[Sync] Queued ${repos.length} projects for ${user.githubHandle}`);
+        } catch (err) {
+          console.warn('[Sync] Project queue failed for', user.githubHandle, err);
+        }
+      }
     } catch (err) {
       console.error('GitHub sync error for', user.githubHandle, err);
     }

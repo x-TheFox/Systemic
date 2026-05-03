@@ -50,6 +50,11 @@ const publicUserSelect = {
   skillTreeState: true,
   dynamicNodes: true,
   pastTitles: { orderBy: { createdAt: 'desc' as const }, take: 20 },
+  guild: {
+    include: {
+      badges: true,
+    },
+  },
 };
 
 export async function GET(req: Request) {
@@ -63,8 +68,13 @@ export async function GET(req: Request) {
 
     if (githubHandle) {
       // Public profile lookup — use public-safe select (no email, no activityLogs, no ghostSnapshots)
-      dbUser = await prisma.user.findUnique({
-        where: { githubHandle },
+      dbUser = await prisma.user.findFirst({
+        where: {
+          githubHandle: {
+            equals: githubHandle,
+            mode: 'insensitive',
+          },
+        },
         select: publicUserSelect,
       });
     } else if (clerkIdParam) {
@@ -127,7 +137,7 @@ export async function PUT(req: Request) {
     const updated = await prisma.user.update({
       where: { clerkId: user.id },
       data: {
-        ...(githubHandle !== undefined && { githubHandle }),
+        ...(githubHandle !== undefined && { githubHandle: githubHandle.toLowerCase() }),
         ...(leetcodeHandle !== undefined && { leetcodeHandle }),
         ...(codeforcesHandle !== undefined && { codeforcesHandle }),
         ...(hackerrankHandle !== undefined && { hackerrankHandle }),

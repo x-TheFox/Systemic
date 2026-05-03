@@ -39,7 +39,12 @@ export async function POST(req: Request) {
     });
 
     const opponent = await prisma.user.findFirst({
-      where: { githubHandle: opponentHandle },
+      where: {
+        githubHandle: {
+          equals: opponentHandle,
+          mode: 'insensitive',
+        },
+      },
     });
 
     if (!challenger || !opponent) {

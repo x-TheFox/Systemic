@@ -94,7 +94,7 @@ export function SkillRadar() {
           <PolarGrid stroke="hsl(var(--border))" />
           <PolarAngleAxis
             dataKey="subject"
-            tick={{ fill: "hsl(var(--fg-dim))", fontSize: 11, fontFamily: "var(--font-geist-sans)" }}
+            tick={{ fill: "hsl(var(--fg-dim))", fontSize: 13, fontWeight: 600, fontFamily: "var(--font-geist-sans)" }}
           />
           <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
           <Radar

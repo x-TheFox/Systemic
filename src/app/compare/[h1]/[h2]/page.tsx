@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { Swords, Trophy, ArrowLeft, GitBranch, Code2 } from "lucide-react";
 import { pageEntrance, staggerItem } from "@/lib/motion";
@@ -30,6 +31,7 @@ export default function ComparePage() {
   const params = useParams();
   const h1 = params.h1 as string;
   const h2 = params.h2 as string;
+  const { user: clerkUser } = useUser();
   const [data, setData] = useState<{ user1: CompareUser; user2: CompareUser; commonBadges: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -118,7 +120,8 @@ export default function ComparePage() {
               <h2 className="text-lg font-bold text-white mt-3">{u.name || u.email.split("@")[0]}</h2>
               {u.title && <p className="text-sm text-amber-400 mt-1">{u.title}</p>}
               <p className="text-2xl font-bold font-mono text-white mt-2">{u.xp.toLocaleString()} <span className="text-accent text-sm">XP</span></p>
-              {i === 1 && u.githubHandle && (
+              {clerkUser && u.githubHandle &&
+                clerkUser.username?.toLowerCase() !== u.githubHandle.toLowerCase() && (
                 <button
                   onClick={() => challengeToDuel(u.githubHandle!)}
                   className="mt-3 h-8 px-4 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/30 text-accent text-xs font-semibold hover:bg-accent/20 transition-colors"

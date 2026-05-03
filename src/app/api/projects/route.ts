@@ -14,7 +14,12 @@ export async function GET(req: Request) {
     }
 
     const user = await prisma.user.findFirst({
-      where: { githubHandle: handle },
+      where: {
+        githubHandle: {
+          equals: handle,
+          mode: 'insensitive',
+        },
+      },
       select: { id: true },
     });
 

@@ -1,0 +1,15 @@
+name: Project Queue Processor
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process Project Queue
+        run: |
+          curl -X POST "${{ secrets.APP_URL }}/api/projects/process-queue" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

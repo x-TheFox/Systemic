@@ -14,8 +14,13 @@ export async function GET(
       100
     );
 
-    const user = await prisma.user.findUnique({
-      where: { githubHandle: handle },
+    const user = await prisma.user.findFirst({
+      where: {
+        githubHandle: {
+          equals: handle,
+          mode: 'insensitive',
+        },
+      },
       select: {
         id: true,
         name: true,

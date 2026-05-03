@@ -56,7 +56,14 @@ export async function GET(req: Request) {
       if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
       dbUserId = user.id;
     } else if (githubHandle) {
-      const user = await prisma.user.findUnique({ where: { githubHandle } });
+      const user = await prisma.user.findFirst({
+        where: {
+          githubHandle: {
+            equals: githubHandle,
+            mode: 'insensitive',
+          },
+        },
+      });
       if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
       dbUserId = user.id;
     }

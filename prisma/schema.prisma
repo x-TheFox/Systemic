@@ -238,6 +238,7 @@ model Duel {
   opponentStartXP   Int      @default(0)
   challengerEndXP   Int      @default(0)
   opponentEndXP     Int      @default(0)
+  resolvedAt        DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

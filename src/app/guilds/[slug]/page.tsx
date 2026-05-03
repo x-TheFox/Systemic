@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Shield, Users, Trophy, Crown, ArrowLeft } from "lucide-react";
+import { Shield, Users, Trophy, Crown, ArrowLeft, LogOut } from "lucide-react";
 import { pageEntrance, staggerItem } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import { toast } from "sonner";
 
 interface Guild {
   id: string;
@@ -31,17 +32,29 @@ interface Guild {
 
 export default function GuildDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = params.slug as string;
   const [guild, setGuild] = useState<Guild | null>(null);
   const [loading, setLoading] = useState(true);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/guilds?slug=${slug}`);
-        if (!res.ok) throw new Error("Failed");
-        const data = await res.json();
-        setGuild(data.guild);
+        const [guildRes, profileRes] = await Promise.all([
+          fetch(`/api/guilds?slug=${slug}`),
+          fetch("/api/profile"),
+        ]);
+        if (guildRes.ok) {
+          const data = await guildRes.json();
+          setGuild(data.guild);
+        }
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          const uid = data.user?.id || null;
+          setMyUserId(uid);
+        }
       } catch {
         setGuild(null);
       } finally {
@@ -50,6 +63,26 @@ export default function GuildDetailPage() {
     }
     load();
   }, [slug]);
+
+  useEffect(() => {
+    if (guild && myUserId) {
+      setIsAdmin(guild.adminId === myUserId);
+    }
+  }, [guild, myUserId]);
+
+  async function leaveGuild() {
+    const msg = isAdmin ? "Delete this guild? All members will be removed." : "Leave this guild?";
+    if (!confirm(msg)) return;
+    try {
+      const res = await fetch(`/api/guilds/${slug}/join`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      toast.success(data.deleted ? "Guild deleted!" : "Left guild!");
+      router.push("/guilds");
+    } catch {
+      toast.error("Failed to leave guild.");
+    }
+  }
 
   if (loading) {
     return (
@@ -77,21 +110,41 @@ export default function GuildDetailPage() {
       className="min-h-screen p-4 md:p-8"
     >
       <div className="mx-auto max-w-4xl space-y-6">
-        <motion.div variants={staggerItem} className="flex items-center gap-4">
-          <Link href="/guilds" className="inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div className="flex items-center gap-3">
-            {guild.iconUrl ? (
-              <img src={guild.iconUrl} alt={guild.name} className="h-10 w-10 rounded-[var(--radius-compact)]" />
-            ) : (
-              <Shield className="h-8 w-8 text-accent" />
-            )}
-            <div>
-              <h1 className="text-display gradient-text">{guild.name}</h1>
-              {guild.description && <p className="text-sm text-fg-muted">{guild.description}</p>}
+        <motion.div variants={staggerItem} className="flex items-center gap-4 justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/guilds" className="inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div className="flex items-center gap-3">
+              {guild.iconUrl ? (
+                <img src={guild.iconUrl} alt={guild.name} className="h-10 w-10 rounded-[var(--radius-compact)]" />
+              ) : (
+                <Shield className="h-8 w-8 text-accent" />
+              )}
+              <div>
+                <h1 className="text-display gradient-text">{guild.name}</h1>
+                {guild.description && <p className="text-sm text-fg-muted">{guild.description}</p>}
+              </div>
             </div>
           </div>
+          {isAdmin && (
+            <button
+              onClick={leaveGuild}
+              className="h-9 px-3 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors inline-flex items-center gap-1.5"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Delete Guild
+            </button>
+          )}
+          {!isAdmin && guild.members.some((m) => m.id === myUserId) && (
+            <button
+              onClick={leaveGuild}
+              className="h-9 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:bg-white/[0.06] transition-colors inline-flex items-center gap-1.5"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Leave
+            </button>
+          )}
         </motion.div>
 
         {/* Stats */}

@@ -50,7 +50,7 @@ export async function POST(req: Request) {
         email: email_addresses[0]?.email_address || '',
         name: `${first_name || ''} ${last_name || ''}`.trim() || null,
         imageUrl: image_url,
-        githubHandle: username || null,
+        githubHandle: username?.toLowerCase() || null,
       },
     });
 
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         email: email_addresses[0]?.email_address || '',
         name: `${first_name || ''} ${last_name || ''}`.trim() || null,
         imageUrl: image_url,
-        githubHandle: existing?.githubHandle || username || null,
+        githubHandle: existing?.githubHandle || username?.toLowerCase() || null,
       },
     });
   }

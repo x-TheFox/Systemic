@@ -23,14 +23,23 @@ export default function GuildsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", slug: "", description: "" });
+  const [myGuildId, setMyGuildId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/guilds");
-        if (!res.ok) throw new Error("Failed");
-        const data = await res.json();
-        setGuilds(data.guilds || []);
+        const [guildsRes, profileRes] = await Promise.all([
+          fetch("/api/guilds"),
+          fetch("/api/profile"),
+        ]);
+        if (guildsRes.ok) {
+          const data = await guildsRes.json();
+          setGuilds(data.guilds || []);
+        }
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          setMyGuildId(data.user?.guildId || null);
+        }
       } catch {
         setGuilds([]);
       } finally {
@@ -64,8 +73,28 @@ export default function GuildsPage() {
       const res = await fetch(`/api/guilds/${slug}/join`, { method: "POST" });
       if (!res.ok) throw new Error("Failed");
       toast.success("Joined guild!");
+      // Refresh profile to update guild status
+      const profileRes = await fetch("/api/profile");
+      if (profileRes.ok) {
+        const data = await profileRes.json();
+        setMyGuildId(data.user?.guildId || null);
+      }
     } catch {
       toast.error("Failed to join guild.");
+    }
+  }
+
+  async function leaveGuild() {
+    try {
+      // Find current guild slug
+      const myGuild = guilds.find((g) => g.id === myGuildId);
+      if (!myGuild) return;
+      const res = await fetch(`/api/guilds/${myGuild.slug}/join`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed");
+      toast.success("Left guild!");
+      setMyGuildId(null);
+    } catch {
+      toast.error("Failed to leave guild.");
     }
   }
 
@@ -152,12 +181,25 @@ export default function GuildsPage() {
                       View
                     </span>
                   </Link>
-                  <button
-                    onClick={() => joinGuild(guild.slug)}
-                    className="h-8 px-3 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/30 text-accent text-xs font-semibold hover:bg-accent/20 transition-colors"
-                  >
-                    Join
-                  </button>
+                  {myGuildId === guild.id ? (
+                    <button
+                      onClick={leaveGuild}
+                      className="h-8 px-3 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
+                    >
+                      Leave
+                    </button>
+                  ) : myGuildId ? (
+                    <span className="h-8 px-3 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06] text-fg-muted text-xs font-semibold inline-flex items-center">
+                      In another guild
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => joinGuild(guild.slug)}
+                      className="h-8 px-3 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/30 text-accent text-xs font-semibold hover:bg-accent/20 transition-colors"
+                    >
+                      Join
+                    </button>
+                  )}
                 </div>
               </div>
             ))

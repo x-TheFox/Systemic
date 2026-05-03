@@ -31,13 +31,23 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'h1 and h2 required' }, { status: 400 });
     }
 
-    const user1 = await prisma.user.findUnique({
-      where: { githubHandle: handle1 },
+    const user1 = await prisma.user.findFirst({
+      where: {
+        githubHandle: {
+          equals: handle1,
+          mode: 'insensitive',
+        },
+      },
       select: publicUserSelect,
     });
 
-    const user2 = await prisma.user.findUnique({
-      where: { githubHandle: handle2 },
+    const user2 = await prisma.user.findFirst({
+      where: {
+        githubHandle: {
+          equals: handle2,
+          mode: 'insensitive',
+        },
+      },
       select: publicUserSelect,
     });
 

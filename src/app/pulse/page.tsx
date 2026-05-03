@@ -81,7 +81,7 @@ export default function PulsePage() {
 
         {/* Filters */}
         <motion.div variants={staggerItem} className="flex flex-wrap gap-2">
-          {["all", "badge-earned", "node-unlocked", "xp-milestone", "new-activity"].map((f) => (
+          {["all", "badge-earned", "node-unlocked", "xp-milestone", "new-activity", "duel-won"].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}

@@ -116,7 +116,7 @@ async function profileOGImage(handle: string) {
               boxShadow: '0 0 40px rgba(139,92,246,0.3)',
             }}
           >
-            {(user.name || user.email || handle).charAt(0).toUpperCase()}
+            {(user.name || handle).charAt(0).toUpperCase()}
           </div>
 
           {/* Info */}

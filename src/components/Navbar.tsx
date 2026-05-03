@@ -62,6 +62,8 @@ export function Navbar() {
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/pulse", label: "Pulse", icon: Activity },
+    { href: "/duels", label: "Duels", icon: Swords },
+    { href: "/guilds", label: "Guilds", icon: Shield },
     { href: "/profile", label: "Profile", icon: User },
   ];
 

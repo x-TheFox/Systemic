@@ -9,15 +9,10 @@ const footerLinks = [
   { href: "/", label: "Dashboard" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/profile", label: "Profile" },
-];
-
-const features = [
-  "AI-Forged Badges",
-  "Dynamic Skill Trees",
-  "Weekly Post-Mortems",
-  "Ghost Snapshots",
-  "Deep Dive Archetypes",
-  "Real-time Pulse Feed",
+  { href: "/duels", label: "Duels" },
+  { href: "/guilds", label: "Guilds" },
+  { href: "/pulse", label: "Pulse" },
+  { href: "/compare", label: "Compare" },
 ];
 
 export function Footer() {
@@ -30,9 +25,9 @@ export function Footer() {
         viewport={{ once: true }}
         className="mx-auto max-w-7xl px-4 sm:px-6 py-10"
       >
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-          {/* Brand — wider */}
-          <motion.div variants={staggerItem} className="md:col-span-5 space-y-3">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+          {/* Brand */}
+          <motion.div variants={staggerItem} className="space-y-3">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="relative flex h-7 w-7 items-center justify-center rounded-[var(--radius-compact)] overflow-hidden">
                 <Image src="/icon.svg" alt="Systemics" width={28} height={28} className="object-contain" />
@@ -45,27 +40,16 @@ export function Footer() {
           </motion.div>
 
           {/* Navigation */}
-          <motion.div variants={staggerItem} className="md:col-span-3">
-            <h3 className="text-label text-fg-dim mb-3">Navigate</h3>
-            <ul className="space-y-1.5">
-              {footerLinks.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-fg-muted hover:text-white transition-colors duration-150">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* Features */}
-          <motion.div variants={staggerItem} className="md:col-span-4">
-            <h3 className="text-label text-fg-dim mb-3">Features</h3>
-            <ul className="space-y-1.5">
-              {features.map((f) => (
-                <li key={f} className="text-sm text-fg-muted">{f}</li>
-              ))}
-            </ul>
+          <motion.div variants={staggerItem} className="flex flex-wrap gap-x-5 gap-y-2 md:justify-end">
+            {footerLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-sm text-fg-muted hover:text-white transition-colors duration-150"
+              >
+                {link.label}
+              </Link>
+            ))}
           </motion.div>
         </div>
 

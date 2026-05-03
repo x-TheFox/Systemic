@@ -33,6 +33,16 @@ export async function GET(req: Request) {
       },
     });
 
+    const duels = await prisma.duel.findMany({
+      where: { status: 'completed' },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      include: {
+        challenger: { select: { id: true, name: true, email: true, githubHandle: true } },
+        opponent: { select: { id: true, name: true, email: true, githubHandle: true } },
+      },
+    });
+
     const events = [
       ...activityLogs.map((log) => ({
         id: `log-${log.id}`,
@@ -60,6 +70,18 @@ export async function GET(req: Request) {
         userName: node.user?.name || node.user?.email?.split('@')[0],
         xp: node.xpReward,
       })),
+      ...duels.map((duel) => {
+        const winner = duel.winnerId === duel.challengerId ? duel.challenger : duel.opponent;
+        const loser = duel.winnerId === duel.challengerId ? duel.opponent : duel.challenger;
+        return {
+          id: `duel-${duel.id}`,
+          type: 'duel-won',
+          message: `${winner?.name || winner?.githubHandle || 'Someone'} won a duel against ${loser?.name || loser?.githubHandle || 'someone'}!`,
+          timestamp: duel.updatedAt.toISOString(),
+          userName: winner?.name || winner?.githubHandle,
+          xp: 0,
+        };
+      }),
     ];
 
     events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());

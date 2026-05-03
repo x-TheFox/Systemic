@@ -40,12 +40,22 @@ export async function POST(req: Request) {
     }
 
     if (action === 'accept') {
+      // Snapshot current XP for both players
+      const [challenger, opponent] = await Promise.all([
+        prisma.user.findUnique({ where: { id: duel.challengerId }, select: { xp: true } }),
+        prisma.user.findUnique({ where: { id: duel.opponentId }, select: { xp: true } }),
+      ]);
+
+      const now = new Date();
+      const resolvedAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+
       await prisma.duel.update({
         where: { id: duelId },
         data: {
           status: 'active',
-          challengerStartXP: duel.challengerStartXP || 0,
-          opponentStartXP: duel.opponentStartXP || 0,
+          challengerStartXP: challenger?.xp ?? 0,
+          opponentStartXP: opponent?.xp ?? 0,
+          resolvedAt,
         },
       });
 
@@ -60,7 +70,7 @@ export async function POST(req: Request) {
         },
       });
 
-      return NextResponse.json({ success: true, status: 'active' });
+      return NextResponse.json({ success: true, status: 'active', resolvedAt });
     } else {
       await prisma.duel.update({
         where: { id: duelId },

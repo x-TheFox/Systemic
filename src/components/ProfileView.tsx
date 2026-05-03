@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Code2, Trophy, Zap, RefreshCw,
   Brain, X, Crown, Sparkles, Clock, Copy, Check,
-  GitPullRequest, FolderGit2,
+  GitPullRequest, FolderGit2, Shield,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -459,8 +459,30 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
           </motion.div>
         )}
 
-        {/* Unlocked Skill Nodes */}
-        {profile?.dynamicNodes && profile.dynamicNodes.length > 0 && (
+      {/* Guild */}
+      {profile?.guild && (
+        <motion.div variants={staggerItem} className="glass-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="h-5 w-5 text-accent" />
+            <h2 className="text-heading text-white">{profile.guild.name}</h2>
+          </div>
+          {profile.guild.badges && profile.guild.badges.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {profile.guild.badges.map((badge: any) => (
+                <span
+                  key={badge.id}
+                  className="text-xs border border-accent/20 text-accent bg-accent/10 px-3 py-1 rounded-full"
+                >
+                  {badge.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Unlocked Skill Nodes */}
+      {profile?.dynamicNodes && profile.dynamicNodes.length > 0 && (
           <motion.div variants={staggerItem} className="glass-card p-6">
             <h2 className="text-heading text-white mb-4">Unlocked Skills</h2>
             <div className="flex flex-wrap gap-2">

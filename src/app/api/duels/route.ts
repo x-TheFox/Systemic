@@ -29,8 +29,8 @@ export async function GET(req: Request) {
       },
       orderBy: { createdAt: 'desc' },
       include: {
-        challenger: { select: { id: true, name: true, email: true, githubHandle: true, imageUrl: true } },
-        opponent: { select: { id: true, name: true, email: true, githubHandle: true, imageUrl: true } },
+        challenger: { select: { id: true, name: true, email: true, githubHandle: true, imageUrl: true, xp: true } },
+        opponent: { select: { id: true, name: true, email: true, githubHandle: true, imageUrl: true, xp: true } },
       },
     });
 
