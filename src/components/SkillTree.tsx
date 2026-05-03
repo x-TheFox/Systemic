@@ -121,12 +121,11 @@ export function SkillTree() {
             id: edge.id || `${edge.source}-${edge.target}`,
             source: edge.source,
             target: edge.target,
-            type: "default",
+            type: "smoothstep",
             animated: isMet,
             style: {
-              stroke: isMet ? "hsl(var(--accent))" : "hsl(var(--fg-dim) / 0.35)",
-              strokeWidth: isMet ? 2.5 : 1.5,
-              filter: isMet ? "drop-shadow(0 0 4px hsl(var(--accent) / 0.5))" : undefined,
+              stroke: isMet ? "#a78bfa" : "rgba(255, 255, 255, 0.35)",
+              strokeWidth: isMet ? 3 : 2,
             },
           };
         });

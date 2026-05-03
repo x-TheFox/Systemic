@@ -26,6 +26,8 @@ model User {
   // Aggregated stats for fast leaderboard queries
   totalCommits     Int @default(0)
   totalPRs         Int @default(0)
+  totalReviews     Int @default(0)
+  reviewComments   Int @default(0)
   leetcodeEasy     Int @default(0)
   leetcodeMedium   Int @default(0)
   leetcodeHard     Int @default(0)
@@ -57,9 +59,19 @@ model User {
   dynamicNodes   DynamicSkillNode[]
   badges         Badge[]
   badgeQueues    BadgeQueue[]
+  inboxMessages  InboxMessage[]
+  duelsAsChallenger Duel[] @relation("Challenger")
+  duelsAsOpponent   Duel[] @relation("Opponent")
+  dailyActivities   DailyActivity[]
+  dailyChallenges   DailyChallenge[]
+  projects          Project[]
+  projectQueues     ProjectQueue[]
+  guildId           String?
+  guild             Guild?   @relation(fields: [guildId], references: [id])
 
   @@index([xp])
   @@index([clerkId])
+  @@index([guildId])
 }
 
 model ActivityLog {
@@ -195,4 +207,132 @@ model BadgeQueue {
 
   @@index([userId])
   @@index([status])
+}
+
+model InboxMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // duel_request | duel_accepted | duel_declined | system | badge_earned
+  title     String
+  body      String
+  metadata  Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
+}
+
+model Duel {
+  id                String   @id @default(cuid())
+  challengerId      String
+  challenger        User     @relation("Challenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  opponentId        String
+  opponent          User     @relation("Opponent", fields: [opponentId], references: [id], onDelete: Cascade)
+  weekNumber        Int
+  year              Int
+  status            String   @default("pending") // pending | active | completed | declined
+  winnerId          String?
+  challengerStartXP Int      @default(0)
+  opponentStartXP   Int      @default(0)
+  challengerEndXP   Int      @default(0)
+  opponentEndXP     Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([challengerId])
+  @@index([opponentId])
+  @@index([status])
+}
+
+model DailyActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String   // YYYY-MM-DD
+  xpGained  Int      @default(0)
+  platforms String[]
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model DailyChallenge {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        String   // YYYY-MM-DD
+  description String
+  platform    String
+  target      Int
+  current     Int      @default(0)
+  completed   Boolean  @default(false)
+  xpReward    Int      @default(50)
+  difficulty  String   @default("medium") // easy | medium | hard
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  repoUrl     String
+  demoUrl     String?
+  language    String?
+  stars       Int      @default(0)
+  forks       Int      @default(0)
+  pinned      Boolean  @default(false)
+  aiSummary   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ProjectQueue {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repoName  String
+  repoUrl   String
+  status    String   @default("pending") // pending | processing | done | failed
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Guild {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  iconUrl     String?
+  isPublic    Boolean  @default(true)
+  adminId     String
+  createdAt   DateTime @default(now())
+
+  members     User[]
+  badges      GuildBadge[]
+
+  @@index([slug])
+}
+
+model GuildBadge {
+  id          String   @id @default(cuid())
+  guildId     String
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  name        String
+  description String
+  rarity      String
+  icon        String
+  color       String
+  createdAt   DateTime @default(now())
+
+  @@index([guildId])
 }
