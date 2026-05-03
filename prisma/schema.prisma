@@ -50,6 +50,7 @@ model User {
   lastSyncedCodeforces DateTime?
   lastSyncedHackerRank DateTime?
   lastSyncedTryHackMe DateTime?
+  lastBadgeCommitSync DateTime?
   lastGhostSnapshotAt  DateTime?
 
   createdAt DateTime @default(now())

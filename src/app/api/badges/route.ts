@@ -4,7 +4,7 @@ import { groqGenerateText } from '@/lib/ai/groq-models';
 
 export const dynamic = 'force-dynamic';
 
-async function generateBadgesForUser(userId: string): Promise<number> {
+async function generateBadgesForUser(userId: string, commits?: string[], isFirstBadgeSync?: boolean): Promise<number> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -47,7 +47,21 @@ async function generateBadgesForUser(userId: string): Promise<number> {
     ? `\nEXISTING BADGES (DO NOT repeat these — generate NEW unique badges):\n${existingBadgeNames.map((n: string) => `- ${n}`).join('\n')}`
     : '';
 
-  const badgeText = await groqGenerateText(`You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
+  const hasCommits = commits && commits.length > 0;
+  const commitSection = hasCommits
+    ? `\nCOMMIT MESSAGES (${isFirstBadgeSync ? 'ALL HISTORICAL' : 'NEW ONLY'}):\n${commits!.slice(0, 50).map((c, i) => `${i + 1}. ${c}`).join('\n')}`
+    : '';
+
+  const isBulk = isFirstBadgeSync && hasCommits;
+  const badgeCount = isBulk ? 8 : 4;
+  const badgeCountRule = isBulk
+    ? `1. Generate ${badgeCount} badges — this is the INITIAL bulk generation covering the developer's entire commit history. Create badges that represent diverse skills shown in their commits.`
+    : `1. Generate EXACTLY ${badgeCount} badges — no more, no less`;
+  const commitRule = hasCommits
+    ? `${isBulk ? '2' : '2'}. Descriptions MUST reference specific commit messages or patterns from the commit list above — tie each badge to actual work done`
+    : `${isBulk ? '2' : '2'}. Descriptions must reference ACTUAL repos, languages, or stats — no generic fluff`;
+
+  const prompt = `You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
 
 USER: ${user.name || user.email}
 GITHUB: ${user.githubHandle || 'none'}
@@ -58,6 +72,7 @@ CODEFORCES: Rating ${user.codeforcesRating} | Solved: ${user.codeforcesSolved}
 HACKERRANK: ${user.hackerrankBadges} badges
 TRYHACKME: ${user.tryhackmePoints}pts | Rank: ${user.tryhackmeRank} | ${user.tryhackmeBadges} badges | ${user.tryhackmeRooms} rooms
 ${existingBadgeText}
+${commitSection}
 
 SKILL SIGNALS:
 ${topSkills}
@@ -72,49 +87,30 @@ DEEP DIVE ARCHETYPE: ${deepDiveData?.archetype || 'Unknown'}
 GRIND PATH: ${deepDiveData?.grindPath || 'Unknown'}
 
 RULES:
-1. Generate EXACTLY 4 badges — no more, no less
-2. Each badge must be UNIQUE to this developer's actual skills
-3. IMPORTANT: Do NOT generate any badge that shares a name with an EXISTING badge listed above — each badge name must be completely new and different
-4. Names must be HYPE and GAMING-STYLE (e.g., "Cache Commander", "DOM Dominator", "Pipeline Warlord")
-5. Rarity distribution: 1 common, 1 rare, 1 epic, 1 legendary
-6. Common = basic skill recognition, Rare = notable achievement, Epic = mastery, Legendary = once-in-a-gang feat
-7. Colors: common=#6b7280 gray, rare=#3b82f6 blue, epic=#a855f7 purple, legendary=#f59e0b gold
-8. Icons: pick simple lucide-react icon names (e.g., "Zap", "Shield", "Cpu", "Flame", "Target", "Code", "Database", "Globe")
-9. Categories: skill | grind | social | special
-10. Descriptions must reference ACTUAL repos, languages, or stats — no generic fluff
+${badgeCountRule}
+${isBulk ? '' : '2. Each badge must be UNIQUE to this developer — do NOT repeat existing badge names'}
+${commitRule}
+${isBulk ? '4' : '3'}. Names must be HYPE and GAMING-STYLE (e.g., "Cache Commander", "DOM Dominator", "Pipeline Warlord")
+${isBulk ? '5' : '4'}. Rarity distribution: ${isBulk ? '2 common, 2 rare, 2 epic, 2 legendary' : '1 common, 1 rare, 1 epic, 1 legendary'}
+${isBulk ? '6' : '5'}. Common = basic skill recognition, Rare = notable achievement, Epic = mastery, Legendary = once-in-a-gang feat
+${isBulk ? '7' : '6'}. Colors: common=#6b7280 gray, rare=#3b82f6 blue, epic=#a855f7 purple, legendary=#f59e0b gold
+${isBulk ? '8' : '7'}. Icons: pick simple lucide-react icon names (e.g., "Zap", "Shield", "Cpu", "Flame", "Target", "Code", "Database", "Globe")
+${isBulk ? '9' : '8'}. Categories: skill | grind | social | special
 
 OUTPUT FORMAT (exactly this format, no markdown code blocks):
-BADGE 1
+${Array.from({ length: badgeCount }, (_, i) => {
+  const rarities = isBulk ? ['common', 'common', 'rare', 'rare', 'epic', 'epic', 'legendary', 'legendary'] : ['common', 'rare', 'epic', 'legendary'];
+  const colors = isBulk ? ['#6b7280', '#6b7280', '#3b82f6', '#3b82f6', '#a855f7', '#a855f7', '#f59e0b', '#f59e0b'] : ['#6b7280', '#3b82f6', '#a855f7', '#f59e0b'];
+  return `BADGE ${i + 1}
 name: <name>
 description: <description>
-rarity: common
-color: #6b7280
+rarity: ${rarities[i]}
+color: ${colors[i]}
 icon: <icon>
-category: <category>
+category: <category>`;
+}).join('\n\n')}`;
 
-BADGE 2
-name: <name>
-description: <description>
-rarity: rare
-color: #3b82f6
-icon: <icon>
-category: <category>
-
-BADGE 3
-name: <name>
-description: <description>
-rarity: epic
-color: #a855f7
-icon: <icon>
-category: <category>
-
-BADGE 4
-name: <name>
-description: <description>
-rarity: legendary
-color: #f59e0b
-icon: <icon>
-category: <category>`);
+  const badgeText = await groqGenerateText(prompt);
 
   const badges = parseBadges(badgeText);
 
@@ -153,6 +149,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'userId required' }, { status: 400 });
     }
 
+    const commits: string[] = body.commits || [];
+    const isFirstBadgeSync: boolean = body.isFirstBadgeSync || false;
+
     if (userId === 'all') {
       const users = await prisma.user.findMany({ select: { id: true } });
       let totalBadges = 0;
@@ -168,7 +167,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, usersProcessed: users.length, totalBadges });
     }
 
-    const count = await generateBadgesForUser(userId);
+    const count = await generateBadgesForUser(userId, commits, isFirstBadgeSync);
     return NextResponse.json({ success: true, badges: count });
   } catch (error: any) {
     console.error('[Badges] Error:', error);

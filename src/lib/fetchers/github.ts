@@ -176,3 +176,69 @@ export async function fetchPRDiff(prUrl: string, token?: string): Promise<string
     return '';
   }
 }
+
+interface CommitMessage {
+  message: string;
+  date: string;
+  repo: string;
+}
+
+export async function fetchCommitMessages(
+  handle: string,
+  token?: string,
+  since?: Date,
+  maxPages: number = 10
+): Promise<CommitMessage[]> {
+  const authToken = token || process.env.GITHUB_TOKEN;
+  const commits: CommitMessage[] = [];
+  const seen = new Set<string>();
+
+  for (let page = 1; page <= maxPages; page++) {
+    const url = `https://api.github.com/users/${encodeURIComponent(handle)}/events/public?per_page=30&page=${page}`;
+    try {
+      const response = await fetch(url, {
+        headers: authToken
+          ? { Authorization: `Bearer ${authToken}`, Accept: 'application/vnd.github.v3+json' }
+          : { Accept: 'application/vnd.github.v3+json' },
+      });
+
+      if (!response.ok) {
+        console.warn(`[GitHub Events] Page ${page} returned ${response.status}`);
+        break;
+      }
+
+      const events = await response.json();
+      if (!Array.isArray(events) || events.length === 0) break;
+
+      let stoppedByDate = false;
+      for (const event of events) {
+        const eventDate = new Date(event.created_at);
+        if (since && eventDate < since) {
+          stoppedByDate = true;
+          break;
+        }
+
+        if (event.type === 'PushEvent' && event.payload?.commits) {
+          const repo = event.repo?.name || 'unknown';
+          for (const commit of event.payload.commits) {
+            if (commit.message && !seen.has(commit.sha)) {
+              seen.add(commit.sha);
+              commits.push({
+                message: commit.message.split('\n')[0].trim(),
+                date: event.created_at,
+                repo,
+              });
+            }
+          }
+        }
+      }
+
+      if (stoppedByDate) break;
+    } catch (err) {
+      console.warn(`[GitHub Events] Error on page ${page}:`, err);
+      break;
+    }
+  }
+
+  return commits;
+}
