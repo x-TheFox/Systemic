@@ -39,6 +39,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Duel not found or already resolved' }, { status: 404 });
     }
 
+    const opponentUser = await prisma.user.findUnique({
+      where: { id: duel.opponentId },
+      select: { name: true, githubHandle: true },
+    });
+    const challengerUser = await prisma.user.findUnique({
+      where: { id: duel.challengerId },
+      select: { name: true, githubHandle: true },
+    });
+
     if (action === 'accept') {
       // Snapshot current XP for both players
       const [challenger, opponent] = await Promise.all([
@@ -59,6 +68,18 @@ export async function POST(req: Request) {
         },
       });
 
+      // Log to pulse
+      await prisma.activityLog.create({
+        data: {
+          userId: duel.opponentId,
+          platform: 'SYSTEM',
+          activityType: 'DUEL_ACCEPTED',
+          description: `${opponentUser?.name || opponentUser?.githubHandle || 'Someone'} accepted a duel challenge from ${challengerUser?.name || challengerUser?.githubHandle || 'someone'}`,
+          xpAwarded: 0,
+          metadata: { duelId, action: 'accept' },
+        },
+      });
+
       // Notify challenger
       await prisma.inboxMessage.create({
         data: {
@@ -75,6 +96,18 @@ export async function POST(req: Request) {
       await prisma.duel.update({
         where: { id: duelId },
         data: { status: 'declined' },
+      });
+
+      // Log to pulse
+      await prisma.activityLog.create({
+        data: {
+          userId: duel.opponentId,
+          platform: 'SYSTEM',
+          activityType: 'DUEL_DECLINED',
+          description: `${opponentUser?.name || opponentUser?.githubHandle || 'Someone'} declined a duel challenge from ${challengerUser?.name || challengerUser?.githubHandle || 'someone'}`,
+          xpAwarded: 0,
+          metadata: { duelId, action: 'decline' },
+        },
       });
 
       // Notify challenger

@@ -318,10 +318,35 @@ model Guild {
   adminId     String
   createdAt   DateTime @default(now())
 
-  members     User[]
-  badges      GuildBadge[]
+  members           User[]
+  badges            GuildBadge[]
+  duelsAsChallenger GuildDuel[] @relation("ChallengerGuild")
+  duelsAsOpponent   GuildDuel[] @relation("OpponentGuild")
 
   @@index([slug])
+}
+
+model GuildDuel {
+  id                String   @id @default(cuid())
+  challengerGuildId String
+  challengerGuild   Guild    @relation("ChallengerGuild", fields: [challengerGuildId], references: [id], onDelete: Cascade)
+  opponentGuildId   String
+  opponentGuild     Guild    @relation("OpponentGuild", fields: [opponentGuildId], references: [id], onDelete: Cascade)
+  weekNumber        Int
+  year              Int
+  status            String   @default("pending") // pending | active | completed | declined
+  winnerGuildId     String?
+  challengerStartXP Int      @default(0)
+  opponentStartXP   Int      @default(0)
+  challengerEndXP   Int      @default(0)
+  opponentEndXP     Int      @default(0)
+  resolvedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([challengerGuildId])
+  @@index([opponentGuildId])
+  @@index([status])
 }
 
 model GuildBadge {

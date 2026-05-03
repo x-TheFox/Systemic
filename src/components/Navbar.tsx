@@ -5,8 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, LayoutDashboard, User, Mail, Swords, Shield, Activity } from "lucide-react";
+import { Trophy, LayoutDashboard, User, Mail, Swords, Shield, Activity, Check, X as XIcon } from "lucide-react";
 import Image from "next/image";
+import { toast } from "sonner";
 
 interface InboxMessage {
   id: string;
@@ -15,6 +16,12 @@ interface InboxMessage {
   body: string;
   read: boolean;
   createdAt: string;
+  metadata?: any;
+}
+
+interface DuelRequestModal {
+  open: boolean;
+  message?: InboxMessage;
 }
 
 export function Navbar() {
@@ -23,6 +30,7 @@ export function Navbar() {
   const [inboxOpen, setInboxOpen] = useState(false);
   const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [duelModal, setDuelModal] = useState<DuelRequestModal>({ open: false });
   const inboxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
@@ -56,6 +64,28 @@ export function Navbar() {
     await fetch(`/api/inbox/${id}`, { method: "POST" });
     setInboxMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read: true } : m)));
     setUnreadCount((c) => Math.max(0, c - 1));
+  }
+
+  async function respondToDuel(duelId: string, action: "accept" | "decline") {
+    try {
+      const res = await fetch("/api/duels/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duelId, action }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success(`Duel ${action}ed!`);
+      setDuelModal({ open: false });
+      // Refresh inbox
+      const inboxRes = await fetch("/api/inbox");
+      if (inboxRes.ok) {
+        const data = await inboxRes.json();
+        setInboxMessages(data.messages || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch {
+      toast.error(`Failed to ${action} duel.`);
+    }
   }
 
   const navItems = [
@@ -141,7 +171,10 @@ export function Navbar() {
                                   onClick={() => {
                                     if (!msg.read) markRead(msg.id);
                                     if (msg.type === "duel_request") {
-                                      window.location.href = "/duels";
+                                      setDuelModal({ open: true, message: msg });
+                                      setInboxOpen(false);
+                                    } else if (msg.type === "guild_duel_request") {
+                                      window.location.href = "/guilds";
                                     }
                                   }}
                                   className={`w-full text-left p-3 border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors ${
@@ -187,6 +220,65 @@ export function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* Duel Request Modal */}
+      <AnimatePresence>
+        {duelModal.open && duelModal.message && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            onClick={() => setDuelModal({ open: false })}
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="relative w-full max-w-sm rounded-[var(--radius-container)] border border-white/[0.08] bg-overlay backdrop-blur-xl p-6 shadow-z-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="h-14 w-14 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center">
+                  <Swords className="h-7 w-7 text-accent" />
+                </div>
+                <div>
+                  <h3 className="text-heading text-white">{duelModal.message.title}</h3>
+                  <p className="text-sm text-fg-muted mt-1">{duelModal.message.body}</p>
+                </div>
+                <div className="flex gap-3 w-full">
+                  <button
+                    onClick={() =>
+                      respondToDuel(duelModal.message?.metadata?.duelId, "decline")
+                    }
+                    className="flex-1 h-10 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors inline-flex items-center justify-center gap-1.5"
+                  >
+                    <XIcon className="h-4 w-4" />
+                    Decline
+                  </button>
+                  <button
+                    onClick={() =>
+                      respondToDuel(duelModal.message?.metadata?.duelId, "accept")
+                    }
+                    className="flex-1 h-10 rounded-[var(--radius-compact)] bg-success/10 border border-success/30 text-success text-sm font-semibold hover:bg-success/20 transition-colors inline-flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="h-4 w-4" />
+                    Accept
+                  </button>
+                </div>
+                <button
+                  onClick={() => setDuelModal({ open: false })}
+                  className="text-xs text-fg-muted hover:text-fg-dim transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
