@@ -273,7 +273,7 @@ export default function GuildsPage() {
                     {guild.iconUrl ? (
                       <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
                         {guild.iconUrl.trim().match(/<svg[\s>]/i) ? (
-                          <div dangerouslySetInnerHTML={{ __html: guild.iconUrl }} className="h-6 w-6" />
+                          <div dangerouslySetInnerHTML={{ __html: guild.iconUrl }} className="h-full w-full" />
                         ) : (
                           <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-cover" />
                         )}

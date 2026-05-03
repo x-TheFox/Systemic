@@ -30,6 +30,20 @@ interface Guild {
   badges: any[];
 }
 
+function processSvgForStorage(svg: string): string {
+  // Remove XML declaration
+  svg = svg.replace(/<\?xml[^?]*\?>\s*/i, '');
+  // Remove DOCTYPE
+  svg = svg.replace(/<!DOCTYPE[^>]*>\s*/i, '');
+  // Add responsive styles to svg tag — make it fill container
+  svg = svg.replace(
+    /<svg\b/i,
+    '<svg style="width:100%;height:100%;display:block;"'
+  );
+  return svg.trim();
+}
+}
+
 export default function GuildDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -99,7 +113,8 @@ export default function GuildDetailPage() {
         toast.error("Invalid SVG file — must contain a <svg> tag.");
         return;
       }
-      setEditForm((prev) => ({ ...prev, iconUrl: content }));
+      const cleaned = processSvgForStorage(content);
+      setEditForm((prev) => ({ ...prev, iconUrl: cleaned }));
       toast.success("SVG uploaded!");
     };
     reader.readAsText(file);
@@ -178,9 +193,17 @@ export default function GuildDetailPage() {
             </Link>
             <div className="flex items-center gap-3">
               {guild.iconUrl ? (
-                <img src={guild.iconUrl} alt={guild.name} className="h-10 w-10 rounded-[var(--radius-compact)]" />
+                <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
+                  {guild.iconUrl.trim().match(/<svg[\s>]/i) ? (
+                    <div dangerouslySetInnerHTML={{ __html: guild.iconUrl }} className="h-full w-full" />
+                  ) : (
+                    <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-cover" />
+                  )}
+                </div>
               ) : (
-                <Shield className="h-8 w-8 text-accent" />
+                <div className="h-10 w-10 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/20 flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-accent" />
+                </div>
               )}
               <div>
                 <h1 className="text-display gradient-text">{guild.name}</h1>
@@ -252,7 +275,7 @@ export default function GuildDetailPage() {
                   <div className="flex items-center gap-3 p-3 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06]">
                     <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
                       {editForm.iconUrl.trim().match(/<svg[\s>]/i) ? (
-                        <div dangerouslySetInnerHTML={{ __html: editForm.iconUrl }} className="h-6 w-6" />
+                        <div dangerouslySetInnerHTML={{ __html: editForm.iconUrl }} className="h-full w-full" />
                       ) : (
                         <img src={editForm.iconUrl} alt="Preview" className="h-full w-full object-cover" />
                       )}
