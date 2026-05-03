@@ -4,6 +4,10 @@ import { groqGenerateText } from '@/lib/ai/groq-models';
 
 export const dynamic = 'force-dynamic';
 
+function computeScore(u: any) {
+  return (u.totalCommits || 0) + (u.totalPRs || 0) * 5 + (u.leetcodeHard || 0) * 10 + (u.leetcodeMedium || 0) * 5 + (u.codeforcesSolved || 0) + (u.hackerrankBadges || 0) * 2 + (u.tryhackmePoints || 0) / 50;
+}
+
 async function generateBadgesForUser(userId: string, commits?: string[], isFirstBadgeSync?: boolean): Promise<number> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -16,6 +20,18 @@ async function generateBadgesForUser(userId: string, commits?: string[], isFirst
   });
 
   if (!user) return 0;
+
+  // Compute relative standing in the guild
+  const allUsers = await prisma.user.findMany({
+    select: { id: true, totalCommits: true, totalPRs: true, leetcodeHard: true, leetcodeMedium: true, codeforcesSolved: true, hackerrankBadges: true, tryhackmePoints: true, xp: true },
+  });
+  const scores = allUsers.map(u => ({ id: u.id, score: computeScore(u), xp: u.xp }));
+  scores.sort((a, b) => b.score - a.score);
+  const rank = scores.findIndex(s => s.id === userId) + 1;
+  const percentile = Math.round(((scores.length - rank) / Math.max(scores.length - 1, 1)) * 100);
+  const userScore = computeScore(user);
+  const maxScore = scores[0]?.score || 1;
+  const relativePower = Math.round((userScore / maxScore) * 100);
 
   const deepDiveSnapshot = user.ghostSnapshots.find((s: any) => {
     const ac = s.activityCounts as any;
@@ -52,17 +68,16 @@ async function generateBadgesForUser(userId: string, commits?: string[], isFirst
     ? `\nCOMMIT MESSAGES (${isFirstBadgeSync ? 'ALL HISTORICAL' : 'NEW ONLY'}):\n${commits!.slice(0, 50).map((c, i) => `${i + 1}. ${c}`).join('\n')}`
     : '';
 
-  // Rarity rubric based on absolute stats — the AI must calibrate rarity to actual achievement
-  const totalStats = user.totalCommits + user.totalPRs * 5 + user.leetcodeHard * 10 + user.leetcodeMedium * 5 + user.codeforcesSolved;
+  // Dynamic rarity guidance based on relative guild standing
   let rarityGuidance = '';
-  if (totalStats >= 400) {
-    rarityGuidance = `This user is ELITE-TIER (total score ${totalStats}). MOST badges should be LEGENDARY or EPIC. Only give COMMON for the most trivial/basic skills. Legendary should dominate (~40-50% of badges), Epic next (~30%), Rare for solid but not exceptional work (~15%), Common only for beginner/foundation-level stuff (~5%).`;
-  } else if (totalStats >= 150) {
-    rarityGuidance = `This user is VETERAN-TIER (total score ${totalStats}). Badges should skew EPIC and RARE. Legendary only for their absolute best work (~10%). Epic for mastery (~30%). Rare for notable achievements (~35%). Common for basic skills/foundations (~25%).`;
-  } else if (totalStats >= 50) {
-    rarityGuidance = `This user is MID-TIER (total score ${totalStats}). MOST badges should be COMMON and RARE. Legendary ONLY if they did something truly exceptional (~2-3 max). Epic only for clear mastery moments (~10%). Rare for solid work (~30%). Common for everything else (~55-60%).`;
+  if (percentile >= 90) {
+    rarityGuidance = `This user is TOP-TIER in the guild — Rank #${rank} of ${scores.length} (top ${100 - percentile}%). Relative power: ${relativePower}% of the strongest member. They should be DROWNING in LEGENDARY and EPIC badges. Legendary should be ~40-50% of badges, Epic ~30%, Rare ~15%, Common only for the most basic foundations (~5%). This is a guild leader — their badges must reflect dominance.`;
+  } else if (percentile >= 70) {
+    rarityGuidance = `This user is HIGH-TIER in the guild — Rank #${rank} of ${scores.length} (top ${100 - percentile}%). Relative power: ${relativePower}%. They should get plenty of EPIC and RARE, with some LEGENDARY for their absolute best work (~10-15%). Epic ~30%, Rare ~35%, Common ~20%.`;
+  } else if (percentile >= 40) {
+    rarityGuidance = `This user is MID-TIER in the guild — Rank #${rank} of ${scores.length} (${percentile}th percentile). Relative power: ${relativePower}%. MOST badges should be COMMON and RARE. Legendary ONLY for truly exceptional moments (~2-3 max). Epic only for clear mastery (~10%). Rare for solid work (~30%). Common for the rest (~55%).`;
   } else {
-    rarityGuidance = `This user is BEGINNER-TIER (total score ${totalStats}). ALMOST ALL badges must be COMMON. Rare ONLY for genuinely notable moments (~10% max). Epic/Legendary are FORBIDDEN unless they did something truly insane — and even then, cap at 1 epic max. Do NOT inflate rarity.`;
+    rarityGuidance = `This user is BEGINNER-TIER in the guild — Rank #${rank} of ${scores.length} (${percentile}th percentile). Relative power: ${relativePower}%. ALMOST ALL badges must be COMMON. Rare ONLY for genuinely notable moments (~10% max). Epic/Legendary are FORBIDDEN unless they did something truly insane — and even then, cap at 1 epic max. Do NOT inflate rarity. They are still learning.`;
   }
 
   const prompt = `You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
@@ -207,7 +222,19 @@ function parseBadges(text: string) {
         badge[key.trim().toLowerCase()] = rest.join(':').trim();
       }
     }
-    if (badge.name) badges.push(badge);
+    // Skip incomplete badges
+    if (!badge.name) continue;
+    // Defaults for missing fields
+    if (!badge.rarity) badge.rarity = 'common';
+    if (!badge.color) {
+      badge.color = badge.rarity === 'legendary' ? '#f59e0b'
+        : badge.rarity === 'epic' ? '#a855f7'
+        : badge.rarity === 'rare' ? '#3b82f6'
+        : '#6b7280';
+    }
+    if (!badge.icon) badge.icon = 'Zap';
+    if (!badge.category) badge.category = 'skill';
+    badges.push(badge);
   }
 
   return badges;
