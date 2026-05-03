@@ -27,6 +27,17 @@ export const metadata: Metadata = {
   icons: {
     icon: '/icon.svg',
   },
+  openGraph: {
+    title: "Systemics — AI-Augmented Developer Leaderboard",
+    description: "Track your grind. Forge your legacy. Join the guild.",
+    images: ["/api/og"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Systemics — AI-Augmented Developer Leaderboard",
+    description: "Track your grind. Forge your legacy. Join the guild.",
+    images: ["/api/og"],
+  },
 };
 
 export default function RootLayout({

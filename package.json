@@ -16,6 +16,7 @@
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.105.1",
     "@types/d3-hierarchy": "^3.1.7",
+    "@vercel/og": "^0.11.1",
     "@xyflow/react": "^12.10.2",
     "ai": "^6.0.174",
     "class-variance-authority": "^0.7.1",
