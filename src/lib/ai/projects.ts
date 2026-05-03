@@ -1,13 +1,29 @@
-import { generateObject } from 'ai';
-import { groq } from '@ai-sdk/groq';
-import { nextModel } from './groq-models';
+import { z } from 'zod';
+import { groqGenerateObject, groqGenerateText } from './groq-models';
 import { fetchRepoTree, fetchRepoFile } from '@/lib/fetchers/github-repos';
+
+const FileListSchema = z.array(z.string());
+
+const ProjectCardSchema = z.object({
+  name: z.string().describe('Project name, max 30 chars'),
+  description: z.string().describe('One compelling sentence about what it does, max 100 chars'),
+  rarity: z.enum(['common', 'rare', 'epic', 'legendary'])
+    .describe('Based on complexity, uniqueness, and polish'),
+  icon: z.string().describe('A lucide-react icon name (e.g. Database, Globe, Terminal, Cpu, Layers, Box, Code2, GitBranch, Server, Shield)'),
+  language: z.string().describe('Primary programming language'),
+});
+
+const BestProjectsSchema = z.array(z.string());
+
+const SummarySchema = z.object({
+  summary: z.string().describe('2-3 sentence summary of the project'),
+});
 
 interface ProjectCard {
   name: string;
   description: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  icon: string; // lucide icon name
+  icon: string;
   language: string;
 }
 
@@ -19,11 +35,9 @@ export async function analyzeProject(
   token?: string,
   forkInfo?: { isFork: boolean; aheadBy: number; parentFullName: string | null }
 ): Promise<ProjectCard> {
-  const model = nextModel();
-
   // Step 1: Get file tree
   const tree = await fetchRepoTree(owner, repoName, token);
-  const truncatedTree = tree.slice(0, 200); // Limit tree size
+  const truncatedTree = tree.slice(0, 200);
 
   // Build fork context for the LLM
   const forkContext = forkInfo?.isFork
@@ -40,22 +54,16 @@ Language: ${repoLanguage || 'Unknown'}${forkContext}
 Files:
 ${truncatedTree.join('\n')}
 
-List the 5-10 most important files to read to understand what this project does. Return ONLY a JSON array of file paths. Example: ["README.md", "src/main.ts", "package.json"]`;
+List the 5-10 most important files to read to understand what this project does.`;
 
-  const fileRes = await generateObject({
-    model: groq(model),
-    prompt: fileSelectionPrompt,
-    schema: { type: 'array', items: { type: 'string' } } as any,
-  });
-
-  const selectedFiles: string[] = (fileRes.object as string[]).slice(0, 10);
+  const selectedFiles = await groqGenerateObject(FileListSchema, fileSelectionPrompt);
+  const filesToRead = selectedFiles.slice(0, 10);
 
   // Step 3: Fetch selected files
   const fileContents: Record<string, string> = {};
-  for (const path of selectedFiles) {
+  for (const path of filesToRead) {
     const content = await fetchRepoFile(owner, repoName, path, token);
     if (content) {
-      // Truncate large files
       fileContents[path] = content.length > 8000
         ? content.slice(0, 4000) + '\n\n[... content truncated ...]\n\n' + content.slice(-4000)
         : content;
@@ -80,49 +88,32 @@ Generate a project card with:
 - name: project name (max 30 chars)
 - description: one compelling sentence about what it does (max 100 chars)
 - rarity: common | rare | epic | legendary (based on complexity, uniqueness, and polish)
-- icon: a lucide-react icon name that represents this project type (e.g., "Database", "Globe", "Terminal", "Cpu", "Layers", "Box", "Code2", "GitBranch", "Server", "Shield")
-- language: primary programming language
+- icon: a lucide-react icon name that represents this project type
+- language: primary programming language`;
 
-Return as JSON: {"name": "...", "description": "...", "rarity": "...", "icon": "...", "language": "..."}`;
+  const card = await groqGenerateObject(ProjectCardSchema, cardPrompt);
 
-  const cardRes = await generateObject({
-    model: groq(model),
-    prompt: cardPrompt,
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string' },
-        description: { type: 'string' },
-        rarity: { type: 'string', enum: ['common', 'rare', 'epic', 'legendary'] },
-        icon: { type: 'string' },
-        language: { type: 'string' },
-      },
-      required: ['name', 'description', 'rarity', 'icon', 'language'],
-    } as any,
-  });
-
-  return cardRes.object as ProjectCard;
+  return {
+    name: card.name.slice(0, 30),
+    description: card.description.slice(0, 100),
+    rarity: card.rarity,
+    icon: card.icon,
+    language: card.language,
+  };
 }
 
 export async function pickBestProjects(
   projects: Array<{ name: string; description: string; rarity: string; stars: number }>
 ): Promise<string[]> {
-  const model = nextModel();
-
   const prompt = `Pick the best 3 projects to showcase on a developer profile. Consider: impact, complexity, stars, and uniqueness.
 
 Projects:
 ${projects.map((p) => `- ${p.name} (${p.rarity}, ${p.stars} stars): ${p.description}`).join('\n')}
 
-Return ONLY a JSON array of the 3 project names to pin. Example: ["project-a", "project-b", "project-c"]`;
+Return ONLY a JSON array of the 3 project names to pin.`;
 
-  const res = await generateObject({
-    model: groq(model),
-    prompt,
-    schema: { type: 'array', items: { type: 'string' } } as any,
-  });
-
-  return (res.object as string[]).slice(0, 3);
+  const bestNames = await groqGenerateObject(BestProjectsSchema, prompt);
+  return bestNames.slice(0, 3);
 }
 
 export async function summarizeProjectForBadges(
@@ -131,8 +122,6 @@ export async function summarizeProjectForBadges(
   fileTree: string[],
   fileContents: Record<string, string>
 ): Promise<string> {
-  const model = nextModel();
-
   const filesContext = Object.entries(fileContents)
     .map(([path, content]) => `--- ${path} ---\n${content.slice(0, 2000)}`)
     .join('\n\n');
@@ -147,11 +136,6 @@ ${filesContext}
 
 Write a 2-3 sentence summary focusing on: what problem it solves, technical sophistication, and impact.`;
 
-  const res = await generateObject({
-    model: groq(model),
-    prompt,
-    schema: { type: 'object', properties: { summary: { type: 'string' } }, required: ['summary'] } as any,
-  });
-
-  return (res.object as any).summary || '';
+  const result = await groqGenerateObject(SummarySchema, prompt);
+  return result.summary;
 }
