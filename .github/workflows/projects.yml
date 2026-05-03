@@ -9,12 +9,59 @@ jobs:
   process:
     runs-on: ubuntu-latest
     steps:
-      - name: Process Project Queue
+      - name: Process All Pending Projects (One-by-One)
         run: |
-          curl -X POST "${{ secrets.VERCEL_URL }}/api/projects/process-queue" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            --fail
+          set -e
+          BASE_URL="${{ secrets.VERCEL_URL }}"
+          AUTH="Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+
+          echo "=== Checking pending projects ==="
+          PENDING_JSON=$(curl -s -X GET "$BASE_URL/api/projects/process-queue" -H "$AUTH")
+          PENDING=$(echo "$PENDING_JSON" | grep -o '"pending":[0-9]*' | cut -d: -f2)
+          echo "Pending projects: $PENDING"
+
+          if [ "$PENDING" -eq 0 ]; then
+            echo "Nothing to process. Exiting."
+            exit 0
+          fi
+
+          echo "=== Processing $PENDING project(s) one at a time ==="
+          LOOP=0
+          MAX_LOOPS=200
+
+          while [ "$PENDING" -gt 0 ] && [ "$LOOP" -lt "$MAX_LOOPS" ]; do
+            LOOP=$((LOOP + 1))
+            echo "--- Call $LOOP: processing 1 project ---"
+
+            RESULT=$(curl -s -X POST "$BASE_URL/api/projects/process-queue?count=1" \
+              -H "$AUTH" \
+              -H "Content-Type: application/json")
+
+            echo "Response: $RESULT"
+
+            PROCESSED=$(echo "$RESULT" | grep -o '"processed":[0-9]*' | cut -d: -f2 || echo "0")
+            REMAINING=$(echo "$RESULT" | grep -o '"remaining":[0-9]*' | cut -d: -f2 || echo "0")
+
+            echo "  -> processed: $PROCESSED, remaining: $REMAINING"
+
+            if [ "$REMAINING" -eq 0 ]; then
+              echo "All projects processed!"
+              break
+            fi
+
+            PENDING=$REMAINING
+
+            # Small cooldown between calls to avoid hammering the API / rate limits
+            sleep 3
+          done
+
+          echo "=== Finalizing: pinning best projects + feeding badge queue ==="
+          FINALIZE_RESULT=$(curl -s -X POST "$BASE_URL/api/projects/process-queue?finalize=true" \
+            -H "$AUTH" \
+            -H "Content-Type: application/json")
+          echo "Finalize response: $FINALIZE_RESULT"
+
+          echo "=== Done ==="
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
