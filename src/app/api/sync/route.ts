@@ -6,7 +6,7 @@ import { fetchLeetCodeMetrics } from '@/lib/fetchers/leetcode';
 import { fetchCodeforcesMetrics } from '@/lib/fetchers/codeforces';
 import { fetchHackerRankMetrics } from '@/lib/fetchers/hackerrank';
 import { evaluatePRComplexity } from '@/lib/ai/groq';
-import { XP_TABLE } from '@/lib/xp/normalize';
+import { XP_TABLE, getIntensityMultiplier, getStreakMultiplier, calculateMilestoneBonuses } from '@/lib/xp/normalize';
 import { triggerMilestone } from '@/lib/pusher/server';
 import { createWeeklySnapshot } from '@/lib/ai/ghost';
 import { generatePersonalizedSkillTree, generateInitialTreeFromDeepDive, generateInitialSkillTree } from '@/lib/ai/skillTreeGenerator';
@@ -99,19 +99,21 @@ async function syncUser(user: any) {
         totalPRs = prevPRs;
       }
 
-      // Delta commits XP
+      // Delta commits XP with intensity multiplier
       const deltaCommits = Math.max(0, totalCommits - prevCommits);
       if (deltaCommits > 0) {
-        const commitXP = deltaCommits * XP_TABLE.GITHUB.COMMIT;
+        const intensityMult = getIntensityMultiplier(deltaCommits);
+        const baseCommitXP = deltaCommits * XP_TABLE.GITHUB.COMMIT;
+        const commitXP = Math.round(baseCommitXP * intensityMult);
         totalDeltaXP += commitXP;
         activities.push({
           userId: user.id,
           platform: 'GITHUB',
           activityType: 'COMMIT',
-          description: `${deltaCommits} new commits (total: ${totalCommits})`,
+          description: `${deltaCommits} new commits (total: ${totalCommits})${intensityMult > 1 ? ` [${intensityMult}x intensity]` : ''}`,
           xpAwarded: commitXP,
           externalId: `github-commits-${user.id}-${dateSlug}`,
-          metadata: { deltaCommits, totalCommits, languages: ghMetrics.languageDistribution },
+          metadata: { deltaCommits, totalCommits, intensityMult, languages: ghMetrics.languageDistribution },
         });
       }
 
@@ -372,11 +374,40 @@ async function syncUser(user: any) {
     }
   }
 
+  // ---------- STREAK MULTIPLIER ----------
+  // Calculate current streak BEFORE we save today's activity
+  const recentActivities = await prisma.dailyActivity.findMany({
+    where: { userId: user.id },
+    orderBy: { date: 'desc' },
+    take: 60,
+  });
+  const dateMap = new Map(recentActivities.map((a) => [a.date, a.xpGained]));
+  let currentStreak = 0;
+  const todayStr = now.toISOString().split('T')[0];
+  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const checkDate = dateMap.has(todayStr) ? todayStr : dateMap.has(yesterdayStr) ? yesterdayStr : null;
+  if (checkDate) {
+    const d = new Date(checkDate);
+    while (true) {
+      const ds = d.toISOString().split('T')[0];
+      const xp = dateMap.get(ds);
+      if (xp && xp > 0) {
+        currentStreak++;
+        d.setDate(d.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+  }
+  // If today already has activity, streak includes today; otherwise it's up to yesterday
+  const streakForMultiplier = dateMap.has(todayStr) ? currentStreak : currentStreak;
+  const streakMult = getStreakMultiplier(streakForMultiplier);
+  const streakBonusXP = totalDeltaXP > 0 ? Math.round(totalDeltaXP * (streakMult - 1)) : 0;
+
   // ---------- CALCULATE FINAL XP ----------
-  // XP only ever goes UP: current XP + delta. Never regress.
-  // GitHub stats (commits, PRs) update the stored totals but XP doesn't go down.
-  // Additional safety: final XP must never be less than current XP.
-  const finalXP = Math.max(user.xp, user.xp + totalDeltaXP);
+  // XP only ever goes UP: current XP + delta + streak bonus. Never regress.
+  const finalDeltaXP = totalDeltaXP + streakBonusXP;
+  const finalXP = Math.max(user.xp, user.xp + finalDeltaXP);
 
   // ---------- UPDATE USER ----------
   await prisma.user.update({
@@ -399,6 +430,59 @@ async function syncUser(user: any) {
       lastSyncedHackerRank: user.hackerrankHandle ? now : user.lastSyncedHackerRank,
     },
   });
+
+  // ---------- MILESTONE BONUSES ----------
+  const prevLeetcodeTotal = prevLeetcodeEasy + prevLeetcodeMedium + prevLeetcodeHard;
+  const currLeetcodeTotal = leetcodeEasy + leetcodeMedium + leetcodeHard;
+  const milestones = calculateMilestoneBonuses(
+    {
+      commits: prevCommits,
+      prs: prevPRs,
+      reviews: user.totalReviews,
+      leetcodeSolved: prevLeetcodeTotal,
+      streakDays: streakForMultiplier - (dateMap.has(todayStr) ? 0 : 1),
+    },
+    {
+      commits: totalCommits,
+      prs: totalPRs,
+      reviews: totalReviews,
+      leetcodeSolved: currLeetcodeTotal,
+      streakDays: streakForMultiplier,
+    }
+  );
+
+  if (milestones.xp > 0) {
+    const milestoneXP = milestones.xp;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { xp: { increment: milestoneXP } },
+    });
+    await prisma.activityLog.create({
+      data: {
+        userId: user.id,
+        platform: 'SYSTEMICS',
+        activityType: 'MILESTONE',
+        description: `Milestones: ${milestones.labels.join(', ')}`,
+        xpAwarded: milestoneXP,
+        externalId: `milestone-${user.id}-${dateSlug}-${Date.now()}`,
+        metadata: { labels: milestones.labels, xp: milestoneXP },
+      },
+    }).catch(() => {});
+    console.log(`[Sync] Milestones for ${user.email}: +${milestoneXP} XP (${milestones.labels.join(', ')})`);
+  }
+
+  // ---------- STREAK BONUS ACTIVITY ----------
+  if (streakBonusXP > 0) {
+    activities.push({
+      userId: user.id,
+      platform: 'SYSTEMICS',
+      activityType: 'STREAK_BONUS',
+      description: `${streakForMultiplier}-day streak bonus (${streakMult}x)`,
+      xpAwarded: streakBonusXP,
+      externalId: `streak-bonus-${user.id}-${dateSlug}`,
+      metadata: { streakDays: streakForMultiplier, multiplier: streakMult },
+    });
+  }
 
   // ---------- CREATE ACTIVITY LOGS ----------
   for (const activity of activities) {
@@ -666,7 +750,7 @@ async function syncUser(user: any) {
   });
 
   // ---------- DAILY ACTIVITY TRACKING ----------
-  if (totalDeltaXP > 0) {
+  if (finalDeltaXP > 0) {
     const dateStr = now.toISOString().split('T')[0];
     const platforms = Array.from(new Set(activities.map((a) => a.platform)));
 
@@ -675,13 +759,13 @@ async function syncUser(user: any) {
         userId_date: { userId: user.id, date: dateStr },
       },
       update: {
-        xpGained: { increment: totalDeltaXP },
+        xpGained: { increment: finalDeltaXP },
         platforms: { push: platforms },
       },
       create: {
         userId: user.id,
         date: dateStr,
-        xpGained: totalDeltaXP,
+        xpGained: finalDeltaXP,
         platforms,
       },
     });

@@ -47,6 +47,9 @@ async function generateTitleForUser(userId: string): Promise<number> {
       activityLogs: { orderBy: { timestamp: 'desc' }, take: 10 },
       dynamicNodes: { where: { unlocked: true } },
       ghostSnapshots: { orderBy: { createdAt: 'desc' }, take: 1 },
+      badges: { orderBy: { createdAt: 'desc' }, take: 20 },
+      duelsAsChallenger: { where: { status: 'completed' } },
+      duelsAsOpponent: { where: { status: 'completed' } },
     },
   });
 
@@ -65,33 +68,119 @@ async function generateTitleForUser(userId: string): Promise<number> {
   const topSkills = Object.entries(skillBreakdown)
     .filter(([, v]) => (v as number) > 0)
     .sort(([, a], [, b]) => (b as number) - (a as number))
-    .slice(0, 3)
-    .map(([k]) => k)
+    .slice(0, 5)
+    .map(([k, v]) => `${k}:${v}`)
     .join(', ');
 
-  const title = await groqGenerateText(`You are the Title Master of Systemics, a competitive developer guild. You grant short, hype, one-line titles to developers based on their entire profile.
+  // Build badge context
+  const badgeList = user.badges.map((b: any) => {
+    const rarityEmoji = b.rarity === 'legendary' ? '🔥' : b.rarity === 'epic' ? '💎' : b.rarity === 'rare' ? '⭐' : '⚡';
+    return `${rarityEmoji} ${b.name} (${b.rarity})`;
+  }).join(' | ');
 
-USER: ${user.name || user.email}
-GITHUB: ${user.githubHandle || 'none'}
-TOTAL XP: ${user.xp}
-COMMITS: ${user.totalCommits} | PRs: ${user.totalPRs}
-LEETCODE: ${user.leetcodeEasy}E / ${user.leetcodeMedium}M / ${user.leetcodeHard}H
-CODEFORCES: Rating ${user.codeforcesRating}
-HACKERRANK: ${user.hackerrankBadges} badges
-TOP SKILLS: ${topSkills}
-ARCHETYPE: ${deepDiveData?.archetype || 'Unknown'}
-GRIND PATH: ${deepDiveData?.grindPath || 'Unknown'}
-UNLOCKED NODES: ${user.dynamicNodes.map((n: any) => n.name).join(', ')}
+  const badgeCategories = user.badges.reduce((acc: Record<string, number>, b: any) => {
+    acc[b.category] = (acc[b.category] || 0) + 1;
+    return acc;
+  }, {});
+  const badgeCategorySummary = Object.entries(badgeCategories)
+    .map(([cat, count]) => `${cat}:${count}`)
+    .join(', ');
 
-RULES:
-1. Generate EXACTLY ONE title — a short, hype phrase (2-5 words max)
-2. Examples: "Cache Commander", "TypeScript Artisan", "Algo Gladiator", "Pipeline Warlord", "DOM Surgeon"
-3. Must reference their actual dominant skill
-4. NO generic titles like "Developer" or "Coder"
-5. Gaming-style, memorable, slightly exaggerated
-6. Just output the title, nothing else — no quotes, no markdown, no explanation`);
+  const totalDuels = user.duelsAsChallenger.length + user.duelsAsOpponent.length;
+  const duelWins = user.duelsAsChallenger.filter((d: any) => d.winnerId === user.id).length
+    + user.duelsAsOpponent.filter((d: any) => d.winnerId === user.id).length;
 
-  const cleanTitle = title.trim().replace(/^["']|["']$/g, '').replace(/\*\*/g, '').slice(0, 50);
+  // Recent activity summary
+  const recentPlatforms = Array.from(new Set(user.activityLogs.map((l: any) => l.platform))).join(', ');
+  const recentTypes = Array.from(new Set(user.activityLogs.map((l: any) => l.activityType))).join(', ');
+
+  const prompt = `You are the Grand Title Forger of Systemics — an elite, hyper-creative AI that bestows LEGENDARY one-line titles upon developers. Your titles are spoken in hushed tones across the guild. They are iconic. They are meme-worthy. They are earned.
+
+## CANDIDATE PROFILE
+
+**Name:** ${user.name || 'Unknown'}
+**GitHub:** @${user.githubHandle || 'none'}
+**Display Identity:** ${user.name || user.githubHandle || user.email}
+
+**Power Stats:**
+- Total XP: ${user.xp.toLocaleString()}
+- Commits: ${user.totalCommits.toLocaleString()}
+- PRs Merged: ${user.totalPRs}
+- Code Reviews: ${user.totalReviews}
+- LeetCode: ${user.leetcodeEasy}E / ${user.leetcodeMedium}M / ${user.leetcodeHard}H
+- Codeforces Rating: ${user.codeforcesRating || 'N/A'}
+- HackerRank Badges: ${user.hackerrankBadges}
+
+**Dominant Skills:** ${topSkills || 'Unknown'}
+**Archetype:** ${deepDiveData?.archetype || 'Unknown'}
+**Grind Path:** ${deepDiveData?.grindPath || 'Unknown'}
+
+**Battle Record:**
+- Duels Fought: ${totalDuels}
+- Duels Won: ${duelWins}
+
+**Unlocked Skill Nodes:** ${user.dynamicNodes.map((n: any) => n.name).join(', ') || 'None yet'}
+
+**Badge Collection (${user.badges.length} total):**
+${badgeList || 'No badges yet'}
+
+**Badge Breakdown:** ${badgeCategorySummary || 'none'}
+
+**Recent Activity:** ${recentPlatforms || 'None'} — ${recentTypes || 'None'}
+
+## TITLE FORGING RULES
+
+1. Generate EXACTLY ONE title — maximum 6 words, ideally 2-4
+2. The title must feel EARNED, not given. It should reflect their actual dominance.
+3. Use their badges, skill nodes, archetype, and GitHub handle as creative fuel.
+4. Reference their name or handle ONLY if it makes the title significantly cooler (e.g., "The Fox's Gambit" for x-TheFox)
+5. Gaming/mythology/anime/military/Dark Souls naming conventions are ENCOURAGED
+6. ALLITERATION and RHYME are powerful tools
+7. NO generic garbage like "Developer", "Coder", "Programmer", "Engineer"
+8. NO quotes, markdown, or explanation — output ONLY the raw title text
+
+## TITLE EXAMPLES (quality bar)
+
+- "Cachebreaker Prime"
+- "The Nullpointer Slayer"
+- "TypeScript Thundergod"
+- "Pipeline Warlord"
+- "DOM Surgeon Supreme"
+- "Async Await Ronin"
+- "The LeetCode Leviathan"
+- "Git Reaper"
+- "Binary Berserker"
+- "Stack Overflow Sovereign"
+- "The Commit Crusader"
+- "API Archon"
+- "The Fox's Grand Gambit"
+- "Docker Demon Lord"
+- "Recursion Raider"
+- "Runtime Reaper"
+- "Syntax Samurai"
+- "The Merge Conflicter"
+- "Segmentation Fault Slayer"
+- "Build Breaker Extraordinaire"
+
+Now forge their title:`;
+
+  const rawTitle = await groqGenerateText(prompt);
+
+  // Aggressive cleanup
+  let cleanTitle = rawTitle
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/\*\*/g, '')
+    .replace(/^[-–—]\s*/, '')
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 50);
+
+  // Fallback if model returns garbage
+  if (!cleanTitle || cleanTitle.length < 2 || cleanTitle.toLowerCase().includes('title')) {
+    cleanTitle = oldTitle || 'Unnamed Grunt';
+  }
 
   // Archive old title only if it actually changed
   if (oldTitle && oldTitle !== cleanTitle) {
@@ -114,6 +203,7 @@ RULES:
     data: { title: cleanTitle },
   });
 
+  console.log(`[Title] "${cleanTitle}" forged for ${user.name || user.githubHandle || user.email}`);
   return 1;
 }
 
@@ -127,7 +217,7 @@ export async function GET(req: Request) {
     }
 
     const user = await prisma.user.findFirst({
-      where: { githubHandle },
+      where: { githubHandle: { mode: 'insensitive', equals: githubHandle.toLowerCase() } },
       select: {
         title: true,
         name: true,

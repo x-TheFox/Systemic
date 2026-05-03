@@ -101,6 +101,8 @@
 
   * {
     @apply border-border;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 
   body {
@@ -110,6 +112,21 @@
 
   html {
     scroll-behavior: smooth;
+  }
+
+  /* ── Hide scrollbars globally ── */
+  html, body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
   }
 }
 
