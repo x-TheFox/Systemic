@@ -23,7 +23,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "Systemics — AI-Augmented Developer Leaderboard",
-  description: "Track your grind across GitHub, LeetCode, Codeforces, HackerRank, and TryHackMe with AI-generated skill trees, dynamic badges, and weekly reports.",
+  description: "Track your grind across GitHub, LeetCode, Codeforces, and HackerRank with AI-generated skill trees, dynamic badges, and weekly reports.",
   icons: {
     icon: '/icon.svg',
   },

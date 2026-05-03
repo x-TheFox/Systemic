@@ -35,10 +35,6 @@ export async function POST(req: Request) {
         codeforcesRating: true,
         codeforcesSolved: true,
         hackerrankBadges: true,
-        tryhackmePoints: true,
-        tryhackmeRank: true,
-        tryhackmeBadges: true,
-        tryhackmeRooms: true,
       },
     });
 

@@ -5,7 +5,6 @@ import { deepDiveGitHub } from '@/lib/fetchers/github-deepdive';
 import { fetchLeetCodeMetrics } from '@/lib/fetchers/leetcode';
 import { fetchCodeforcesMetrics } from '@/lib/fetchers/codeforces';
 import { fetchHackerRankMetrics } from '@/lib/fetchers/hackerrank';
-import { fetchTryHackMeMetrics } from '@/lib/fetchers/tryhackme';
 import { evaluatePRComplexity } from '@/lib/ai/groq';
 import { XP_TABLE } from '@/lib/xp/normalize';
 import { triggerMilestone } from '@/lib/pusher/server';
@@ -56,10 +55,6 @@ async function syncUser(user: any) {
   const prevCodeforcesRating = user.codeforcesRating;
   const prevCodeforcesSolved = user.codeforcesSolved;
   const prevHackerrankBadges = user.hackerrankBadges;
-  const prevTryhackmePoints = user.tryhackmePoints;
-  const prevTryhackmeBadges = user.tryhackmeBadges;
-  const prevTryhackmeRooms = user.tryhackmeRooms;
-  const prevTryhackmeRank = user.tryhackmeRank;
 
   // Current stats (to be updated on user)
   let totalCommits = prevCommits;
@@ -70,12 +65,8 @@ async function syncUser(user: any) {
   let codeforcesRating = prevCodeforcesRating;
   let codeforcesSolved = prevCodeforcesSolved;
   let hackerrankBadges = prevHackerrankBadges;
-  let tryhackmePoints = prevTryhackmePoints;
-  let tryhackmeBadges = prevTryhackmeBadges;
-  let tryhackmeRooms = prevTryhackmeRooms;
-  let tryhackmeRank = prevTryhackmeRank;
 
-  const isFirstSync = !user.lastSyncedGitHub && !user.lastSyncedLeetCode && !user.lastSyncedCodeforces && !user.lastSyncedHackerRank && !user.lastSyncedTryHackMe;
+  const isFirstSync = !user.lastSyncedGitHub && !user.lastSyncedLeetCode && !user.lastSyncedCodeforces && !user.lastSyncedHackerRank;
   let deepDiveResult: any = null;
 
   // ---------- GITHUB ----------
@@ -290,59 +281,6 @@ async function syncUser(user: any) {
     }
   }
 
-  // ---------- TRYHACKME ----------
-  if (user.tryhackmeHandle) {
-    try {
-      const thmMetrics = await fetchTryHackMeMetrics(user.tryhackmeHandle);
-      tryhackmePoints = thmMetrics.points;
-      tryhackmeBadges = thmMetrics.badges;
-      tryhackmeRooms = thmMetrics.roomsCompleted;
-      tryhackmeRank = thmMetrics.rank;
-
-      if (tryhackmePoints < prevTryhackmePoints && prevTryhackmePoints > 0) {
-        console.log(`[Sync] TryHackMe returned ${tryhackmePoints} points but we had ${prevTryhackmePoints} — keeping previous`);
-        tryhackmePoints = prevTryhackmePoints;
-      }
-      if (tryhackmeBadges < prevTryhackmeBadges && prevTryhackmeBadges > 0) {
-        console.log(`[Sync] TryHackMe returned ${tryhackmeBadges} badges but we had ${prevTryhackmeBadges} — keeping previous`);
-        tryhackmeBadges = prevTryhackmeBadges;
-      }
-      if (tryhackmeRooms < prevTryhackmeRooms && prevTryhackmeRooms > 0) {
-        console.log(`[Sync] TryHackMe returned ${tryhackmeRooms} rooms but we had ${prevTryhackmeRooms} — keeping previous`);
-        tryhackmeRooms = prevTryhackmeRooms;
-      }
-      if (tryhackmeRank < prevTryhackmeRank && prevTryhackmeRank > 0) {
-        console.log(`[Sync] TryHackMe rank ${tryhackmeRank} < previous ${prevTryhackmeRank} — keeping previous`);
-        tryhackmeRank = prevTryhackmeRank;
-      }
-
-      const deltaPoints = Math.max(0, tryhackmePoints - prevTryhackmePoints);
-      const deltaBadges = Math.max(0, tryhackmeBadges - prevTryhackmeBadges);
-      const deltaRooms = Math.max(0, tryhackmeRooms - prevTryhackmeRooms);
-      const deltaRankMilestone = Math.max(0, Math.floor(prevTryhackmeRank / 100) - Math.floor(tryhackmeRank / 100));
-
-      const thmXP = (deltaPoints * XP_TABLE.TRYHACKME.POINT_MILESTONE) +
-                    (deltaBadges * XP_TABLE.TRYHACKME.BADGE) +
-                    (deltaRooms * XP_TABLE.TRYHACKME.ROOM_COMPLETED) +
-                    (deltaRankMilestone * XP_TABLE.TRYHACKME.RANK_MILESTONE);
-
-      if (thmXP > 0) {
-        totalDeltaXP += thmXP;
-        activities.push({
-          userId: user.id,
-          platform: 'TRYHACKME',
-          activityType: 'HACK',
-          description: `+${deltaPoints}pts / +${deltaBadges} badges / +${deltaRooms} rooms (Rank: ${tryhackmeRank})`,
-          xpAwarded: thmXP,
-          externalId: `tryhackme-${user.id}-${dateSlug}`,
-          metadata: { points: tryhackmePoints, badges: tryhackmeBadges, rooms: tryhackmeRooms, rank: tryhackmeRank, deltaPoints, deltaBadges, deltaRooms },
-        });
-      }
-    } catch (err) {
-      console.error('TryHackMe sync error for', user.tryhackmeHandle, err);
-    }
-  }
-
   // ---------- CALCULATE FINAL XP ----------
   // XP only ever goes UP: current XP + delta. Never regress.
   // GitHub stats (commits, PRs) update the stored totals but XP doesn't go down.
@@ -362,15 +300,10 @@ async function syncUser(user: any) {
       codeforcesRating,
       codeforcesSolved,
       hackerrankBadges,
-      tryhackmePoints,
-      tryhackmeBadges,
-      tryhackmeRooms,
-      tryhackmeRank,
       lastSyncedGitHub: user.githubHandle ? now : user.lastSyncedGitHub,
       lastSyncedLeetCode: user.leetcodeHandle ? now : user.lastSyncedLeetCode,
       lastSyncedCodeforces: user.codeforcesHandle ? now : user.lastSyncedCodeforces,
       lastSyncedHackerRank: user.hackerrankHandle ? now : user.lastSyncedHackerRank,
-      lastSyncedTryHackMe: user.tryhackmeHandle ? now : user.lastSyncedTryHackMe,
     },
   });
 
@@ -564,9 +497,6 @@ async function syncUser(user: any) {
       else if (key === 'codeforces_rating') current = freshUser.codeforcesRating;
       else if (key === 'codeforces_solved') current = freshUser.codeforcesSolved;
       else if (key === 'hackerrank_badges') current = freshUser.hackerrankBadges;
-      else if (key === 'tryhackme_points') current = freshUser.tryhackmePoints;
-      else if (key === 'tryhackme_badges') current = freshUser.tryhackmeBadges;
-      else if (key === 'tryhackme_rooms') current = freshUser.tryhackmeRooms;
       else if (key.startsWith('skill_xp_')) {
         const skill = key.replace('skill_xp_', '');
         current = skillXP[skill] || 0;

@@ -3,7 +3,7 @@ import { groqGenerateText } from './groq-models';
 import { triggerMilestone } from '@/lib/pusher/server';
 
 function computeScore(u: any) {
-  return (u.totalCommits || 0) + (u.totalPRs || 0) * 5 + (u.leetcodeHard || 0) * 10 + (u.leetcodeMedium || 0) * 5 + (u.codeforcesSolved || 0) + (u.hackerrankBadges || 0) * 2 + (u.tryhackmePoints || 0) / 50;
+  return (u.totalCommits || 0) + (u.totalPRs || 0) * 5 + (u.leetcodeHard || 0) * 10 + (u.leetcodeMedium || 0) * 5 + (u.codeforcesSolved || 0) + (u.hackerrankBadges || 0) * 2;
 }
 
 export async function generateBadgesForUser(userId: string, commits?: string[], isFirstBadgeSync?: boolean): Promise<number> {
@@ -21,7 +21,7 @@ export async function generateBadgesForUser(userId: string, commits?: string[], 
 
   // Compute relative standing in the guild
   const allUsers = await prisma.user.findMany({
-    select: { id: true, totalCommits: true, totalPRs: true, leetcodeHard: true, leetcodeMedium: true, codeforcesSolved: true, hackerrankBadges: true, tryhackmePoints: true, xp: true },
+    select: { id: true, totalCommits: true, totalPRs: true, leetcodeHard: true, leetcodeMedium: true, codeforcesSolved: true, hackerrankBadges: true, xp: true },
   });
   const scores = allUsers.map(u => ({ id: u.id, score: computeScore(u), xp: u.xp }));
   scores.sort((a, b) => b.score - a.score);
@@ -87,7 +87,6 @@ COMMITS: ${user.totalCommits} | PRs: ${user.totalPRs}
 LEETCODE: ${user.leetcodeEasy}E / ${user.leetcodeMedium}M / ${user.leetcodeHard}H
 CODEFORCES: Rating ${user.codeforcesRating} | Solved: ${user.codeforcesSolved}
 HACKERRANK: ${user.hackerrankBadges} badges
-TRYHACKME: ${user.tryhackmePoints}pts | Rank: ${user.tryhackmeRank} | ${user.tryhackmeBadges} badges | ${user.tryhackmeRooms} rooms
 ${existingBadgeText}
 ${commitSection}
 
