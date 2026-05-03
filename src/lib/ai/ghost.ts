@@ -54,7 +54,6 @@ export async function createWeeklySnapshot(userId: string): Promise<void> {
         LEETCODE: { easy: user.leetcodeEasy, medium: user.leetcodeMedium, hard: user.leetcodeHard },
         CODEFORCES: { rating: user.codeforcesRating, solved: user.codeforcesSolved },
         HACKERRANK: { badges: user.hackerrankBadges },
-        TRYHACKME: { points: user.tryhackmePoints, rank: user.tryhackmeRank, badges: user.tryhackmeBadges, rooms: user.tryhackmeRooms },
       },
     },
     create: {
@@ -68,7 +67,6 @@ export async function createWeeklySnapshot(userId: string): Promise<void> {
         LEETCODE: { easy: user.leetcodeEasy, medium: user.leetcodeMedium, hard: user.leetcodeHard },
         CODEFORCES: { rating: user.codeforcesRating, solved: user.codeforcesSolved },
         HACKERRANK: { badges: user.hackerrankBadges },
-        TRYHACKME: { points: user.tryhackmePoints, rank: user.tryhackmeRank, badges: user.tryhackmeBadges, rooms: user.tryhackmeRooms },
       },
     },
   });

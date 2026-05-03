@@ -71,7 +71,11 @@ export function Footer() {
 
         <div className="mt-8 pt-5 border-t border-white/[0.04] flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-fg-muted">
-            Built with dark energy. Powered by Groq AI.
+            Built with rage, caffeine, and a relentless pursuit of XP. &copy;{' '}
+            <a href="https://www.edencorp.org/" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+              EdenCORP
+            </a>{' '}
+            {new Date().getFullYear()}
           </p>
           <p className="text-xs text-fg-muted font-mono">
             XP never regresses.

@@ -181,7 +181,7 @@ export function LeaderboardTable() {
         >
           {middleUsers.map((user) => {
             const rank = users.indexOf(user) + 1;
-            const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : "#";
+            const profileUrl = user.githubHandle ? `/${user.githubHandle}` : "#";
             const isClickable = !!user.githubHandle;
             const rankChange = getRankChange(user, rank);
             const xpPct = (user.xp / maxXP) * 100;
@@ -268,7 +268,7 @@ export function LeaderboardTable() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {bottom2.map((user) => {
               const badgeInfo = getBottomBadge(user);
-              const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : "#";
+              const profileUrl = user.githubHandle ? `/${user.githubHandle}` : "#";
               const isClickable = !!user.githubHandle;
 
               const content = (
@@ -322,7 +322,7 @@ export function LeaderboardTable() {
 
 function PodiumCard({ rank, user, maxXP }: { rank: number; user: LeaderboardUser; maxXP: number }) {
   const cfg = podiumConfig[rank];
-  const profileUrl = user.githubHandle ? `/profile?github=${user.githubHandle}` : "#";
+  const profileUrl = user.githubHandle ? `/${user.githubHandle}` : "#";
   const isClickable = !!user.githubHandle;
   const xpPct = (user.xp / maxXP) * 100;
 

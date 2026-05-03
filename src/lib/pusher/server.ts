@@ -9,7 +9,7 @@ const pusherServer = new Pusher({
 });
 
 export async function triggerMilestone(
-  event: 'rank-up' | 'node-unlocked' | 'achievement-earned' | 'xp-milestone' | 'new-activity',
+  event: 'rank-up' | 'node-unlocked' | 'badge-earned' | 'xp-milestone' | 'new-activity',
   data: {
     userId: string;
     userName?: string;

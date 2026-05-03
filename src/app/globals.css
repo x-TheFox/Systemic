@@ -348,14 +348,14 @@
 }
 
 .react-flow__edge-path {
-  stroke: rgba(255, 255, 255, 0.45) !important;
+  stroke: rgba(255, 255, 255, 0.5) !important;
   stroke-width: 2px !important;
 }
 
-.react-flow__edge-path.selected {
-  stroke: hsl(var(--accent)) !important;
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke: #a78bfa !important;
   stroke-width: 2.5px !important;
-  filter: drop-shadow(0 0 4px hsl(var(--accent) / 0.6)) !important;
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.5)) !important;
 }
 
 .react-flow__connectionline-path {

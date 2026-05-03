@@ -5,7 +5,6 @@ import { deepDiveGitHub } from '@/lib/fetchers/github-deepdive';
 import { fetchLeetCodeMetrics } from '@/lib/fetchers/leetcode';
 import { fetchCodeforcesMetrics } from '@/lib/fetchers/codeforces';
 import { fetchHackerRankMetrics } from '@/lib/fetchers/hackerrank';
-import { fetchTryHackMeMetrics } from '@/lib/fetchers/tryhackme';
 import { evaluatePRComplexity } from '@/lib/ai/groq';
 import { XP_TABLE } from '@/lib/xp/normalize';
 import { triggerMilestone } from '@/lib/pusher/server';
@@ -56,26 +55,20 @@ async function syncUser(user: any) {
   const prevCodeforcesRating = user.codeforcesRating;
   const prevCodeforcesSolved = user.codeforcesSolved;
   const prevHackerrankBadges = user.hackerrankBadges;
-  const prevTryhackmePoints = user.tryhackmePoints;
-  const prevTryhackmeBadges = user.tryhackmeBadges;
-  const prevTryhackmeRooms = user.tryhackmeRooms;
-  const prevTryhackmeRank = user.tryhackmeRank;
 
   // Current stats (to be updated on user)
   let totalCommits = prevCommits;
   let totalPRs = prevPRs;
+  let totalReviews = user.totalReviews;
+  let reviewComments = user.reviewComments;
   let leetcodeEasy = prevLeetcodeEasy;
   let leetcodeMedium = prevLeetcodeMedium;
   let leetcodeHard = prevLeetcodeHard;
   let codeforcesRating = prevCodeforcesRating;
   let codeforcesSolved = prevCodeforcesSolved;
   let hackerrankBadges = prevHackerrankBadges;
-  let tryhackmePoints = prevTryhackmePoints;
-  let tryhackmeBadges = prevTryhackmeBadges;
-  let tryhackmeRooms = prevTryhackmeRooms;
-  let tryhackmeRank = prevTryhackmeRank;
 
-  const isFirstSync = !user.lastSyncedGitHub && !user.lastSyncedLeetCode && !user.lastSyncedCodeforces && !user.lastSyncedHackerRank && !user.lastSyncedTryHackMe;
+  const isFirstSync = !user.lastSyncedGitHub && !user.lastSyncedLeetCode && !user.lastSyncedCodeforces && !user.lastSyncedHackerRank;
   let deepDiveResult: any = null;
 
   // ---------- GITHUB ----------
@@ -145,6 +138,29 @@ async function syncUser(user: any) {
           timestamp: new Date(pr.mergedAt || pr.createdAt),
           metadata: { category, justification, url: pr.url },
         });
+      }
+
+      // Code reviews
+      try {
+        const { fetchGitHubReviews } = await import('@/lib/fetchers/github');
+        const reviews = await fetchGitHubReviews(user.githubHandle, process.env.GITHUB_TOKEN);
+        if (reviews.totalReviews > 0) {
+          totalReviews = Math.max(totalReviews, reviews.totalReviews);
+          reviewComments = Math.max(reviewComments, reviews.reviewComments);
+          const reviewXP = reviews.totalReviews * XP_TABLE.GITHUB.REVIEW;
+          totalDeltaXP += reviewXP;
+          activities.push({
+            userId: user.id,
+            platform: 'GITHUB',
+            activityType: 'REVIEW',
+            description: `${reviews.totalReviews} PR reviews`,
+            xpAwarded: reviewXP,
+            externalId: `github-reviews-${user.id}-${dateSlug}`,
+            metadata: { totalReviews: reviews.totalReviews, reviewComments: reviews.reviewComments },
+          });
+        }
+      } catch (err) {
+        console.warn('[Sync] Code review fetch failed for', user.githubHandle, err);
       }
 
       // DEEP DIVE on first sync
@@ -290,59 +306,6 @@ async function syncUser(user: any) {
     }
   }
 
-  // ---------- TRYHACKME ----------
-  if (user.tryhackmeHandle) {
-    try {
-      const thmMetrics = await fetchTryHackMeMetrics(user.tryhackmeHandle);
-      tryhackmePoints = thmMetrics.points;
-      tryhackmeBadges = thmMetrics.badges;
-      tryhackmeRooms = thmMetrics.roomsCompleted;
-      tryhackmeRank = thmMetrics.rank;
-
-      if (tryhackmePoints < prevTryhackmePoints && prevTryhackmePoints > 0) {
-        console.log(`[Sync] TryHackMe returned ${tryhackmePoints} points but we had ${prevTryhackmePoints} — keeping previous`);
-        tryhackmePoints = prevTryhackmePoints;
-      }
-      if (tryhackmeBadges < prevTryhackmeBadges && prevTryhackmeBadges > 0) {
-        console.log(`[Sync] TryHackMe returned ${tryhackmeBadges} badges but we had ${prevTryhackmeBadges} — keeping previous`);
-        tryhackmeBadges = prevTryhackmeBadges;
-      }
-      if (tryhackmeRooms < prevTryhackmeRooms && prevTryhackmeRooms > 0) {
-        console.log(`[Sync] TryHackMe returned ${tryhackmeRooms} rooms but we had ${prevTryhackmeRooms} — keeping previous`);
-        tryhackmeRooms = prevTryhackmeRooms;
-      }
-      if (tryhackmeRank < prevTryhackmeRank && prevTryhackmeRank > 0) {
-        console.log(`[Sync] TryHackMe rank ${tryhackmeRank} < previous ${prevTryhackmeRank} — keeping previous`);
-        tryhackmeRank = prevTryhackmeRank;
-      }
-
-      const deltaPoints = Math.max(0, tryhackmePoints - prevTryhackmePoints);
-      const deltaBadges = Math.max(0, tryhackmeBadges - prevTryhackmeBadges);
-      const deltaRooms = Math.max(0, tryhackmeRooms - prevTryhackmeRooms);
-      const deltaRankMilestone = Math.max(0, Math.floor(prevTryhackmeRank / 100) - Math.floor(tryhackmeRank / 100));
-
-      const thmXP = (deltaPoints * XP_TABLE.TRYHACKME.POINT_MILESTONE) +
-                    (deltaBadges * XP_TABLE.TRYHACKME.BADGE) +
-                    (deltaRooms * XP_TABLE.TRYHACKME.ROOM_COMPLETED) +
-                    (deltaRankMilestone * XP_TABLE.TRYHACKME.RANK_MILESTONE);
-
-      if (thmXP > 0) {
-        totalDeltaXP += thmXP;
-        activities.push({
-          userId: user.id,
-          platform: 'TRYHACKME',
-          activityType: 'HACK',
-          description: `+${deltaPoints}pts / +${deltaBadges} badges / +${deltaRooms} rooms (Rank: ${tryhackmeRank})`,
-          xpAwarded: thmXP,
-          externalId: `tryhackme-${user.id}-${dateSlug}`,
-          metadata: { points: tryhackmePoints, badges: tryhackmeBadges, rooms: tryhackmeRooms, rank: tryhackmeRank, deltaPoints, deltaBadges, deltaRooms },
-        });
-      }
-    } catch (err) {
-      console.error('TryHackMe sync error for', user.tryhackmeHandle, err);
-    }
-  }
-
   // ---------- CALCULATE FINAL XP ----------
   // XP only ever goes UP: current XP + delta. Never regress.
   // GitHub stats (commits, PRs) update the stored totals but XP doesn't go down.
@@ -356,21 +319,18 @@ async function syncUser(user: any) {
       xp: finalXP,
       totalCommits,
       totalPRs,
+      totalReviews,
+      reviewComments,
       leetcodeEasy,
       leetcodeMedium,
       leetcodeHard,
       codeforcesRating,
       codeforcesSolved,
       hackerrankBadges,
-      tryhackmePoints,
-      tryhackmeBadges,
-      tryhackmeRooms,
-      tryhackmeRank,
       lastSyncedGitHub: user.githubHandle ? now : user.lastSyncedGitHub,
       lastSyncedLeetCode: user.leetcodeHandle ? now : user.lastSyncedLeetCode,
       lastSyncedCodeforces: user.codeforcesHandle ? now : user.lastSyncedCodeforces,
       lastSyncedHackerRank: user.hackerrankHandle ? now : user.lastSyncedHackerRank,
-      lastSyncedTryHackMe: user.tryhackmeHandle ? now : user.lastSyncedTryHackMe,
     },
   });
 
@@ -564,9 +524,6 @@ async function syncUser(user: any) {
       else if (key === 'codeforces_rating') current = freshUser.codeforcesRating;
       else if (key === 'codeforces_solved') current = freshUser.codeforcesSolved;
       else if (key === 'hackerrank_badges') current = freshUser.hackerrankBadges;
-      else if (key === 'tryhackme_points') current = freshUser.tryhackmePoints;
-      else if (key === 'tryhackme_badges') current = freshUser.tryhackmeBadges;
-      else if (key === 'tryhackme_rooms') current = freshUser.tryhackmeRooms;
       else if (key.startsWith('skill_xp_')) {
         const skill = key.replace('skill_xp_', '');
         current = skillXP[skill] || 0;
@@ -580,15 +537,6 @@ async function syncUser(user: any) {
         data: { unlocked: true },
       });
       unlockedIds.push(node.nodeId);
-
-      await prisma.achievement.create({
-        data: {
-          userId: user.id,
-          title: `Unlocked: ${node.name}`,
-          description: node.description,
-          xpBonus: node.xpReward,
-        },
-      });
 
       await triggerMilestone('node-unlocked', {
         userId: user.id,
@@ -651,6 +599,31 @@ async function syncUser(user: any) {
     data: { lastBadgeCommitSync: now },
   });
 
+  // ---------- DAILY ACTIVITY TRACKING ----------
+  if (totalDeltaXP > 0) {
+    const dateStr = now.toISOString().split('T')[0];
+    const platforms = Array.from(new Set(activities.map((a) => a.platform)));
+
+    await prisma.dailyActivity.upsert({
+      where: {
+        userId_date: { userId: user.id, date: dateStr },
+      },
+      update: {
+        xpGained: { increment: totalDeltaXP },
+        platforms: { push: platforms },
+      },
+      create: {
+        userId: user.id,
+        date: dateStr,
+        xpGained: totalDeltaXP,
+        platforms,
+      },
+    });
+
+    // Check streak badges
+    await checkStreakBadges(user.id);
+  }
+
   // ---------- QUEUE BADGE GENERATION ----------
   if (totalDeltaXP > 0 || isFirstSync || commitMessages.length > 0) {
     await prisma.badgeQueue.create({
@@ -665,4 +638,65 @@ async function syncUser(user: any) {
   }
 
   console.log(`[Sync] ${user.email}: +${totalDeltaXP} delta XP (commits: +${totalCommits - prevCommits}, PRs processed)`);
+}
+
+async function checkStreakBadges(userId: string) {
+  const activities = await prisma.dailyActivity.findMany({
+    where: { userId },
+    orderBy: { date: 'desc' },
+    take: 60,
+  });
+
+  const dateMap = new Map(activities.map((a) => [a.date, a.xpGained]));
+
+  // Calculate current streak
+  let streak = 0;
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const checkDate = dateMap.has(today) ? today : dateMap.has(yesterday) ? yesterday : null;
+
+  if (checkDate) {
+    const d = new Date(checkDate);
+    while (true) {
+      const dateStr = d.toISOString().split('T')[0];
+      const xp = dateMap.get(dateStr);
+      if (xp && xp > 0) {
+        streak++;
+        d.setDate(d.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+  }
+
+  const existingBadges = await prisma.badge.findMany({
+    where: { userId, category: 'streak' },
+  });
+
+  const hasBadge = (name: string) => existingBadges.some((b) => b.name === name);
+
+  const streakBadges = [
+    { days: 30, name: '30-Day Apotheosis', rarity: 'legendary', color: '#f59e0b', icon: 'Crown' },
+    { days: 14, name: '14-Day Inferno', rarity: 'epic', color: '#a855f7', icon: 'Flame' },
+    { days: 7, name: '7-Day Flame', rarity: 'rare', color: '#3b82f6', icon: 'Flame' },
+    { days: 3, name: '3-Day Spark', rarity: 'common', color: '#6b7280', icon: 'Zap' },
+  ];
+
+  for (const sb of streakBadges) {
+    if (streak >= sb.days && !hasBadge(sb.name)) {
+      await prisma.badge.create({
+        data: {
+          userId,
+          name: sb.name,
+          description: `Maintained a ${sb.days}-day activity streak.`,
+          rarity: sb.rarity,
+          color: sb.color,
+          icon: sb.icon,
+          category: 'streak',
+          generatedBy: 'system',
+        },
+      });
+      break; // Only award the highest tier
+    }
+  }
 }

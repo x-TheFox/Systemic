@@ -35,10 +35,6 @@ export async function POST(req: Request) {
         codeforcesRating: true,
         codeforcesSolved: true,
         hackerrankBadges: true,
-        tryhackmePoints: true,
-        tryhackmeRank: true,
-        tryhackmeBadges: true,
-        tryhackmeRooms: true,
       },
     });
 
@@ -294,6 +290,81 @@ export async function POST(req: Request) {
       message: `Weekly Post-Mortem is live! MVP: ${mvp?.[1].name || 'N/A'} (+${mvp?.[1].xpGained || 0} XP)`,
       metadata: { type: 'weekly-report' },
     });
+
+    // Resolve active duels for this week
+    const activeDuels = await prisma.duel.findMany({
+      where: { weekNumber, year, status: 'active' },
+      include: {
+        challenger: { select: { id: true, xp: true, name: true, email: true } },
+        opponent: { select: { id: true, xp: true, name: true, email: true } },
+      },
+    });
+
+    for (const duel of activeDuels) {
+      const challengerXP = duel.challenger.xp - duel.challengerStartXP;
+      const opponentXP = duel.opponent.xp - duel.opponentStartXP;
+      const winnerId = challengerXP > opponentXP ? duel.challengerId :
+                       opponentXP > challengerXP ? duel.opponentId : null;
+
+      await prisma.duel.update({
+        where: { id: duel.id },
+        data: {
+          status: 'completed',
+          winnerId,
+          challengerEndXP: duel.challenger.xp,
+          opponentEndXP: duel.opponent.xp,
+        },
+      });
+
+      if (winnerId) {
+        // Award duel badges
+        const xpGap = Math.abs(challengerXP - opponentXP);
+        const isUnderdog = (winnerId === duel.challengerId && duel.challengerStartXP < duel.opponentStartXP) ||
+                           (winnerId === duel.opponentId && duel.opponentStartXP < duel.challengerStartXP);
+
+        let badgeName = 'Duel Victor';
+        let badgeRarity = 'rare';
+        let badgeColor = '#3b82f6';
+
+        if (isUnderdog) {
+          badgeName = 'Underdog Upset';
+          badgeRarity = 'epic';
+          badgeColor = '#a855f7';
+        } else if (xpGap >= 500) {
+          badgeName = 'Dominant Display';
+          badgeRarity = 'legendary';
+          badgeColor = '#f59e0b';
+        }
+
+        await prisma.badge.create({
+          data: {
+            userId: winnerId,
+            name: badgeName,
+            description: `Won a 1v1 weekly duel${xpGap >= 500 ? ' by 500+ XP' : isUnderdog ? ' as the underdog' : ''}.`,
+            rarity: badgeRarity,
+            color: badgeColor,
+            icon: 'Swords',
+            category: 'special',
+            generatedBy: 'system',
+          },
+        });
+
+        // Participation badge for loser
+        const loserId = winnerId === duel.challengerId ? duel.opponentId : duel.challengerId;
+        await prisma.badge.create({
+          data: {
+            userId: loserId,
+            name: 'Duelist',
+            description: 'Participated in a 1v1 weekly duel.',
+            rarity: 'common',
+            color: '#6b7280',
+            icon: 'Swords',
+            category: 'special',
+            generatedBy: 'system',
+          },
+        });
+      }
+    }
 
     // Optionally send to Discord
     if (process.env.DISCORD_WEBHOOK_URL) {

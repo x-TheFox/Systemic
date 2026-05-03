@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const eventType = evt.type;
 
   if (eventType === 'user.created') {
-    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
+    const { id, email_addresses, first_name, last_name, image_url, username } = evt.data;
 
     const user = await prisma.user.create({
       data: {
@@ -50,6 +50,7 @@ export async function POST(req: Request) {
         email: email_addresses[0]?.email_address || '',
         name: `${first_name || ''} ${last_name || ''}`.trim() || null,
         imageUrl: image_url,
+        githubHandle: username || null,
       },
     });
 
@@ -64,7 +65,9 @@ export async function POST(req: Request) {
   }
 
   if (eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
+    const { id, email_addresses, first_name, last_name, image_url, username } = evt.data;
+
+    const existing = await prisma.user.findUnique({ where: { clerkId: id } });
 
     await prisma.user.update({
       where: { clerkId: id },
@@ -72,8 +75,22 @@ export async function POST(req: Request) {
         email: email_addresses[0]?.email_address || '',
         name: `${first_name || ''} ${last_name || ''}`.trim() || null,
         imageUrl: image_url,
+        githubHandle: existing?.githubHandle || username || null,
       },
     });
+  }
+
+  // Backfill: if a user signs in and we don't have their githubHandle yet, try to get it from Clerk
+  if (eventType === 'session.created') {
+    const { user_id } = evt.data;
+    try {
+      const user = await prisma.user.findUnique({ where: { clerkId: user_id } });
+      if (user && !user.githubHandle) {
+        // We can't get username from session event, but the next user.updated will catch it
+        // This is just a safety net
+        console.log(`[Clerk Webhook] User ${user_id} missing githubHandle, waiting for user.updated`);
+      }
+    } catch {}
   }
 
   if (eventType === 'user.deleted') {

@@ -4,6 +4,8 @@ export const XP_TABLE = {
     PR_SIMPLE: 20,
     PR_COMPLEX_BASE: 30,
     PR_AI_MAX: 100,
+    REVIEW: 5, // per PR reviewed
+    REVIEW_COMMENT: 2, // per review comment
     LANGUAGE_BONUS: 5, // per language used significantly (>10%)
   },
   LEETCODE: {
@@ -32,12 +34,6 @@ export const XP_TABLE = {
     BADGE: 30,
     CERTIFICATE: 100,
     STAR: 10,
-  },
-  TRYHACKME: {
-    POINT_MILESTONE: 2,
-    BADGE: 20,
-    ROOM_COMPLETED: 10,
-    RANK_MILESTONE: 50,
   },
 } as const;
 

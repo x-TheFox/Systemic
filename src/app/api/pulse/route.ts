@@ -16,8 +16,8 @@ export async function GET(req: Request) {
       },
     });
 
-    const achievements = await prisma.achievement.findMany({
-      orderBy: { earnedAt: 'desc' },
+    const badges = await prisma.badge.findMany({
+      orderBy: { createdAt: 'desc' },
       take: limit,
       include: {
         user: { select: { name: true, email: true } },
@@ -43,13 +43,14 @@ export async function GET(req: Request) {
         xp: log.xpAwarded,
         platform: log.platform,
       })),
-      ...achievements.map((ach) => ({
-        id: `ach-${ach.id}`,
-        type: 'achievement-earned',
-        message: `${ach.user?.name || ach.user?.email || 'Someone'} earned: ${ach.title}`,
-        timestamp: ach.earnedAt.toISOString(),
-        userName: ach.user?.name || ach.user?.email?.split('@')[0],
-        xp: ach.xpBonus,
+      ...badges.map((badge) => ({
+        id: `badge-${badge.id}`,
+        type: 'badge-earned',
+        message: `${badge.user?.name || badge.user?.email || 'Someone'} earned the ${badge.rarity} badge: ${badge.name}`,
+        timestamp: badge.createdAt.toISOString(),
+        userName: badge.user?.name || badge.user?.email?.split('@')[0],
+        xp: 0,
+        rarity: badge.rarity,
       })),
       ...unlockedNodes.map((node) => ({
         id: `node-${node.id}`,

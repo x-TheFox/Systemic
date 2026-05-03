@@ -95,30 +95,32 @@ export function computeSkillTreeLayout(
 
   const root = hierarchy(rootData);
 
-  const nodeCount = nodes.length;
-  const nodeWidth = nodeCount > 40 ? 160 : nodeCount > 20 ? 200 : 240;
-  const nodeHeight = nodeCount > 40 ? 80 : 100;
-  const treeWidth = Math.max(800, nodeCount * nodeWidth * 0.6);
-  const treeHeight = Math.max(500, root.height * nodeHeight * 1.8);
+  // Increased spacing to prevent overlap
+  const horizontalGap = 280;
+  const verticalGap = 180;
+  const rootExtraGap = 80; // Extra space between root and first children
 
   const layout = tree<any>()
-    .size([treeWidth, treeHeight])
-    .nodeSize([nodeWidth, nodeHeight]);
+    .size([nodes.length * horizontalGap * 0.5, root.height * verticalGap * 1.5 + rootExtraGap])
+    .nodeSize([horizontalGap, verticalGap]);
 
   layout(root);
 
   const result: LayoutNode[] = [];
   root.each((d: HierarchyNode<any>) => {
+    // Push non-root nodes down to create extra gap from root
+    const yOffset = d.depth > 0 ? rootExtraGap : 0;
     result.push({
       id: d.data.id,
       x: d.x ?? 0,
-      y: d.y ?? 0,
+      y: (d.y ?? 0) + yOffset,
       data: d.data.data as SkillNodeData,
       status: d.data.status,
       depth: d.depth,
     });
   });
 
+  // Center the tree
   const xValues = result.map((n) => n.x);
   const minX = Math.min(...xValues);
   const maxX = Math.max(...xValues);
