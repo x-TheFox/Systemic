@@ -38,7 +38,12 @@ export async function GET(req: Request) {
 
     if (githubHandle) {
       dbUser = await prisma.user.findFirst({
-        where: { githubHandle },
+        where: {
+          githubHandle: {
+            equals: githubHandle,
+            mode: 'insensitive',
+          },
+        },
         include: userInclude,
       });
     } else if (clerkIdParam) {

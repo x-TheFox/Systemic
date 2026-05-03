@@ -1,22 +1,67 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import { motion } from "framer-motion";
-import { Trophy, LayoutDashboard, User } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Trophy, LayoutDashboard, User, Mail, Swords, Shield, Activity } from "lucide-react";
 import Image from "next/image";
+
+interface InboxMessage {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+}
 
 export function Navbar() {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const inboxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    async function loadInbox() {
+      try {
+        const res = await fetch("/api/inbox");
+        if (!res.ok) return;
+        const data = await res.json();
+        setInboxMessages(data.messages || []);
+        setUnreadCount(data.unreadCount || 0);
+      } catch {}
+    }
+    loadInbox();
+    const interval = setInterval(loadInbox, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (inboxRef.current && !inboxRef.current.contains(e.target as Node)) {
+        setInboxOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function markRead(id: string) {
+    await fetch(`/api/inbox/${id}`, { method: "POST" });
+    setInboxMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read: true } : m)));
+    setUnreadCount((c) => Math.max(0, c - 1));
+  }
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+    { href: "/pulse", label: "Pulse", icon: Activity },
     { href: "/profile", label: "Profile", icon: User },
   ];
 
@@ -54,10 +99,69 @@ export function Navbar() {
             );
           })}
 
-          <div className="ml-3 pl-3 border-l border-white/[0.06]">
+          <div className="ml-3 pl-3 border-l border-white/[0.06] flex items-center gap-2">
             {mounted ? (
               <>
                 <SignedIn>
+                  {/* Inbox */}
+                  <div className="relative" ref={inboxRef}>
+                    <button
+                      onClick={() => setInboxOpen(!inboxOpen)}
+                      className="relative p-1.5 rounded-[var(--radius-compact)] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors"
+                    >
+                      <Mail className="h-4 w-4" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-white text-[9px] font-bold flex items-center justify-center">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <AnimatePresence>
+                      {inboxOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 top-full mt-2 w-80 rounded-[var(--radius-container)] border border-white/[0.08] bg-overlay backdrop-blur-xl shadow-z-modal overflow-hidden"
+                        >
+                          <div className="p-3 border-b border-white/[0.06]">
+                            <p className="text-sm font-semibold text-white">Inbox</p>
+                          </div>
+                          <div className="max-h-72 overflow-y-auto">
+                            {inboxMessages.length === 0 ? (
+                              <div className="p-4 text-center text-sm text-fg-muted">No messages</div>
+                            ) : (
+                              inboxMessages.slice(0, 10).map((msg) => (
+                                <button
+                                  key={msg.id}
+                                  onClick={() => {
+                                    if (!msg.read) markRead(msg.id);
+                                    if (msg.type === "duel_request") {
+                                      window.location.href = "/duels";
+                                    }
+                                  }}
+                                  className={`w-full text-left p-3 border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors ${
+                                    !msg.read ? "bg-white/[0.02]" : ""
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    {!msg.read && <div className="h-2 w-2 rounded-full bg-accent mt-1 shrink-0" />}
+                                    <div className={`${msg.read ? "" : "ml-1"}`}>
+                                      <p className={`text-xs ${!msg.read ? "font-semibold text-white" : "text-fg-dim"}`}>{msg.title}</p>
+                                      <p className="text-[11px] text-fg-muted mt-0.5 line-clamp-2">{msg.body}</p>
+                                    </div>
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
                   <UserButton
                     afterSignOutUrl="/"
                     appearance={{

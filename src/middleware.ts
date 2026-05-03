@@ -5,8 +5,10 @@ const isPublicRoute = createRouteMatcher([
   '/leaderboard',
   '/profile',
   '/pulse',
-  '/guilds(.*)',
-  '/compare(.*)',
+  '/duels',
+  '/guilds',
+  '/guilds/:slug',
+  '/compare/:h1/:h2',
   '/sign-up(.*)',
   '/sign-in(.*)',
   '/sso-callback',
@@ -23,7 +25,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/badges',
   '/api/badges/process-queue',
   '/api/title',
-  '/api/og(.*)',
+  '/api/og',
   '/api/streaks',
   '/api/challenges',
   '/api/duels(.*)',
@@ -31,7 +33,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/guilds(.*)',
   '/api/projects',
   '/api/v1(.*)',
-  '/(?!_next|api|static|.*\\..*).+', // Allow all dynamic routes like /[handle]
+  '/:handle',
 ]);
 
 export default clerkMiddleware((auth, req) => {

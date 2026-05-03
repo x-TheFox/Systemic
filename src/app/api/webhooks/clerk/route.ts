@@ -80,6 +80,19 @@ export async function POST(req: Request) {
     });
   }
 
+  // Backfill: if a user signs in and we don't have their githubHandle yet, try to get it from Clerk
+  if (eventType === 'session.created') {
+    const { user_id } = evt.data;
+    try {
+      const user = await prisma.user.findUnique({ where: { clerkId: user_id } });
+      if (user && !user.githubHandle) {
+        // We can't get username from session event, but the next user.updated will catch it
+        // This is just a safety net
+        console.log(`[Clerk Webhook] User ${user_id} missing githubHandle, waiting for user.updated`);
+      }
+    } catch {}
+  }
+
   if (eventType === 'user.deleted') {
     const { id } = evt.data;
 
