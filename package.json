@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.38",
-    "@clerk/nextjs": "^5.0.0",
+    "@clerk/nextjs": "^5.7.6",
     "@neondatabase/serverless": "^1.1.0",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.105.1",
@@ -24,7 +24,7 @@
     "d3-hierarchy": "^3.1.2",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",
-    "next": "14.2.35",
+    "next": "16.2.4",
     "next-themes": "^0.4.6",
     "prisma": "^5.22.0",
     "pusher": "^5.3.3",
