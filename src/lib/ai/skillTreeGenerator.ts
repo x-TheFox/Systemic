@@ -93,6 +93,8 @@ export async function generatePersonalizedSkillTree(
     unlocked: n.unlocked,
   }));
 
+  const fallback = { newNodes: [] };
+
   const object = await groqGenerateObject(z.object({
       newNodes: z.array(nodeSchema).max(3).describe('0-3 new nodes. Empty array if nothing new.'),
     }), `You are the AI Architect of Systemics, a competitive developer skill tree.
@@ -118,9 +120,11 @@ RULES:
 3. Requirements should be ACHIEVABLE but require real effort (1.5-3x their current stats)
 4. DO NOT duplicate existing node concepts
 5. Return EMPTY newNodes array if nothing new is warranted
-6. Position nodes to not overlap (spread X, increase Y per tier)`);
+6. Position nodes to not overlap (spread X, increase Y per tier)`,
+    fallback
+  );
 
-  return object.newNodes;
+  return object.newNodes ?? [];
 }
 
 export async function generateInitialTreeFromDeepDive(
@@ -167,6 +171,29 @@ export async function generateInitialTreeFromDeepDive(
     .sort(([, a], [, b]) => b - a)
     .map(([k, v]) => `${k}: ${v}`)
     .join(', ');
+
+  const fallbackNodes = await generateInitialSkillTree();
+  const fallback = {
+    nodes: fallbackNodes.map(n => ({
+      ...n,
+      requirements: {
+        total_xp: n.requirements.total_xp ?? 0,
+        leetcode_hard: n.requirements.leetcode_hard ?? 0,
+        leetcode_medium: n.requirements.leetcode_medium ?? 0,
+        leetcode_easy: n.requirements.leetcode_easy ?? 0,
+        github_prs: n.requirements.github_prs ?? 0,
+        github_commits: n.requirements.github_commits ?? 0,
+        codeforces_rating: n.requirements.codeforces_rating ?? 0,
+        codeforces_solved: n.requirements.codeforces_solved ?? 0,
+        hackerrank_badges: n.requirements.hackerrank_badges ?? 0,
+        skill_xp_Frontend: n.requirements.skill_xp_Frontend ?? 0,
+        skill_xp_Backend: n.requirements.skill_xp_Backend ?? 0,
+        skill_xp_DevOps: n.requirements.skill_xp_DevOps ?? 0,
+        skill_xp_Architecture: n.requirements.skill_xp_Architecture ?? 0,
+        skill_xp_Algo: n.requirements.skill_xp_Algo ?? 0,
+      },
+    })),
+  } as any;
 
   const object = await groqGenerateObject(z.object({
       nodes: z.array(deepDiveNodeSchema).min(5).max(15).describe('5-15 nodes forming a personalized skill tree for this user.'),
@@ -217,9 +244,11 @@ RULES:
 9. Position nodes so paths spread out horizontally (X) and deepen vertically (Y)
 10. Include at least one node per dominant skill area
 
-Create a tree that makes this developer say "damn, that AI really studied my whole GitHub"`);
+Create a tree that makes this developer say "damn, that AI really studied my whole GitHub"`,
+    fallback
+  );
 
-  return object.nodes;
+  return object.nodes ?? fallback.nodes;
 }
 
 export async function generateInitialSkillTree(): Promise<GeneratedNode[]> {
@@ -286,6 +315,8 @@ export async function generateInitialSkillTree(): Promise<GeneratedNode[]> {
 export async function recommendNextPath(
   activities: Array<{ platform: string; description: string }>
 ): Promise<string> {
+  const fallback = { recommendedPath: 'Fullstack Legend' as const, reasoning: 'Default recommendation' };
+
   const object = await groqGenerateObject(z.object({
       recommendedPath: z.enum(['Frontend Wizard', 'Systems Engineer', 'Data Scientist', 'Fullstack Legend', 'DevOps Architect']),
       reasoning: z.string(),
@@ -294,7 +325,9 @@ export async function recommendNextPath(
 Activities:
 ${activities.slice(0, 10).map(a => `- ${a.platform}: ${a.description}`).join('\n')}
 
-Return the best matching path and a one-sentence reasoning.`);
+Return the best matching path and a one-sentence reasoning.`,
+    fallback
+  );
 
-  return object.recommendedPath;
+  return object.recommendedPath ?? fallback.recommendedPath;
 }

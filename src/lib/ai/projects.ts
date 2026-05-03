@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { groqGenerateObject, groqGenerateText } from './groq-models';
+import { groqGenerateObject } from './groq-models';
 import { fetchRepoTree, fetchRepoFile } from '@/lib/fetchers/github-repos';
 
 const FileListSchema = z.array(z.string());
@@ -56,7 +56,11 @@ ${truncatedTree.join('\n')}
 
 List the 5-10 most important files to read to understand what this project does.`;
 
-  const selectedFiles = await groqGenerateObject(FileListSchema, fileSelectionPrompt);
+  const selectedFiles = await groqGenerateObject(
+    FileListSchema,
+    fileSelectionPrompt,
+    ["README.md"] // fallback: every repo has a README
+  );
   const filesToRead = selectedFiles.slice(0, 10);
 
   // Step 3: Fetch selected files
@@ -91,7 +95,15 @@ Generate a project card with:
 - icon: a lucide-react icon name that represents this project type
 - language: primary programming language`;
 
-  const card = await groqGenerateObject(ProjectCardSchema, cardPrompt);
+  const defaultCard: z.infer<typeof ProjectCardSchema> = {
+    name: repoName.slice(0, 30),
+    description: repoDescription || `A project by ${owner}.`,
+    rarity: 'common',
+    icon: 'Code2',
+    language: repoLanguage || 'Unknown',
+  };
+
+  const card = await groqGenerateObject(ProjectCardSchema, cardPrompt, defaultCard);
 
   return {
     name: card.name.slice(0, 30),
@@ -112,7 +124,8 @@ ${projects.map((p) => `- ${p.name} (${p.rarity}, ${p.stars} stars): ${p.descript
 
 Return ONLY a JSON array of the 3 project names to pin.`;
 
-  const bestNames = await groqGenerateObject(BestProjectsSchema, prompt);
+  const fallbackNames = projects.slice(0, 3).map((p) => p.name);
+  const bestNames = await groqGenerateObject(BestProjectsSchema, prompt, fallbackNames);
   return bestNames.slice(0, 3);
 }
 
@@ -136,6 +149,10 @@ ${filesContext}
 
 Write a 2-3 sentence summary focusing on: what problem it solves, technical sophistication, and impact.`;
 
-  const result = await groqGenerateObject(SummarySchema, prompt);
+  const fallbackSummary: z.infer<typeof SummarySchema> = {
+    summary: description || `A project named ${repoName}.`,
+  };
+
+  const result = await groqGenerateObject(SummarySchema, prompt, fallbackSummary);
   return result.summary;
 }

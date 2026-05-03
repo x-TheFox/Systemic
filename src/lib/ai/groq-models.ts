@@ -51,7 +51,18 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function stripLLMWrappers(text: string): string {
+  // Remove <think>...</think> tags (Qwen, DeepSeek reasoning models)
+  text = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  // Remove other common wrapper tags
+  text = text.replace(/<output>[\s\S]*?<\/output>/gi, '');
+  text = text.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '');
+  return text;
+}
+
 function extractJSON(text: string): any {
+  text = stripLLMWrappers(text);
+
   // Try to find JSON in markdown code blocks first
   const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (codeBlockMatch) {
@@ -125,16 +136,20 @@ export async function groqGenerateText(prompt: string): Promise<string> {
 
 export async function groqGenerateObject<T extends z.ZodType>(
   schema: T,
-  prompt: string
+  prompt: string,
+  fallback?: z.infer<T>
 ): Promise<z.infer<T>> {
   // Append JSON formatting instruction to the prompt
   const jsonPrompt = `${prompt}\n\nIMPORTANT: Return ONLY valid JSON. Do not wrap in markdown code blocks. Do not add any explanatory text before or after the JSON.`;
 
   let lastError: any;
+  let lastRaw: string | null = null;
+
   for (let attempt = 0; attempt < MODELS.length; attempt++) {
     const model = attempt === 0 ? currentModel() : nextModel();
     try {
       const text = await groqGenerateText(jsonPrompt);
+      lastRaw = text.slice(0, 500);
       const raw = extractJSON(text);
       const parsed = schema.parse(raw);
       return parsed as z.infer<T>;
@@ -145,15 +160,15 @@ export async function groqGenerateObject<T extends z.ZodType>(
         continue;
       }
       // JSON parse or Zod validation error — log and retry with next model
-      console.warn(`[Groq] JSON parse/Zod error on ${model}: ${error?.message?.slice(0, 120)}`);
+      console.warn(`[Groq] JSON parse/Zod error on ${model}: ${error?.message?.slice(0, 120)} | raw: ${lastRaw?.slice(0, 200)}`);
       continue;
     }
   }
 
-  // All models exhausted
+  // All models exhausted — try one final time after waiting
   const lastModel = currentModel();
   const waitSeconds = Math.min(getRetryAfter(lastError), 120);
-  console.warn(`[Groq] All models hit rate limits. Waiting ${waitSeconds}s for ${lastModel}...`);
+  console.warn(`[Groq] All models exhausted. Waiting ${waitSeconds}s for ${lastModel}...`);
   await sleep(waitSeconds * 1000);
 
   try {
@@ -162,6 +177,11 @@ export async function groqGenerateObject<T extends z.ZodType>(
     const parsed = schema.parse(raw);
     return parsed as z.infer<T>;
   } catch (error: any) {
+    // If a fallback was provided, return it instead of crashing
+    if (fallback !== undefined) {
+      console.error(`[Groq] All models failed. Using fallback. Last error: ${lastError?.message?.slice(0, 200)} | raw: ${lastRaw?.slice(0, 300)}`);
+      return fallback;
+    }
     throw lastError;
   }
 }
