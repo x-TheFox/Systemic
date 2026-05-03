@@ -11,5 +11,10 @@ jobs:
     steps:
       - name: Resolve Duels
         run: |
-          curl -X POST "${{ secrets.APP_URL }}/api/duels/resolve" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          curl -X POST "${{ secrets.VERCEL_URL }}/api/duels/resolve" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail
+        env:
+          VERCEL_URL: ${{ secrets.VERCEL_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
