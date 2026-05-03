@@ -163,8 +163,10 @@ export default function ProfilePage() {
   }
 
   const pastTitles: PastTitle[] = profile.pastTitles || [];
-  const weeklyBadges = (profile.badges || []).filter((b: any) => b.category === 'weekly_leaderboard');
-  const aiBadges = (profile.badges || []).filter((b: any) => b.category !== 'weekly_leaderboard');
+  const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, common: 1 };
+  const sortByRarity = (a: any, b: any) => (rarityOrder[b.rarity?.toLowerCase()] || 0) - (rarityOrder[a.rarity?.toLowerCase()] || 0);
+  const weeklyBadges = (profile.badges || []).filter((b: any) => b.category === 'weekly_leaderboard').sort(sortByRarity);
+  const aiBadges = (profile.badges || []).filter((b: any) => b.category !== 'weekly_leaderboard').sort(sortByRarity);
 
   return (
     <main className="min-h-screen p-4 md:p-8">
