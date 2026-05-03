@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Shield, Users, Trophy, Crown, ArrowLeft, LogOut, Pencil } from "lucide-react";
+import { Shield, Users, Trophy, Crown, ArrowLeft, LogOut, Pencil, Upload, X } from "lucide-react";
 import { pageEntrance, staggerItem } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,6 +40,7 @@ export default function GuildDetailPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", description: "", iconUrl: "" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -81,6 +82,33 @@ export default function GuildDetailPage() {
       });
     }
   }, [guild]);
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "image/svg+xml" && !file.name.endsWith(".svg")) {
+      toast.error("Only SVG files are allowed.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (!content.trim().startsWith("<svg")) {
+        toast.error("Invalid SVG file.");
+        return;
+      }
+      setEditForm((prev) => ({ ...prev, iconUrl: content }));
+      toast.success("SVG uploaded!");
+    };
+    reader.readAsText(file);
+  }
+
+  function clearIcon() {
+    setEditForm((prev) => ({ ...prev, iconUrl: "" }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function saveGuildEdit() {
     try {
@@ -212,14 +240,42 @@ export default function GuildDetailPage() {
                 />
               </div>
               <div>
-                <label className="text-label text-fg-muted mb-1 block">Guild Icon SVG / URL</label>
-                <textarea
-                  value={editForm.iconUrl}
-                  onChange={(e) => setEditForm({ ...editForm, iconUrl: e.target.value })}
-                  placeholder="Paste <svg>...</svg> or an image URL"
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50 resize-none font-mono text-xs"
+                <label className="text-label text-fg-muted mb-1 block">Guild Icon</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".svg,image/svg+xml"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
+                {editForm.iconUrl ? (
+                  <div className="flex items-center gap-3 p-3 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06]">
+                    <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
+                      {editForm.iconUrl.trim().startsWith("<svg") ? (
+                        <div dangerouslySetInnerHTML={{ __html: editForm.iconUrl }} className="h-6 w-6" />
+                      ) : (
+                        <img src={editForm.iconUrl} alt="Preview" className="h-full w-full object-cover" />
+                      )}
+                    </div>
+                    <span className="text-sm text-fg-dim flex-1 truncate">
+                      {editForm.iconUrl.length > 60 ? "SVG uploaded" : editForm.iconUrl.slice(0, 40)}
+                    </span>
+                    <button
+                      onClick={clearIcon}
+                      className="h-7 w-7 rounded-[var(--radius-compact)] bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center justify-center"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-10 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06] border-dashed text-fg-muted hover:text-fg-dim hover:border-white/[0.12] transition-colors inline-flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload SVG
+                  </button>
+                )}
               </div>
               <div className="flex gap-2">
                 <button
