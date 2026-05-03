@@ -267,42 +267,6 @@ export default function GuildDetailPage() {
           </div>
         </motion.div>
 
-
-              <div>
-                <h1 className="text-display gradient-text">{guild.name}</h1>
-                {guild.description && <p className="text-sm text-fg-muted">{guild.description}</p>}
-              </div>
-            </div>
-          </div>
-          {isAdmin && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setEditing(!editing)}
-                className="h-9 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:bg-white/[0.06] transition-colors inline-flex items-center gap-1.5"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </button>
-              <button
-                onClick={leaveGuild}
-                className="h-9 px-3 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors inline-flex items-center gap-1.5"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                Delete Guild
-              </button>
-            </div>
-          )}
-          {!isAdmin && guild.members.some((m) => m.id === myUserId) && (
-            <button
-              onClick={leaveGuild}
-              className="h-9 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:bg-white/[0.06] transition-colors inline-flex items-center gap-1.5"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Leave
-            </button>
-          )}
-        </motion.div>
-
         {/* Edit Form */}
         {editing && isAdmin && (
           <motion.div variants={staggerItem} className="glass-card p-6 space-y-4">

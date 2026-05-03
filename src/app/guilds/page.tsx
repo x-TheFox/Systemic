@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Users, Plus, Shield, Upload, X, Loader2 } from "lucide-react";
+import { Users, Plus, Shield, Upload, X, Loader2, Trophy, Crown } from "lucide-react";
 import { pageEntrance, staggerItem } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -258,30 +258,43 @@ export default function GuildsPage() {
               <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p>No guilds yet. Be the first to create one!</p>
             </div>
-          ) : (
-            guilds.map((guild) => (
+          )           : (
+            guilds.map((guild: any) => (
               <div key={guild.id} className="glass-card p-5 hover:border-accent/20 transition-colors">
-                <div className="flex items-start gap-3 mb-3">
-                  {/* Guild Icon */}
+                <div className="flex items-start gap-4 mb-3">
+                  {/* Big Guild Icon */}
                   <div className="flex-shrink-0">
                     {guild.iconUrl ? (
-                      <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                        <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain" />
+                      <div className="h-16 w-16 rounded-[var(--radius-standard)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
+                        <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain p-1" />
                       </div>
                     ) : (
-                      <div className="h-10 w-10 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/20 flex items-center justify-center">
-                        <Shield className="h-5 w-5 text-accent" />
+                      <div className="h-16 w-16 rounded-[var(--radius-standard)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border border-accent/30 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-accent">{guild.name.charAt(0).toUpperCase()}</span>
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <h3 className="text-lg font-bold text-white truncate">{guild.name}</h3>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/[0.08] text-fg-muted shrink-0 ml-2">
-                        {guild._count.members} members
-                      </span>
                     </div>
                     {guild.description && <p className="text-sm text-fg-muted truncate">{guild.description}</p>}
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[11px] text-accent font-medium">
+                        <Trophy className="h-3 w-3" />
+                        {(guild.totalXP || 0).toLocaleString()} XP
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[11px] text-fg-dim">
+                        <Users className="h-3 w-3" />
+                        {guild._count?.members || guild.members?.length || 0}
+                      </span>
+                      {guild.admin && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-fg-dim">
+                          <Crown className="h-3 w-3 text-amber-400" />
+                          {guild.admin.name || guild.admin.githubHandle || "Unknown"}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
