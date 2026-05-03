@@ -58,7 +58,6 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
-    githubHandle: profile?.githubHandle || "",
     leetcodeHandle: profile?.leetcodeHandle || "",
     codeforcesHandle: profile?.codeforcesHandle || "",
     hackerrankHandle: profile?.hackerrankHandle || "",
@@ -468,17 +467,27 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
                     placeholder="Your name"
                   />
                 </div>
-                {Object.entries(platformLabels).map(([key, label]) => (
-                  <div key={key}>
-                    <label className="text-label text-fg-muted mb-1 block">{label}</label>
-                    <input
-                      value={(formData as any)[key]}
-                      onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                      className="w-full h-10 px-3 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50 transition-colors"
-                      placeholder={`Your ${label} username`}
-                    />
+                {Object.entries(platformLabels)
+                  .filter(([key]) => key !== "githubHandle")
+                  .map(([key, label]) => (
+                    <div key={key}>
+                      <label className="text-label text-fg-muted mb-1 block">{label}</label>
+                      <input
+                        value={(formData as any)[key]}
+                        onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                        className="w-full h-10 px-3 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50 transition-colors"
+                        placeholder={`Your ${label} username`}
+                      />
+                    </div>
+                  ))}
+                <div>
+                  <label className="text-label text-fg-muted mb-1 block">GitHub</label>
+                  <div className="w-full h-10 px-3 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06] text-fg-dim text-sm flex items-center gap-2">
+                    <Code2 className="h-4 w-4 text-accent" />
+                    <span>{profile.githubHandle || <span className="italic">Linked via Clerk</span>}</span>
                   </div>
-                ))}
+                  <p className="text-[11px] text-fg-muted mt-1">GitHub handle is managed by your Clerk account and cannot be changed here.</p>
+                </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">

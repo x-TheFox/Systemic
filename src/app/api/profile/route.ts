@@ -125,7 +125,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { githubHandle, leetcodeHandle, codeforcesHandle, hackerrankHandle, name } = body;
+    const { leetcodeHandle, codeforcesHandle, hackerrankHandle, name } = body;
 
     await getOrCreateUser(
       user.id,
@@ -137,7 +137,6 @@ export async function PUT(req: Request) {
     const updated = await prisma.user.update({
       where: { clerkId: user.id },
       data: {
-        ...(githubHandle !== undefined && { githubHandle: githubHandle.toLowerCase() }),
         ...(leetcodeHandle !== undefined && { leetcodeHandle }),
         ...(codeforcesHandle !== undefined && { codeforcesHandle }),
         ...(hackerrankHandle !== undefined && { hackerrankHandle }),
