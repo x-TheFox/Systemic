@@ -291,6 +291,8 @@ model Project {
   forks       Int      @default(0)
   pinned      Boolean  @default(false)
   aiSummary   String?
+  xpValue     Int      @default(0)
+  rarity      String   @default("common") // common | rare | epic | legendary
   createdAt   DateTime @default(now())
 
   @@index([userId])

@@ -28,6 +28,13 @@ const platformLabels: Record<string, string> = {
   hackerrankHandle: "HackerRank",
 };
 
+const rarityStyles: Record<string, { bg: string; border: string; text: string; glow: string; label: string }> = {
+  common:    { bg: 'bg-slate-500/10',  border: 'border-slate-500/20',  text: 'text-slate-400',  glow: '', label: 'Common' },
+  rare:      { bg: 'bg-blue-500/10',   border: 'border-blue-500/30',  text: 'text-blue-400',   glow: 'shadow-[0_0_12px_rgba(59,130,246,0.15)]', label: 'Rare' },
+  epic:      { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400', glow: 'shadow-[0_0_16px_rgba(168,85,247,0.2)]', label: 'Epic' },
+  legendary: { bg: 'bg-amber-500/10',  border: 'border-amber-500/40',  text: 'text-amber-400',  glow: 'shadow-[0_0_20px_rgba(251,191,36,0.25)]', label: 'Legendary' },
+};
+
 interface PastTitle {
   id: string;
   title: string;
@@ -46,6 +53,8 @@ interface Project {
   forks: number;
   pinned: boolean;
   aiSummary: string | null;
+  xpValue: number;
+  rarity: string;
 }
 
 interface ProfileViewProps {
@@ -405,39 +414,56 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
               <p className="text-sm text-fg-muted">No projects indexed yet. Run a sync to auto-import from GitHub.</p>
             ) : (
               <div className="space-y-3">
-                {projects.slice(0, 6).map((project) => (
-                  <a
-                    key={project.id}
-                    href={project.repoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block p-4 rounded-[var(--radius-standard)] bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.10] hover:bg-white/[0.03] transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white">{project.name}</span>
-                        {project.language && (
-                          <span
-                            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                            style={{
-                              backgroundColor: `${langColors[project.language] || '#6b7280'}20`,
-                              color: langColors[project.language] || '#9ca3af',
-                            }}
-                          >
-                            {project.language}
-                          </span>
+                {projects
+                  .sort((a, b) => {
+                    const rarityOrder = { legendary: 4, epic: 3, rare: 2, common: 1 };
+                    const diff = (rarityOrder[b.rarity as keyof typeof rarityOrder] || 0) - (rarityOrder[a.rarity as keyof typeof rarityOrder] || 0);
+                    if (diff !== 0) return diff;
+                    return (b.xpValue || 0) - (a.xpValue || 0);
+                  })
+                  .slice(0, 6)
+                  .map((project) => {
+                    const rs = rarityStyles[project.rarity] || rarityStyles.common;
+                    return (
+                      <a
+                        key={project.id}
+                        href={project.repoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`block p-4 rounded-[var(--radius-standard)] ${rs.bg} border ${rs.border} hover:${rs.border.replace('/30', '/60').replace('/20', '/50').replace('/40', '/70')} hover:bg-white/[0.03] transition-all ${rs.glow}`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-white">{project.name}</span>
+                            {project.language && (
+                              <span
+                                className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                style={{
+                                  backgroundColor: `${langColors[project.language] || '#6b7280'}20`,
+                                  color: langColors[project.language] || '#9ca3af',
+                                }}
+                              >
+                                {project.language}
+                              </span>
+                            )}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${rs.text} bg-white/[0.04]`}>
+                              {rs.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-fg-muted">
+                            {project.xpValue > 0 && (
+                              <span className={`font-semibold ${rs.text}`}>+{project.xpValue.toLocaleString()} XP</span>
+                            )}
+                            {project.stars > 0 && <span>⭐ {project.stars}</span>}
+                            {project.forks > 0 && <span>🍴 {project.forks}</span>}
+                          </div>
+                        </div>
+                        {project.aiSummary && (
+                          <p className="text-xs text-fg-muted line-clamp-2">{project.aiSummary}</p>
                         )}
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-fg-muted">
-                        {project.stars > 0 && <span>⭐ {project.stars}</span>}
-                        {project.forks > 0 && <span>🍴 {project.forks}</span>}
-                      </div>
-                    </div>
-                    {project.aiSummary && (
-                      <p className="text-xs text-fg-muted line-clamp-2">{project.aiSummary}</p>
-                    )}
-                  </a>
-                ))}
+                      </a>
+                    );
+                  })}
               </div>
             )}
           </motion.div>

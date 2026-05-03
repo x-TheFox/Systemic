@@ -5,7 +5,7 @@ import { deepDiveGitHub } from '@/lib/fetchers/github-deepdive';
 import { fetchLeetCodeMetrics } from '@/lib/fetchers/leetcode';
 import { fetchCodeforcesMetrics } from '@/lib/fetchers/codeforces';
 import { fetchHackerRankMetrics } from '@/lib/fetchers/hackerrank';
-import { evaluatePRComplexity } from '@/lib/ai/groq';
+import { evaluatePRComplexity, evaluateCommitBatch } from '@/lib/ai/groq';
 import { XP_TABLE, getIntensityMultiplier, getStreakMultiplier, calculateMilestoneBonuses } from '@/lib/xp/normalize';
 import { triggerMilestone } from '@/lib/pusher/server';
 import { createWeeklySnapshot } from '@/lib/ai/ghost';
@@ -99,21 +99,63 @@ async function syncUser(user: any) {
         totalPRs = prevPRs;
       }
 
-      // Delta commits XP with intensity multiplier
+      // Delta commits XP with LLM weighting + intensity multiplier
       const deltaCommits = Math.max(0, totalCommits - prevCommits);
       if (deltaCommits > 0) {
+        let commitXP = 0;
+        let avgCommitScore = 5;
+        let scoredCount = 0;
+
+        // Try to fetch and score commit messages for weighted XP
+        try {
+          const since = user.lastSyncedGitHub || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          const commitMessages = await fetchCommitMessages(user.githubHandle, process.env.GITHUB_TOKEN, since, 5);
+          // Take only the newest deltaCommits messages
+          const recentMessages = commitMessages.slice(0, deltaCommits).map((c) => c.message);
+
+          if (recentMessages.length > 0) {
+            const { totalXP, scores } = await evaluateCommitBatch(recentMessages);
+            commitXP = totalXP;
+            avgCommitScore = scores.length > 0
+              ? scores.reduce((s, c) => s + c.score, 0) / scores.length
+              : 5;
+            scoredCount = scores.length;
+
+            // Pad with average if we have fewer scored commits than delta
+            if (scoredCount < deltaCommits) {
+              const remaining = deltaCommits - scoredCount;
+              const avgXP = commitXP / scoredCount;
+              commitXP += Math.round(remaining * avgXP);
+            }
+          } else {
+            // Fallback to flat rate if no messages fetched
+            commitXP = deltaCommits * XP_TABLE.GITHUB.COMMIT;
+          }
+        } catch (err) {
+          console.warn('[Sync] Commit weighting failed, using flat rate:', err);
+          commitXP = deltaCommits * XP_TABLE.GITHUB.COMMIT;
+        }
+
+        // Apply intensity multiplier
         const intensityMult = getIntensityMultiplier(deltaCommits);
-        const baseCommitXP = deltaCommits * XP_TABLE.GITHUB.COMMIT;
-        const commitXP = Math.round(baseCommitXP * intensityMult);
-        totalDeltaXP += commitXP;
+        const finalCommitXP = Math.round(commitXP * intensityMult);
+        totalDeltaXP += finalCommitXP;
+
         activities.push({
           userId: user.id,
           platform: 'GITHUB',
           activityType: 'COMMIT',
-          description: `${deltaCommits} new commits (total: ${totalCommits})${intensityMult > 1 ? ` [${intensityMult}x intensity]` : ''}`,
-          xpAwarded: commitXP,
+          description: `${deltaCommits} new commits (avg quality: ${avgCommitScore.toFixed(1)}/10)${intensityMult > 1 ? ` [${intensityMult}x intensity]` : ''}`,
+          xpAwarded: finalCommitXP,
           externalId: `github-commits-${user.id}-${dateSlug}`,
-          metadata: { deltaCommits, totalCommits, intensityMult, languages: ghMetrics.languageDistribution },
+          metadata: {
+            deltaCommits,
+            totalCommits,
+            scoredCount,
+            avgScore: avgCommitScore,
+            intensityMult,
+            languages: ghMetrics.languageDistribution,
+          },
         });
       }
 

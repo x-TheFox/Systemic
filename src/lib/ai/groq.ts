@@ -89,3 +89,63 @@ Rules:
     Algo: result.algo,
   };
 }
+
+interface CommitScore {
+  message: string;
+  score: number; // 1-10
+}
+
+const CommitBatchSchema = z.object({
+  scores: z.array(z.object({
+    message: z.string(),
+    score: z.number().min(1).max(10).describe('1=trivial, 10=groundbreaking'),
+  })).describe('One score per commit message, in the same order'),
+});
+
+function scoreToXP(score: number): number {
+  if (score <= 2) return 5;
+  if (score <= 4) return 12;
+  if (score <= 6) return 25;
+  if (score <= 8) return 45;
+  return 70;
+}
+
+export async function evaluateCommitBatch(commitMessages: string[]): Promise<{ totalXP: number; scores: CommitScore[] }> {
+  if (commitMessages.length === 0) return { totalXP: 0, scores: [] };
+
+  const BATCH_SIZE = 30;
+  const scoredCommits: CommitScore[] = [];
+  let totalXP = 0;
+
+  // Process ALL commits in batches of 30, every commit gets an actual LLM score
+  for (let start = 0; start < commitMessages.length; start += BATCH_SIZE) {
+    const batch = commitMessages.slice(start, start + BATCH_SIZE);
+
+    const prompt = `You are a senior engineering manager evaluating commit quality for a developer XP system.
+
+Rate EACH commit message on a scale of 1-10 based on what the commit likely contains:
+
+SCORING RUBRIC:
+1-2: Trivial (typos, whitespace, comments, config tweaks, merge conflicts)
+3-4: Minor (small refactors, dependency updates, simple style fixes)
+5-6: Solid (bug fixes, small features, test additions, minor API changes)
+7-8: Significant (new modules, complex bug fixes, performance improvements, auth/security)
+9-10: Major (architectural changes, new systems, critical infrastructure, innovative solutions)
+
+COMMITS TO SCORE (return one score per commit, same order):
+${batch.map((m, i) => `${start + i + 1}. ${m}`).join('\n')}`;
+
+    const fallback = { scores: batch.map((m) => ({ message: m, score: 5 })) };
+    const result = await groqGenerateObject(CommitBatchSchema, prompt, fallback);
+
+    for (let i = 0; i < batch.length; i++) {
+      const msg = batch[i];
+      const score = result.scores[i]?.score ?? 5;
+      const xp = scoreToXP(score);
+      totalXP += xp;
+      scoredCommits.push({ message: msg, score });
+    }
+  }
+
+  return { totalXP, scores: scoredCommits };
+}

@@ -119,8 +119,30 @@ export async function POST(req: Request) {
             forks: 0,
             pinned: false,
             aiSummary: summary,
+            xpValue: card.xpValue,
+            rarity: card.rarity,
           },
         });
+
+        // Grant project XP to user
+        if (card.xpValue > 0) {
+          await prisma.user.update({
+            where: { id: item.userId },
+            data: { xp: { increment: card.xpValue } },
+          });
+          await prisma.activityLog.create({
+            data: {
+              userId: item.userId,
+              platform: 'GITHUB',
+              activityType: 'PROJECT',
+              description: `Project analyzed: ${card.name} (${card.rarity})`,
+              xpAwarded: card.xpValue,
+              externalId: `project-${item.userId}-${repoName}`,
+              metadata: { repoName, rarity: card.rarity, xpValue: card.xpValue },
+            },
+          }).catch(() => {});
+          console.log(`[Project] Granted ${card.xpValue} XP for ${card.name} (${card.rarity}) to user ${item.userId}`);
+        }
 
         // Mark queue as done
         await prisma.projectQueue.update({
@@ -163,7 +185,7 @@ async function finalizeProjects() {
     for (const { userId } of affectedUsers) {
       const userProjects = await prisma.project.findMany({
         where: { userId },
-        select: { id: true, name: true, description: true, stars: true, aiSummary: true },
+        select: { id: true, name: true, description: true, stars: true, aiSummary: true, rarity: true, xpValue: true },
       });
 
       if (userProjects.length >= 3) {
@@ -171,7 +193,7 @@ async function finalizeProjects() {
         const bestNames = await pickBestProjects(userProjects.map((p) => ({
           name: p.name,
           description: p.description || '',
-          rarity: 'common',
+          rarity: p.rarity,
           stars: p.stars,
         })));
 

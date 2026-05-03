@@ -9,6 +9,7 @@ const ProjectCardSchema = z.object({
   description: z.string().describe('One compelling sentence about what it does, max 100 chars'),
   rarity: z.enum(['common', 'rare', 'epic', 'legendary'])
     .describe('Based on complexity, uniqueness, and polish'),
+  xpValue: z.number().describe('XP value this project grants the owner. Scale: common=50-150, rare=200-400, epic=500-1000, legendary=1200-3000. Based on scope, technical depth, real-world impact, and code quality.'),
   icon: z.string().describe('A lucide-react icon name (e.g. Database, Globe, Terminal, Cpu, Layers, Box, Code2, GitBranch, Server, Shield)'),
   language: z.string().describe('Primary programming language'),
 });
@@ -23,6 +24,7 @@ interface ProjectCard {
   name: string;
   description: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  xpValue: number;
   icon: string;
   language: string;
 }
@@ -92,6 +94,12 @@ Generate a project card with:
 - name: project name (max 30 chars)
 - description: one compelling sentence about what it does (max 100 chars)
 - rarity: common | rare | epic | legendary (based on complexity, uniqueness, and polish)
+- xpValue: XP this project grants its owner. Be generous but fair:
+  • common (toy/script/prototype): 50-150 XP
+  • rare (solid tool/library/personal app): 200-400 XP
+  • epic (production-grade, multi-feature, well-architected): 500-1000 XP
+  • legendary (open-source with stars, complex system, innovative): 1200-3000 XP
+  Consider: code quality, architecture, tests, docs, real-world utility, uniqueness, scope
 - icon: a lucide-react icon name that represents this project type
 - language: primary programming language`;
 
@@ -99,6 +107,7 @@ Generate a project card with:
     name: repoName.slice(0, 30),
     description: repoDescription || `A project by ${owner}.`,
     rarity: 'common',
+    xpValue: 75,
     icon: 'Code2',
     language: repoLanguage || 'Unknown',
   };
@@ -109,6 +118,7 @@ Generate a project card with:
     name: card.name.slice(0, 30),
     description: card.description.slice(0, 100),
     rarity: card.rarity,
+    xpValue: Math.max(25, Math.min(5000, Math.round(card.xpValue))),
     icon: card.icon,
     language: card.language,
   };
