@@ -51,10 +51,9 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function groqGenerateText(prompt: string, options?: { maxTokens?: number }): Promise<string> {
+export async function groqGenerateText(prompt: string): Promise<string> {
   let lastError: any;
-  const totalAttempts = MODELS.length + 2;
-  for (let attempt = 0; attempt < totalAttempts; attempt++) {
+  for (let attempt = 0; attempt < MODELS.length; attempt++) {
     const model = attempt === 0 ? currentModel() : nextModel();
     try {
       const { text } = await generateText({
@@ -65,27 +64,37 @@ export async function groqGenerateText(prompt: string, options?: { maxTokens?: n
     } catch (error: any) {
       lastError = error;
       if (isRateLimitError(error)) {
-        const waitSeconds = Math.min(getRetryAfter(error), 120);
-        console.warn(`[Groq] Rate limited on ${model}, waiting ${waitSeconds}s then trying next model...`);
-        await sleep(waitSeconds * 1000);
+        console.warn(`[Groq] Rate limited on ${model}, switching to next model...`);
         continue;
       }
       console.warn(`[Groq] Error on ${model}: ${error?.message?.slice(0, 100)}`);
-      await sleep(2000);
       continue;
     }
   }
-  throw lastError;
+
+  // All models exhausted — last resort: wait for the last model's retry-after then try once more
+  const lastModel = currentModel();
+  const waitSeconds = Math.min(getRetryAfter(lastError), 120);
+  console.warn(`[Groq] All models hit rate limits. Waiting ${waitSeconds}s for ${lastModel}...`);
+  await sleep(waitSeconds * 1000);
+
+  try {
+    const { text } = await generateText({
+      model: groq(lastModel),
+      prompt,
+    });
+    return text;
+  } catch (error: any) {
+    throw lastError;
+  }
 }
 
 export async function groqGenerateObject<T extends z.ZodType>(
   schema: T,
-  prompt: string,
-  options?: { maxTokens?: number }
+  prompt: string
 ): Promise<z.infer<T>> {
   let lastError: any;
-  const totalAttempts = MODELS.length + 2;
-  for (let attempt = 0; attempt < totalAttempts; attempt++) {
+  for (let attempt = 0; attempt < MODELS.length; attempt++) {
     const model = attempt === 0 ? currentModel() : nextModel();
     try {
       const { object } = await generateObject({
@@ -97,25 +106,30 @@ export async function groqGenerateObject<T extends z.ZodType>(
     } catch (error: any) {
       lastError = error;
       if (isRateLimitError(error)) {
-        const waitSeconds = Math.min(getRetryAfter(error), 120);
-        console.warn(`[Groq] Rate limited on ${model}, waiting ${waitSeconds}s then trying next model...`);
-        await sleep(waitSeconds * 1000);
+        console.warn(`[Groq] Rate limited on ${model}, switching to next model...`);
         continue;
       }
       console.warn(`[Groq] Error on ${model}: ${error?.message?.slice(0, 100)}`);
-      await sleep(2000);
       continue;
     }
   }
-  throw lastError;
-}
 
-export async function groqGenerateObjectWithSchema(
-  modelParam: string | undefined,
-  schema: z.ZodType,
-  prompt: string
-): Promise<any> {
-  return groqGenerateObject(schema, prompt);
+  // All models exhausted
+  const lastModel = currentModel();
+  const waitSeconds = Math.min(getRetryAfter(lastError), 120);
+  console.warn(`[Groq] All models hit rate limits. Waiting ${waitSeconds}s for ${lastModel}...`);
+  await sleep(waitSeconds * 1000);
+
+  try {
+    const { object } = await generateObject({
+      model: groq(lastModel),
+      schema,
+      prompt,
+    });
+    return object as z.infer<T>;
+  } catch (error: any) {
+    throw lastError;
+  }
 }
 
 export { groq, MODELS, currentModel, nextModel };
