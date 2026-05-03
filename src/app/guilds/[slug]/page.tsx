@@ -18,6 +18,12 @@ interface Guild {
   iconUrl: string | null;
   isPublic: boolean;
   adminId: string;
+  admin: {
+    id: string;
+    name: string | null;
+    githubHandle: string | null;
+    imageUrl: string | null;
+  };
   members: Array<{
     id: string;
     name: string | null;
@@ -181,21 +187,87 @@ export default function GuildDetailPage() {
       className="min-h-screen p-4 md:p-8"
     >
       <div className="mx-auto max-w-4xl space-y-6">
-        <motion.div variants={staggerItem} className="flex items-center gap-4 justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/guilds" className="inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <div className="flex items-center gap-3">
+        {/* Hero Header with Big Icon */}
+        <motion.div variants={staggerItem} className="glass-card p-6 md:p-8">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            {/* Big Guild Icon */}
+            <div className="relative flex-shrink-0">
               {guild.iconUrl ? (
-                <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                  <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain" />
+                <div className="h-24 w-24 md:h-32 md:w-32 rounded-[var(--radius-standard)] overflow-hidden border-2 border-white/[0.08] bg-white/[0.03] flex items-center justify-center shadow-glow">
+                  <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain p-2" />
                 </div>
               ) : (
-                <div className="h-10 w-10 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/20 flex items-center justify-center">
-                  <Shield className="h-6 w-6 text-accent" />
+                <div className="h-24 w-24 md:h-32 md:w-32 rounded-[var(--radius-standard)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border-2 border-accent/30 flex items-center justify-center shadow-glow">
+                  <span className="text-4xl md:text-5xl font-bold text-accent">{guild.name.charAt(0).toUpperCase()}</span>
                 </div>
               )}
+            </div>
+
+            {/* Guild Info */}
+            <div className="flex-1 text-center md:text-left min-w-0">
+              <h1 className="text-display gradient-text">{guild.name}</h1>
+              {guild.description && <p className="text-sm text-fg-muted mt-1">{guild.description}</p>}
+              
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-3">
+                {/* Admin */}
+                {guild.admin && (
+                  <Link href={guild.admin.githubHandle ? `/${guild.admin.githubHandle}` : "#"}>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-xs text-fg-dim hover:border-white/[0.12] transition-colors">
+                      <Crown className="h-3 w-3 text-amber-400" />
+                      <span>Admin: {guild.admin.name || guild.admin.githubHandle || "Unknown"}</span>
+                    </span>
+                  </Link>
+                )}
+                {/* Total XP */}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/10 border border-accent/20 text-xs text-accent font-medium">
+                  <Trophy className="h-3 w-3" />
+                  {guild.members.reduce((s, m) => s + m.xp, 0).toLocaleString()} XP
+                </span>
+                {/* Members */}
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-xs text-fg-dim">
+                  <Users className="h-3 w-3" />
+                  {guild.members.length} members
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link href="/guilds" className="inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => setEditing(!editing)}
+                    className="h-9 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:bg-white/[0.06] transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={leaveGuild}
+                    className="h-9 px-3 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Delete
+                  </button>
+                </>
+              )}
+              {!isAdmin && guild.members.some((m) => m.id === myUserId) && (
+                <button
+                  onClick={leaveGuild}
+                  className="h-9 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:bg-white/[0.06] transition-colors inline-flex items-center gap-1.5"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Leave
+                </button>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+
               <div>
                 <h1 className="text-display gradient-text">{guild.name}</h1>
                 {guild.description && <p className="text-sm text-fg-muted">{guild.description}</p>}

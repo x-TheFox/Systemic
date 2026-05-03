@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Code2, Trophy, Zap, RefreshCw,
   Brain, X, Crown, Sparkles, Clock, Copy, Check,
-  GitPullRequest, FolderGit2, Shield, Swords, BarChart3,
+  GitPullRequest, FolderGit2, Shield, Swords, BarChart3, Users,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -539,46 +539,43 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
       {profile?.guild && (
         <motion.div variants={staggerItem}>
           <Link href={`/guilds/${profile.guild.slug}`}>
-            <div className="glass-card p-5 flex items-center gap-4 hover:border-accent/20 transition-colors cursor-pointer group">
-              {/* Guild Icon / SVG */}
-              <div className="relative flex-shrink-0">
-                {profile.guild.iconUrl ? (
-                  <div className="h-14 w-14 rounded-[var(--radius-standard)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                    <img src={profile.guild.iconUrl} alt={profile.guild.name} className="h-full w-full object-contain" />
-                  </div>
-                ) : (
-                  <div className="h-14 w-14 rounded-[var(--radius-standard)] bg-accent/10 border border-accent/20 flex items-center justify-center">
-                    <Shield className="h-7 w-7 text-accent" />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-heading text-white group-hover:text-accent transition-colors">{profile.guild.name}</h2>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-accent/20 text-accent bg-accent/10">
-                    Guild
-                  </span>
+            <div className="glass-card p-6 hover:border-accent/20 transition-colors cursor-pointer group">
+              <div className="flex items-center gap-5">
+                {/* Big Guild Icon */}
+                <div className="relative flex-shrink-0">
+                  {profile.guild.iconUrl ? (
+                    <div className="h-20 w-20 rounded-[var(--radius-standard)] overflow-hidden border-2 border-white/[0.08] bg-white/[0.03] flex items-center justify-center shadow-glow">
+                      <img src={profile.guild.iconUrl} alt={profile.guild.name} className="h-full w-full object-contain p-2" />
+                    </div>
+                  ) : (
+                    <div className="h-20 w-20 rounded-[var(--radius-standard)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border-2 border-accent/30 flex items-center justify-center shadow-glow">
+                      <span className="text-3xl font-bold text-accent">{profile.guild.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                  )}
                 </div>
-                {profile.guild.description && (
-                  <p className="text-sm text-fg-muted mt-0.5 truncate">{profile.guild.description}</p>
-                )}
-                {profile.guild.badges && profile.guild.badges.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {profile.guild.badges.slice(0, 3).map((badge: any) => (
-                      <span
-                        key={badge.id}
-                        className="text-[10px] border border-accent/20 text-accent bg-accent/10 px-2 py-0.5 rounded-full"
-                      >
-                        {badge.name}
-                      </span>
-                    ))}
-                    {profile.guild.badges.length > 3 && (
-                      <span className="text-[10px] text-fg-muted px-1">+{profile.guild.badges.length - 3}</span>
-                    )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-heading text-white group-hover:text-accent transition-colors">{profile.guild.name}</h2>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-accent/20 text-accent bg-accent/10">
+                      Guild
+                    </span>
                   </div>
-                )}
+                  {profile.guild.description && (
+                    <p className="text-sm text-fg-muted mt-1 truncate">{profile.guild.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="inline-flex items-center gap-1 text-xs text-accent font-medium">
+                      <Trophy className="h-3 w-3" />
+                      {profile.guild.members?.reduce((s: number, m: any) => s + (m.xp || 0), 0)?.toLocaleString() || 0} XP
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs text-fg-dim">
+                      <Users className="h-3 w-3" />
+                      {profile.guild.members?.length || 0} members
+                    </span>
+                  </div>
+                </div>
+                <BarChart3 className="h-5 w-5 text-fg-muted group-hover:text-accent transition-colors flex-shrink-0" />
               </div>
-              <BarChart3 className="h-5 w-5 text-fg-muted group-hover:text-accent transition-colors" />
             </div>
           </Link>
         </motion.div>

@@ -26,6 +26,14 @@ export async function GET(req: Request) {
             orderBy: { xp: 'desc' },
           },
           badges: true,
+          admin: {
+            select: {
+              id: true,
+              name: true,
+              githubHandle: true,
+              imageUrl: true,
+            },
+          },
         },
       });
 
@@ -36,17 +44,28 @@ export async function GET(req: Request) {
       return NextResponse.json({ guild });
     }
 
-    // List all public guilds
+    // List all public guilds with stats
     const guilds = await prisma.guild.findMany({
       where: { isPublic: true },
       include: {
-        members: { select: { id: true }, take: 0 },
+        members: {
+          select: { id: true, xp: true, name: true, githubHandle: true, imageUrl: true },
+        },
+        admin: {
+          select: { id: true, name: true, githubHandle: true, imageUrl: true },
+        },
         _count: { select: { members: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ guilds });
+    // Compute total XP per guild
+    const guildsWithStats = guilds.map((g: any) => ({
+      ...g,
+      totalXP: g.members.reduce((s: number, m: any) => s + (m.xp || 0), 0),
+    }));
+
+    return NextResponse.json({ guilds: guildsWithStats });
   } catch (error: any) {
     console.error('Guilds GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
