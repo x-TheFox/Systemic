@@ -20,18 +20,17 @@ jobs:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
-      - name: Trigger Badge Refresh for All
+      - name: Process Badge Queue After Weekly
         run: |
-          curl -X POST "${{ secrets.VERCEL_URL }}/api/badges" \
+          curl -X POST "${{ secrets.VERCEL_URL }}/api/badges/process-queue" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            -d '{"userId":"all"}' \
             --fail || true
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
-      - name: Trigger Title Refresh for All
+      - name: Refresh Titles After Weekly
         run: |
           curl -X POST "${{ secrets.VERCEL_URL }}/api/title" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
