@@ -52,15 +52,6 @@ async function generateBadgesForUser(userId: string, commits?: string[], isFirst
     ? `\nCOMMIT MESSAGES (${isFirstBadgeSync ? 'ALL HISTORICAL' : 'NEW ONLY'}):\n${commits!.slice(0, 50).map((c, i) => `${i + 1}. ${c}`).join('\n')}`
     : '';
 
-  const isBulk = isFirstBadgeSync && hasCommits;
-  const badgeCount = isBulk ? 8 : 4;
-  const badgeCountRule = isBulk
-    ? `1. Generate ${badgeCount} badges — this is the INITIAL bulk generation covering the developer's entire commit history. Create badges that represent diverse skills shown in their commits.`
-    : `1. Generate EXACTLY ${badgeCount} badges — no more, no less`;
-  const commitRule = hasCommits
-    ? `${isBulk ? '2' : '2'}. Descriptions MUST reference specific commit messages or patterns from the commit list above — tie each badge to actual work done`
-    : `${isBulk ? '2' : '2'}. Descriptions must reference ACTUAL repos, languages, or stats — no generic fluff`;
-
   const prompt = `You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
 
 USER: ${user.name || user.email}
@@ -87,28 +78,38 @@ DEEP DIVE ARCHETYPE: ${deepDiveData?.archetype || 'Unknown'}
 GRIND PATH: ${deepDiveData?.grindPath || 'Unknown'}
 
 RULES:
-${badgeCountRule}
-${isBulk ? '' : '2. Each badge must be UNIQUE to this developer — do NOT repeat existing badge names'}
-${commitRule}
-${isBulk ? '4' : '3'}. Names must be HYPE and GAMING-STYLE (e.g., "Cache Commander", "DOM Dominator", "Pipeline Warlord")
-${isBulk ? '5' : '4'}. Rarity distribution: ${isBulk ? '2 common, 2 rare, 2 epic, 2 legendary' : '1 common, 1 rare, 1 epic, 1 legendary'}
-${isBulk ? '6' : '5'}. Common = basic skill recognition, Rare = notable achievement, Epic = mastery, Legendary = once-in-a-gang feat
-${isBulk ? '7' : '6'}. Colors: common=#6b7280 gray, rare=#3b82f6 blue, epic=#a855f7 purple, legendary=#f59e0b gold
-${isBulk ? '8' : '7'}. Icons: pick simple lucide-react icon names (e.g., "Zap", "Shield", "Cpu", "Flame", "Target", "Code", "Database", "Globe")
-${isBulk ? '9' : '8'}. Categories: skill | grind | social | special
+1. Generate as many badges as warranted — NO LIMIT. Look at every commit message and create a badge for significant work, patterns, or skills shown.
+2. Each badge must be UNIQUE — do NOT repeat existing badge names listed above.
+3. Descriptions MUST reference specific commit messages, patterns, or actual work done — tie each badge to real evidence.
+4. Names must be HYPE and GAMING-STYLE (e.g., "Cache Commander", "DOM Dominator", "Pipeline Warlord").
+5. Assign rarity freely based on actual impressiveness of the work:
+   - common = minor but real skill recognition
+   - rare = notable achievement
+   - epic = mastery
+   - legendary = once-in-a-gang feat
+6. Colors: common=#6b7280 gray, rare=#3b82f6 blue, epic=#a855f7 purple, legendary=#f59e0b gold
+7. Icons: pick simple lucide-react icon names (e.g., "Zap", "Shield", "Cpu", "Flame", "Target", "Code", "Database", "Globe")
+8. Categories: skill | grind | social | special
+9. If there are no meaningful commits to badge, generate 0 badges.
 
-OUTPUT FORMAT (exactly this format, no markdown code blocks):
-${Array.from({ length: badgeCount }, (_, i) => {
-  const rarities = isBulk ? ['common', 'common', 'rare', 'rare', 'epic', 'epic', 'legendary', 'legendary'] : ['common', 'rare', 'epic', 'legendary'];
-  const colors = isBulk ? ['#6b7280', '#6b7280', '#3b82f6', '#3b82f6', '#a855f7', '#a855f7', '#f59e0b', '#f59e0b'] : ['#6b7280', '#3b82f6', '#a855f7', '#f59e0b'];
-  return `BADGE ${i + 1}
+OUTPUT FORMAT (exactly this format, no markdown code blocks — repeat for every badge):
+BADGE 1
 name: <name>
 description: <description>
-rarity: ${rarities[i]}
-color: ${colors[i]}
+rarity: <common|rare|epic|legendary>
+color: <hex>
 icon: <icon>
-category: <category>`;
-}).join('\n\n')}`;
+category: <category>
+
+BADGE 2
+name: <name>
+description: <description>
+rarity: <common|rare|epic|legendary>
+color: <hex>
+icon: <icon>
+category: <category>
+
+...and so on for every badge you want to forge. There is NO maximum.`;
 
   const badgeText = await groqGenerateText(prompt);
 
