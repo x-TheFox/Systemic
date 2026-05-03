@@ -21,7 +21,6 @@ async function getOrCreateUser(clerkId: string, email: string, name: string | nu
 const userInclude = {
   activityLogs: { orderBy: { timestamp: 'desc' as const }, take: 50 },
   skillTreeState: true,
-  achievements: { orderBy: { earnedAt: 'desc' as const } },
   ghostSnapshots: { orderBy: [{ year: 'desc' as const }, { weekNumber: 'desc' as const }], take: 10 },
   badges: { orderBy: { createdAt: 'desc' as const } },
   dynamicNodes: true,

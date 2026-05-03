@@ -406,29 +406,6 @@ export default function ProfilePage() {
           </motion.div>
         )}
 
-        {/* Achievements */}
-        {profile?.achievements?.length > 0 && (
-          <motion.div variants={staggerItem} className="glass-card p-6">
-            <h2 className="text-heading text-white mb-4">Achievements</h2>
-            <div className="space-y-2">
-              {profile.achievements.map((ach: any) => (
-                <div key={ach.id} className="flex items-center gap-3 p-3 rounded-[var(--radius-standard)] bg-white/[0.03] border border-white/[0.06]">
-                  <div className="text-xl">🏆</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white">{ach.title}</p>
-                    <p className="text-xs text-fg-muted">{ach.description}</p>
-                  </div>
-                  {ach.xpBonus > 0 && (
-                    <span className="text-xs font-bold font-mono text-accent bg-accent/10 border border-accent/20 px-2 py-0.5 rounded-full">
-                      +{ach.xpBonus} XP
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
         {/* Unlocked Skill Nodes */}
         {profile?.dynamicNodes && profile.dynamicNodes.length > 0 && (
           <motion.div variants={staggerItem} className="glass-card p-6">

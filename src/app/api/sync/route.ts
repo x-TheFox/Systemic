@@ -581,15 +581,6 @@ async function syncUser(user: any) {
       });
       unlockedIds.push(node.nodeId);
 
-      await prisma.achievement.create({
-        data: {
-          userId: user.id,
-          title: `Unlocked: ${node.name}`,
-          description: node.description,
-          xpBonus: node.xpReward,
-        },
-      });
-
       await triggerMilestone('node-unlocked', {
         userId: user.id,
         userName: user.name || user.email,

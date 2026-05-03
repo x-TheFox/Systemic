@@ -30,7 +30,7 @@ const eventConfig: Record<string, { icon: React.ReactNode; gradient: string; bor
     border: "border-l-accent",
     bg: "bg-accent/5",
   },
-  "achievement-earned": {
+  "badge-earned": {
     icon: <Trophy className="h-3.5 w-3.5" />,
     gradient: "from-success/10 to-transparent",
     border: "border-l-success",
@@ -92,7 +92,7 @@ export function PulseFeed() {
 
     const channel = pusher.subscribe("systemics-activity");
 
-    ["rank-up", "node-unlocked", "achievement-earned", "xp-milestone", "new-activity"].forEach((type) => {
+    ["rank-up", "node-unlocked", "badge-earned", "xp-milestone", "new-activity"].forEach((type) => {
       channel.bind(type, (data: any) => {
         const event: PulseEvent = {
           id: Math.random().toString(36).slice(2),

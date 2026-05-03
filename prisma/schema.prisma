@@ -58,7 +58,7 @@ model User {
 
   activityLogs   ActivityLog[]
   skillTreeState SkillTreeState?
-  achievements   Achievement[]
+
   ghostSnapshots GhostSnapshot[]
   dynamicNodes   DynamicSkillNode[]
   badges         Badge[]
@@ -118,19 +118,6 @@ model DynamicSkillNode {
 
   @@index([userId])
   @@unique([userId, nodeId])
-}
-
-model Achievement {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  description String
-  badgeUrl    String?
-  xpBonus     Int      @default(0)
-  earnedAt    DateTime @default(now())
-
-  @@index([userId])
 }
 
 model GhostSnapshot {

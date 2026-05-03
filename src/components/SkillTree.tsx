@@ -162,7 +162,7 @@ export function SkillTree() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-4">
-      <div className="flex-1 h-[500px] rounded-[var(--radius-container)] overflow-hidden border border-white/[0.06] bg-base">
+      <div className="flex-1 h-[600px] rounded-[var(--radius-container)] overflow-hidden border border-white/[0.06] bg-base">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -171,9 +171,10 @@ export function SkillTree() {
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           fitView
+          fitViewOptions={{ padding: 0.15 }}
           proOptions={{ hideAttribution: true }}
           nodeTypes={nodeTypes}
-          minZoom={0.3}
+          minZoom={0.2}
           maxZoom={1.5}
         >
           <Controls className="bg-surface border-white/[0.06] [&>button]:bg-surface [&>button]:border-white/[0.06] [&>button]:text-fg-dim" />

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { groqGenerateText } from './groq-models';
+import { triggerMilestone } from '@/lib/pusher/server';
 
 function computeScore(u: any) {
   return (u.totalCommits || 0) + (u.totalPRs || 0) * 5 + (u.leetcodeHard || 0) * 10 + (u.leetcodeMedium || 0) * 5 + (u.codeforcesSolved || 0) + (u.hackerrankBadges || 0) * 2 + (u.tryhackmePoints || 0) / 50;
@@ -161,6 +162,14 @@ category: <category>
         category: badge.category,
         generatedBy: 'ai',
       },
+    });
+
+    await triggerMilestone('badge-earned', {
+      userId: user.id,
+      userName: user.name || user.email,
+      message: `${user.name || user.email} earned the ${badge.rarity} badge: ${badge.name}!`,
+      xp: 0,
+      metadata: { badgeName: badge.name, rarity: badge.rarity },
     });
   }
 

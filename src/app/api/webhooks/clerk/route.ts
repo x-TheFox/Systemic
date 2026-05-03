@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const eventType = evt.type;
 
   if (eventType === 'user.created') {
-    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
+    const { id, email_addresses, first_name, last_name, image_url, username } = evt.data;
 
     const user = await prisma.user.create({
       data: {
@@ -50,6 +50,7 @@ export async function POST(req: Request) {
         email: email_addresses[0]?.email_address || '',
         name: `${first_name || ''} ${last_name || ''}`.trim() || null,
         imageUrl: image_url,
+        githubHandle: username || null,
       },
     });
 
@@ -64,7 +65,9 @@ export async function POST(req: Request) {
   }
 
   if (eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
+    const { id, email_addresses, first_name, last_name, image_url, username } = evt.data;
+
+    const existing = await prisma.user.findUnique({ where: { clerkId: id } });
 
     await prisma.user.update({
       where: { clerkId: id },
@@ -72,6 +75,7 @@ export async function POST(req: Request) {
         email: email_addresses[0]?.email_address || '',
         name: `${first_name || ''} ${last_name || ''}`.trim() || null,
         imageUrl: image_url,
+        githubHandle: existing?.githubHandle || username || null,
       },
     });
   }
