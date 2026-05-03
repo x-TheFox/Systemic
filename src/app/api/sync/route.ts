@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { fetchGitHubMetrics, fetchPRDiff } from '@/lib/fetchers/github';
+import { fetchGitHubMetrics, fetchPRDiff, fetchCommitMessages } from '@/lib/fetchers/github';
 import { deepDiveGitHub } from '@/lib/fetchers/github-deepdive';
 import { fetchLeetCodeMetrics } from '@/lib/fetchers/leetcode';
 import { fetchCodeforcesMetrics } from '@/lib/fetchers/codeforces';
@@ -630,16 +630,37 @@ async function syncUser(user: any) {
     }).catch(() => {});
   }
 
+  // ---------- FETCH COMMIT MESSAGES FOR BADGES ----------
+  let commitMessages: string[] = [];
+  const isFirstBadgeSync = !user.lastBadgeCommitSync;
+  if (user.githubHandle) {
+    try {
+      const since = isFirstBadgeSync ? undefined : user.lastBadgeCommitSync;
+      const maxPages = isFirstBadgeSync ? 10 : 3;
+      const commits = await fetchCommitMessages(user.githubHandle, process.env.GITHUB_TOKEN, since, maxPages);
+      commitMessages = commits.map((c) => c.message);
+      console.log(`[Sync] ${user.email}: fetched ${commitMessages.length} commit messages (${isFirstBadgeSync ? 'bulk' : 'incremental'})`);
+    } catch (err) {
+      console.warn(`[Sync] Failed to fetch commit messages for ${user.email}:`, err);
+    }
+  }
+
+  // Update badge commit sync cursor (whether or not badge gen succeeds)
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastBadgeCommitSync: now },
+  });
+
   // ---------- TRIGGER BADGE + TITLE GENERATION ----------
-  if (totalDeltaXP > 0 || isFirstSync) {
+  if (totalDeltaXP > 0 || isFirstSync || commitMessages.length > 0) {
     const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
     const cronSecret = process.env.CRON_SECRET;
     if (cronSecret) {
-      // Fire-and-forget badge generation
+      // Fire-and-forget badge generation (passes commit messages)
       fetch(`${baseUrl}/api/badges`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${cronSecret}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, commits: commitMessages, isFirstBadgeSync }),
       }).catch(() => {});
 
       // Fire-and-forget title generation
