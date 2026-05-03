@@ -62,6 +62,7 @@ model User {
   ghostSnapshots GhostSnapshot[]
   dynamicNodes   DynamicSkillNode[]
   badges         Badge[]
+  badgeQueues    BadgeQueue[]
 
   @@index([xp])
   @@index([clerkId])
@@ -198,4 +199,19 @@ model PastTitle {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model BadgeQueue {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commits   String[]
+  isFirst   Boolean  @default(false)
+  status    String   @default("pending") // pending | processing | done | failed
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
 }

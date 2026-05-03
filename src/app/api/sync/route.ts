@@ -651,25 +651,17 @@ async function syncUser(user: any) {
     data: { lastBadgeCommitSync: now },
   });
 
-  // ---------- TRIGGER BADGE + TITLE GENERATION ----------
+  // ---------- QUEUE BADGE GENERATION ----------
   if (totalDeltaXP > 0 || isFirstSync || commitMessages.length > 0) {
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      // Fire-and-forget badge generation (passes commit messages)
-      fetch(`${baseUrl}/api/badges`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${cronSecret}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, commits: commitMessages, isFirstBadgeSync }),
-      }).catch(() => {});
-
-      // Fire-and-forget title generation
-      fetch(`${baseUrl}/api/title`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${cronSecret}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
-      }).catch(() => {});
-    }
+    await prisma.badgeQueue.create({
+      data: {
+        userId: user.id,
+        commits: commitMessages,
+        isFirst: isFirstBadgeSync,
+        status: 'pending',
+      },
+    });
+    console.log(`[Sync] Queued badge generation for ${user.email} (${commitMessages.length} commits, first=${isFirstBadgeSync})`);
   }
 
   console.log(`[Sync] ${user.email}: +${totalDeltaXP} delta XP (commits: +${totalCommits - prevCommits}, PRs processed)`);

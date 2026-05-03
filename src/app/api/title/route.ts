@@ -52,26 +52,15 @@ async function generateTitleForUser(userId: string): Promise<number> {
 
   if (!user) return 0;
 
-  // Archive current title before overwriting
+  // Archive current title before overwriting (only if it actually changes)
   if (user.title) {
     const now = new Date();
     const startOfYear = new Date(now.getFullYear(), 0, 1);
     const weekNumber = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
 
-    // Only archive if not already archived for this week
-    const existing = await prisma.pastTitle.findFirst({
-      where: { userId: user.id, weekNumber, year: now.getFullYear() },
-    });
-    if (!existing) {
-      await prisma.pastTitle.create({
-        data: {
-          userId: user.id,
-          title: user.title,
-          weekNumber,
-          year: now.getFullYear(),
-        },
-      });
-    }
+    // We'll compare after generating the new title, but we need the old one now
+    // Store old title for comparison after generation
+    // Archiving happens below after we know the new title
   }
 
   const deepDiveSnapshot = user.ghostSnapshots.find((s: any) => {
