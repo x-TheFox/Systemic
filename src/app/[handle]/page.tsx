@@ -29,19 +29,13 @@ export default function PublicProfilePage() {
   const isOwnProfile = !!ownUsername && ownUsername.toLowerCase() === handle.toLowerCase();
 
   useEffect(() => {
-    if (!handle) {
-      setLoading(false);
-      setNotFound(true);
-      return;
-    }
-
-    if (RESERVED_HANDLES.has(handle.toLowerCase())) {
-      setLoading(false);
-      setNotFound(true);
-      return;
-    }
-
     async function loadProfile() {
+      if (!handle || RESERVED_HANDLES.has(handle.toLowerCase())) {
+        setLoading(false);
+        setNotFound(true);
+        return;
+      }
+
       try {
         const res = await fetch(`/api/profile?githubHandle=${handle}`);
         if (!res.ok) {

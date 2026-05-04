@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Shield, Users, Trophy, Crown, ArrowLeft, LogOut, Pencil, Upload, X, Loader2 } from "lucide-react";
@@ -43,7 +43,7 @@ export default function GuildDetailPage() {
   const [guild, setGuild] = useState<Guild | null>(null);
   const [loading, setLoading] = useState(true);
   const [myUserId, setMyUserId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const isAdmin = useMemo(() => !!(guild && myUserId && guild.adminId === myUserId), [guild, myUserId]);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", description: "", iconUrl: "" });
   const [uploading, setUploading] = useState(false);
@@ -73,22 +73,6 @@ export default function GuildDetailPage() {
     }
     load();
   }, [slug]);
-
-  useEffect(() => {
-    if (guild && myUserId) {
-      setIsAdmin(guild.adminId === myUserId);
-    }
-  }, [guild, myUserId]);
-
-  useEffect(() => {
-    if (guild) {
-      setEditForm({
-        name: guild.name,
-        description: guild.description || "",
-        iconUrl: guild.iconUrl || "",
-      });
-    }
-  }, [guild]);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -239,7 +223,16 @@ export default function GuildDetailPage() {
               {isAdmin && (
                 <>
                   <button
-                    onClick={() => setEditing(!editing)}
+                    onClick={() => {
+                      if (!editing && guild) {
+                        setEditForm({
+                          name: guild.name,
+                          description: guild.description || "",
+                          iconUrl: guild.iconUrl || "",
+                        });
+                      }
+                      setEditing(!editing);
+                    }}
                     className="h-9 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:bg-white/[0.06] transition-colors inline-flex items-center gap-1.5"
                   >
                     <Pencil className="h-3.5 w-3.5" />

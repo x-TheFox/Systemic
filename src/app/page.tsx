@@ -19,12 +19,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoaded || !user) {
-      setLoading(false);
-      return;
-    }
-    async function loadStats() {
-      if (!user) return;
+    async function init() {
+      if (!isLoaded || !user) {
+        setLoading(false);
+        return;
+      }
       try {
         const res = await fetch(`/api/profile?clerkId=${user.id}`);
         if (!res.ok) throw new Error("Failed");
@@ -36,7 +35,7 @@ export default function Home() {
         setLoading(false);
       }
     }
-    loadStats();
+    init();
   }, [isLoaded, user]);
 
   return (

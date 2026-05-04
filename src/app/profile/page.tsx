@@ -13,21 +13,20 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    async function init() {
+      if (!isLoaded) return;
 
-    if (!clerkUser) {
-      setLoading(false);
-      return;
-    }
+      if (!clerkUser) {
+        setLoading(false);
+        return;
+      }
 
-    const username = (clerkUser as any)?.username;
-    if (username) {
-      router.replace(`/${username}`);
-      return;
-    }
+      const username = (clerkUser as any)?.username;
+      if (username) {
+        router.replace(`/${username}`);
+        return;
+      }
 
-    async function loadProfile() {
-      if (!clerkUser) return;
       try {
         const res = await fetch(`/api/profile?clerkId=${clerkUser.id}`);
         if (!res.ok) throw new Error("Failed to load");
@@ -39,7 +38,7 @@ export default function ProfilePage() {
         setLoading(false);
       }
     }
-    loadProfile();
+    init();
   }, [isLoaded, clerkUser, router]);
 
   if (loading) {

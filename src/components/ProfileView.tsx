@@ -79,11 +79,11 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
 
   // Fetch projects
   useEffect(() => {
-    if (!profile?.githubHandle) {
-      setProjectsLoading(false);
-      return;
-    }
     async function loadProjects() {
+      if (!profile?.githubHandle) {
+        setProjectsLoading(false);
+        return;
+      }
       try {
         const res = await fetch(`/api/projects?handle=${profile.githubHandle}`);
         if (!res.ok) throw new Error("Failed");

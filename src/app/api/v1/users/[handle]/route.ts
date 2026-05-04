@@ -5,10 +5,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: Request,
-  { params }: { params: { handle: string } }
+  { params }: { params: Promise<{ handle: string }> }
 ) {
   try {
-    const handle = params.handle;
+    const { handle } = await params;
     const limit = Math.min(
       parseInt(new URL(_req.url).searchParams.get('limit') || '50'),
       100

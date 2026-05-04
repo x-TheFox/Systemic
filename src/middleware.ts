@@ -38,8 +38,8 @@ const isPublicRoute = createRouteMatcher([
   '/:handle',
 ]);
 
-export default clerkMiddleware((auth, req) => {
-  if (!isPublicRoute(req)) auth().protect();
+export default clerkMiddleware(async (auth, req) => {
+  if (!isPublicRoute(req)) await auth.protect();
 });
 
 export const config = {

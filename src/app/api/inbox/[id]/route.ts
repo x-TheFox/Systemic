@@ -4,8 +4,9 @@ import { currentUser } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const user = await currentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -21,7 +22,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     await prisma.inboxMessage.updateMany({
-      where: { id: params.id, userId: dbUser.id },
+      where: { id, userId: dbUser.id },
       data: { read: true },
     });
 
@@ -32,8 +33,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const user = await currentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -49,7 +51,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     }
 
     await prisma.inboxMessage.deleteMany({
-      where: { id: params.id, userId: dbUser.id },
+      where: { id, userId: dbUser.id },
     });
 
     return NextResponse.json({ success: true });
