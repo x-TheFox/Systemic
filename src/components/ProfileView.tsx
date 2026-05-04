@@ -29,11 +29,13 @@ const platformLabels: Record<string, string> = {
   hackerrankHandle: "HackerRank",
 };
 
+
+
 const rarityStyles: Record<string, { bg: string; border: string; text: string; glow: string; label: string }> = {
-  common:    { bg: 'bg-slate-500/10',  border: 'border-slate-500/20',  text: 'text-slate-400',  glow: '', label: 'Common' },
-  rare:      { bg: 'bg-blue-500/10',   border: 'border-blue-500/30',  text: 'text-blue-400',   glow: 'shadow-[0_0_12px_rgba(59,130,246,0.15)]', label: 'Rare' },
-  epic:      { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400', glow: 'shadow-[0_0_16px_rgba(168,85,247,0.2)]', label: 'Epic' },
-  legendary: { bg: 'bg-amber-500/10',  border: 'border-amber-500/40',  text: 'text-amber-400',  glow: 'shadow-[0_0_20px_rgba(251,191,36,0.25)]', label: 'Legendary' },
+  common: { bg: 'bg-slate-500/10', border: 'border-slate-500/20', text: 'text-slate-400', glow: '', label: 'Common' },
+  rare: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', glow: 'shadow-[0_0_12px_rgba(59,130,246,0.15)]', label: 'Rare' },
+  epic: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400', glow: 'shadow-[0_0_16px_rgba(168,85,247,0.2)]', label: 'Epic' },
+  legendary: { bg: 'bg-amber-500/10', border: 'border-amber-500/40', text: 'text-amber-400', glow: 'shadow-[0_0_20px_rgba(251,191,36,0.25)]', label: 'Legendary' },
 };
 
 interface PastTitle {
@@ -78,6 +80,10 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   const [compareInput, setCompareInput] = useState("");
   const [showCompare, setShowCompare] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
+
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [errorAI, setErrorAI] = useState("");
 
   // Fetch projects
   useEffect(() => {
@@ -380,11 +386,10 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
                 key={stat.key}
                 variants={statReveal}
                 onClick={stat.key === "xp" ? () => setShowBreakdown(true) : undefined}
-                className={`p-4 rounded-[var(--radius-standard)] border text-center transition-all hover:shadow-glow ${
-                  stat.key === maxStat.key
-                    ? "bg-gradient-to-b from-accent/20 to-accent/5 border-accent/30 shadow-glow"
-                    : "bg-gradient-to-b from-white/[0.04] to-transparent border-white/[0.06]"
-                } ${stat.key === "xp" ? "cursor-pointer hover:bg-white/[0.06]" : ""}`}
+                className={`p-4 rounded-[var(--radius-standard)] border text-center transition-all hover:shadow-glow ${stat.key === maxStat.key
+                  ? "bg-gradient-to-b from-accent/20 to-accent/5 border-accent/30 shadow-glow"
+                  : "bg-gradient-to-b from-white/[0.04] to-transparent border-white/[0.06]"
+                  } ${stat.key === "xp" ? "cursor-pointer hover:bg-white/[0.06]" : ""}`}
               >
                 <div className="text-stat text-white">{stat.value.toLocaleString()}</div>
                 <div className="text-label text-fg-muted mt-1">{stat.label}</div>
@@ -471,7 +476,122 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
             )}
           </motion.div>
         )}
+        {/* AI Profile Analysis */}
+        <motion.div variants={staggerItem} className="glass-card p-6">
 
+          <div className="flex items-center gap-2 mb-4">
+            <Brain className="h-5 w-5 text-accent" />
+            <h2 className="text-heading text-white">AI Profile Analysis</h2>
+          </div>
+
+          {/* 🔥 BUTTON (IMPORTANT) */}
+          <button
+            onClick={async () => {
+              if (!profile) return;
+
+              setLoadingAI(true);
+              setErrorAI("");
+
+              try {
+                const res = await fetch("/api/ai/analyze", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                    githubHandle: profile.githubHandle,
+                    stats: {
+                      commits: profile.totalCommits,
+                      prs: profile.totalPRs,
+                      xp: profile.xp
+                    },
+                    projects: profile.projects || [],
+                    streaks: profile.streaks || []
+                  })
+                });
+
+                const data = await res.json();
+
+                console.log("AI RESPONSE:", data);
+
+                if (data.error) {
+                  setErrorAI(data.error);
+                  return;
+                }
+
+                setAnalysis(data);
+
+              } catch (err) {
+                console.error("AI error:", err);
+                setErrorAI("Something went wrong");
+              } finally {
+                setLoadingAI(false);
+              }
+            }}
+            className="w-full h-10 mb-4 rounded bg-blue-600 text-white"
+          >
+            {loadingAI ? "Analyzing..." : "Analyze Profile"}
+          </button>
+
+          {/* 🔴 ERROR UI */}
+          {errorAI && (
+            <p className="text-red-500 mb-3">{errorAI}</p>
+          )}
+
+          {/* 📊 RESULT */}
+          {analysis && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* Strengths */}
+              <div className="p-4 rounded-xl bg-gray-900 text-white">
+                <h3 className="font-semibold mb-2">💪 Strengths</h3>
+                {analysis.strengths?.length ? (
+                  analysis.strengths.map((s: string, i: number) => (
+                    <p key={i}>• {s}</p>
+                  ))
+                ) : (
+                  <p className="text-gray-400">No strengths detected</p>
+                )}
+              </div>
+
+              {/* Weaknesses */}
+              <div className="p-4 rounded-xl bg-gray-900 text-white">
+                <h3 className="font-semibold mb-2">⚠️ Weaknesses</h3>
+                {analysis.weaknesses?.length ? (
+                  analysis.weaknesses.map((w: string, i: number) => (
+                    <p key={i}>• {w}</p>
+                  ))
+                ) : (
+                  <p className="text-gray-400">No weaknesses detected</p>
+                )}
+              </div>
+
+              {/* Career */}
+              <div className="p-4 rounded-xl bg-gray-900 text-white col-span-2">
+                <h3 className="font-semibold mb-2">🚀 Career Path</h3>
+                <p>{analysis.careerPath || "No data available"}</p>
+              </div>
+
+              {/* Companies */}
+              <div className="p-4 rounded-xl bg-gray-900 text-white col-span-2">
+                <h3 className="font-semibold mb-2">🏢 Target Companies</h3>
+                {analysis.companies?.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {analysis.companies.map((c: string, i: number) => (
+                      <span key={i} className="px-2 py-1 bg-white/10 rounded">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-400">No suggestions available</p>
+                )}
+              </div>
+
+            </div>
+          )}
+
+        </motion.div>
         {/* Platform Handles */}
         {isOwnProfile && (
           <motion.div variants={staggerItem} className="glass-card p-6 space-y-5">
@@ -564,54 +684,54 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
           </motion.div>
         )}
 
-      {/* Guild */}
-      {profile?.guild && (
-        <motion.div variants={staggerItem}>
-          <Link href={`/guilds/${profile.guild.slug}`}>
-            <div className="glass-card p-6 hover:border-accent/20 transition-colors cursor-pointer group">
-              <div className="flex items-center gap-5">
-                {/* Big Guild Icon */}
-                <div className="relative flex-shrink-0">
-                  {profile.guild.iconUrl ? (
-                    <div className="h-20 w-20 rounded-[var(--radius-standard)] overflow-hidden border-2 border-white/[0.08] bg-white/[0.03] flex items-center justify-center shadow-glow">
-                      <img src={profile.guild.iconUrl} alt={profile.guild.name} className="h-full w-full object-contain p-2" />
-                    </div>
-                  ) : (
-                    <div className="h-20 w-20 rounded-[var(--radius-standard)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border-2 border-accent/30 flex items-center justify-center shadow-glow">
-                      <span className="text-3xl font-bold text-accent">{profile.guild.name.charAt(0).toUpperCase()}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-heading text-white group-hover:text-accent transition-colors">{profile.guild.name}</h2>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-accent/20 text-accent bg-accent/10">
-                      Guild
-                    </span>
+        {/* Guild */}
+        {profile?.guild && (
+          <motion.div variants={staggerItem}>
+            <Link href={`/guilds/${profile.guild.slug}`}>
+              <div className="glass-card p-6 hover:border-accent/20 transition-colors cursor-pointer group">
+                <div className="flex items-center gap-5">
+                  {/* Big Guild Icon */}
+                  <div className="relative flex-shrink-0">
+                    {profile.guild.iconUrl ? (
+                      <div className="h-20 w-20 rounded-[var(--radius-standard)] overflow-hidden border-2 border-white/[0.08] bg-white/[0.03] flex items-center justify-center shadow-glow">
+                        <img src={profile.guild.iconUrl} alt={profile.guild.name} className="h-full w-full object-contain p-2" />
+                      </div>
+                    ) : (
+                      <div className="h-20 w-20 rounded-[var(--radius-standard)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border-2 border-accent/30 flex items-center justify-center shadow-glow">
+                        <span className="text-3xl font-bold text-accent">{profile.guild.name.charAt(0).toUpperCase()}</span>
+                      </div>
+                    )}
                   </div>
-                  {profile.guild.description && (
-                    <p className="text-sm text-fg-muted mt-1 truncate">{profile.guild.description}</p>
-                  )}
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="inline-flex items-center gap-1 text-xs text-accent font-medium">
-                      <Trophy className="h-3 w-3" />
-                      {profile.guild.members?.reduce((s: number, m: any) => s + (m.xp || 0), 0)?.toLocaleString() || 0} XP
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs text-fg-dim">
-                      <Users className="h-3 w-3" />
-                      {profile.guild.members?.length || 0} members
-                    </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-heading text-white group-hover:text-accent transition-colors">{profile.guild.name}</h2>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-accent/20 text-accent bg-accent/10">
+                        Guild
+                      </span>
+                    </div>
+                    {profile.guild.description && (
+                      <p className="text-sm text-fg-muted mt-1 truncate">{profile.guild.description}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="inline-flex items-center gap-1 text-xs text-accent font-medium">
+                        <Trophy className="h-3 w-3" />
+                        {profile.guild.members?.reduce((s: number, m: any) => s + (m.xp || 0), 0)?.toLocaleString() || 0} XP
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-xs text-fg-dim">
+                        <Users className="h-3 w-3" />
+                        {profile.guild.members?.length || 0} members
+                      </span>
+                    </div>
                   </div>
+                  <BarChart3 className="h-5 w-5 text-fg-muted group-hover:text-accent transition-colors flex-shrink-0" />
                 </div>
-                <BarChart3 className="h-5 w-5 text-fg-muted group-hover:text-accent transition-colors flex-shrink-0" />
               </div>
-            </div>
-          </Link>
-        </motion.div>
-      )}
+            </Link>
+          </motion.div>
+        )}
 
-      {/* Unlocked Skill Nodes */}
-      {profile?.dynamicNodes && profile.dynamicNodes.length > 0 && (
+        {/* Unlocked Skill Nodes */}
+        {profile?.dynamicNodes && profile.dynamicNodes.length > 0 && (
           <motion.div variants={staggerItem} className="glass-card p-6">
             <h2 className="text-heading text-white mb-4">Unlocked Skills</h2>
             <div className="flex flex-wrap gap-2">
