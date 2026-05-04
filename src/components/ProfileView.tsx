@@ -13,6 +13,7 @@ import Link from "next/link";
 import { BadgeGrid, BadgeCard } from "@/components/BadgeGrid";
 import { StreakHeatmap } from "@/components/StreakHeatmap";
 import { pageEntrance, staggerItem, statReveal } from "@/lib/motion";
+import { XPBreakdownModal } from "@/components/XPBreakdownModal";
 
 const platformIcons: Record<string, React.ReactNode> = {
   githubHandle: <Code2 className="h-4 w-4" />,
@@ -76,6 +77,7 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [compareInput, setCompareInput] = useState("");
   const [showCompare, setShowCompare] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   // Fetch projects
   useEffect(() => {
@@ -377,11 +379,12 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
               <motion.div
                 key={stat.key}
                 variants={statReveal}
+                onClick={stat.key === "xp" ? () => setShowBreakdown(true) : undefined}
                 className={`p-4 rounded-[var(--radius-standard)] border text-center transition-all hover:shadow-glow ${
                   stat.key === maxStat.key
                     ? "bg-gradient-to-b from-accent/20 to-accent/5 border-accent/30 shadow-glow"
                     : "bg-gradient-to-b from-white/[0.04] to-transparent border-white/[0.06]"
-                }`}
+                } ${stat.key === "xp" ? "cursor-pointer hover:bg-white/[0.06]" : ""}`}
               >
                 <div className="text-stat text-white">{stat.value.toLocaleString()}</div>
                 <div className="text-label text-fg-muted mt-1">{stat.label}</div>
@@ -656,6 +659,13 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
           </motion.div>
         </div>
       )}
+
+      <XPBreakdownModal
+        isOpen={showBreakdown}
+        onClose={() => setShowBreakdown(false)}
+        userId={profile.id}
+        userName={profile.name || profile.githubHandle || "Anonymous"}
+      />
     </motion.main>
   );
 }
