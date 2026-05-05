@@ -136,13 +136,15 @@ export async function GET(req: Request) {
     const categories = buildCategories(activityLogs);
     const totalXP = categories.reduce((sum, cat) => sum + cat.totalXP, 0);
     const projectsTotalXP = projects.reduce((sum, p) => sum + p.xpValue, 0);
-    const grandTotal = totalXP + projectsTotalXP;
+    // Use user's actual XP as grand total — activityLogs don't capture everything (node unlocks, etc)
+    const userXP = (await prisma.user.findUnique({ where: { id: userId }, select: { xp: true } }))?.xp ?? 0;
 
     return NextResponse.json({
       totalXP,
       categories,
       projects,
-      grandTotal,
+      projectsTotalXP,
+      userXP,
     });
   } catch (error: any) {
     console.error('XP breakdown GET error:', error);

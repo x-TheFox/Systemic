@@ -59,7 +59,8 @@ interface XPBreakdownData {
   totalXP: number;
   categories: Category[];
   projects: Project[];
-  grandTotal: number;
+  userXP: number;
+  projectsTotalXP: number;
 }
 
 interface XPBreakdownModalProps {
@@ -280,7 +281,7 @@ export function XPBreakdownModal({
                 ) : (
                   <>
                     <span className="text-stat-lg text-white">
-                      {(data?.grandTotal ?? 0).toLocaleString()}
+                      {(data?.userXP ?? 0).toLocaleString()}
                     </span>
                     <span className="text-label text-fg-muted">Total XP</span>
                   </>
