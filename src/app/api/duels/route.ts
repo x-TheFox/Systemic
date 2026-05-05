@@ -7,26 +7,17 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   try {
     const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    let currentUserId: string | null = null;
 
-    const dbUser = await prisma.user.findUnique({
-      where: { clerkId: user.id },
-      select: { id: true },
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (user) {
+      const dbUser = await prisma.user.findUnique({
+        where: { clerkId: user.id },
+        select: { id: true },
+      });
+      currentUserId = dbUser?.id ?? null;
     }
 
     const duels = await prisma.duel.findMany({
-      where: {
-        OR: [
-          { challengerId: dbUser.id },
-          { opponentId: dbUser.id },
-        ],
-      },
       orderBy: { createdAt: 'desc' },
       include: {
         challenger: { select: { id: true, name: true, email: true, githubHandle: true, imageUrl: true, xp: true } },
@@ -34,7 +25,7 @@ export async function GET(req: Request) {
       },
     });
 
-    return NextResponse.json({ duels });
+    return NextResponse.json({ duels, currentUserId });
   } catch (error: any) {
     console.error('Duels GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
