@@ -139,10 +139,10 @@ Be thorough, specific, and honest. Don't flatter - identify real strengths AND r
     deepDive: true,
     archetype: analysis.archetype,
     grindPath: analysis.grindPath,
-    strengths: analysis.strengths,
-    gaps: analysis.gaps,
+    strengths: analysis.strengths ?? [],
+    gaps: analysis.gaps ?? [],
     recommendedFocus: analysis.recommendedFocus,
-    notableProjects: analysis.notableProjects,
+    notableProjects: analysis.notableProjects ?? [],
     repos: deepDive.repos.map(r => ({ name: r.name, language: r.language, commits: r.commitCount, stars: r.stars })),
     languageBreakdown: deepDive.languageBreakdown,
     dominantPath: deepDive.dominantPath,
@@ -192,6 +192,9 @@ function parseAnalysis(text: string) {
     recommendedFocus: '',
     notableProjects: [],
   };
+
+  // Ensure arrays are always returned even if parsing finds no entries
+  const ensureArray = (val: unknown) => (Array.isArray(val) ? val : []);
 
   let section: string | null = null;
   for (const line of lines) {

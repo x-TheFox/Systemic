@@ -99,7 +99,7 @@ model CareerAnalysis {
   id          String   @id @default(cuid())
   userId      String   @unique
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status      String   @default("pending") // pending | questions | analyzing | complete
+  status      String   @default("pending") // pending | questions | analyzing | running | complete | cancelled
   summary     String?  @db.Text
   archetype   String?
   paths       Json?    // Array of ranked career paths
@@ -107,11 +107,17 @@ model CareerAnalysis {
   actionPlan  Json?    // Next 90 days plan
   thinking    String?  @db.Text // Full agent reasoning chain
   questions   Json?    // Questions asked + answers
+  sessionId   String?  @unique
+  stepCount   Int      @default(0)
+  maxSteps    Int      @default(20)
+  agentState  Json?
+  cancelledAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
+  @@index([sessionId])
 }
 
 
