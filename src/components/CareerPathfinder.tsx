@@ -324,6 +324,7 @@ export function CareerPathfinder({ userId, isOwnProfile, analysis, name }: Caree
           <CareerPathfinderModal
             analysis={analysis}
             onClose={() => setShowModal(false)}
+            name={name}
           />
         )}
       </AnimatePresence>
