@@ -107,6 +107,20 @@ export async function POST(req: Request) {
 
         const summary = await summarizeProjectForBadges(repoName, card.description, tree, fileContents);
 
+        // DEDUP: skip if this repo was already analyzed for this user
+        const existingProject = await prisma.project.findFirst({
+          where: { userId: item.userId, repoUrl: item.repoUrl },
+        });
+        if (existingProject) {
+          console.log(`[Project] Skipping duplicate ${repoName} — already analyzed`);
+          await prisma.projectQueue.update({
+            where: { id: item.id },
+            data: { status: 'done' },
+          });
+          processed.push(`${repoName} (skipped-duplicate)`);
+          continue;
+        }
+
         // Save project
         await prisma.project.create({
           data: {
