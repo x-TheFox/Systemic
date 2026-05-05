@@ -139,13 +139,17 @@ export async function GET(req: Request) {
     // Use user's actual XP as grand total — activityLogs don't capture everything (node unlocks, etc)
     const userXP = (await prisma.user.findUnique({ where: { id: userId }, select: { xp: true } }))?.xp ?? 0;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       totalXP,
       categories,
       projects,
       projectsTotalXP,
       userXP,
     });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   } catch (error: any) {
     console.error('XP breakdown GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
