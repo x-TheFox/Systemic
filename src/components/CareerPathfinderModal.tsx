@@ -81,9 +81,10 @@ function getScoreBarColor(score: number): string {
 interface CareerPathfinderModalProps {
   analysis: CareerAnalysisData;
   onClose: () => void;
+  name?: string;
 }
 
-export function CareerPathfinderModal({ analysis, onClose }: CareerPathfinderModalProps) {
+export function CareerPathfinderModal({ analysis, onClose, name }: CareerPathfinderModalProps) {
   const [showThinking, setShowThinking] = useState(false);
   const [loading] = useState(!analysis.paths || analysis.paths.length === 0);
 
@@ -116,7 +117,7 @@ export function CareerPathfinderModal({ analysis, onClose }: CareerPathfinderMod
           <div className="flex items-center gap-3">
             <Compass className="h-5 w-5 text-accent" />
             <div>
-              <h2 className="text-subheading text-white">Career Analysis</h2>
+              <h2 className="text-subheading text-white">Career Analysis{name ? ` for ${name}` : ""}</h2>
               {analysis.archetype && (
                 <Badge variant="default" className="mt-0.5 text-[10px]">
                   {analysis.archetype}
