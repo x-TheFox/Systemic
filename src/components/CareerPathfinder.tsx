@@ -82,7 +82,7 @@ export function getScoreBarColor(score: number): string {
   return "from-red-500 to-red-400";
 }
 
-export function CareerPathfinder({ userId, isOwnProfile, analysis }: CareerPathfinderProps) {
+export function CareerPathfinder({ userId, isOwnProfile, analysis, name }: CareerPathfinderProps) {
   const [showModal, setShowModal] = useState(false);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitting, setSubmitting] = useState(false);
