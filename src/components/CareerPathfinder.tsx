@@ -82,7 +82,7 @@ export function getScoreBarColor(score: number): string {
   return "from-red-500 to-red-400";
 }
 
-export function CareerPathfinder({ userId, isOwnProfile, analysis, name }: CareerPathfinderProps) {
+export function CareerPathfinder({ isOwnProfile, analysis, name }: CareerPathfinderProps) {
   const [showModal, setShowModal] = useState(false);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -92,10 +92,10 @@ export function CareerPathfinder({ userId, isOwnProfile, analysis, name }: Caree
     if (!isOwnProfile) return;
     setTriggering(true);
     try {
-      const res = await fetch("/api/career-pathfinder", {
+      const res = await fetch("/api/career-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ action: "start" }),
       });
       if (!res.ok) throw new Error("Failed to start analysis");
       const data = await res.json();
@@ -116,10 +116,10 @@ export function CareerPathfinder({ userId, isOwnProfile, analysis, name }: Caree
         question: q.question,
         answer: answers[i] || "",
       }));
-      const res = await fetch("/api/career-pathfinder/answers", {
+      const res = await fetch("/api/career-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, answers: filled }),
+        body: JSON.stringify({ action: "answer", answers: filled }),
       });
       if (!res.ok) throw new Error("Failed to submit answers");
       toast.success("Answers submitted! The Ghost is analyzing...");
