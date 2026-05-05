@@ -42,6 +42,7 @@ type AgentState = {
   userAnswers: Record<string, string>;
   toolCalls: Array<{ step: number; tool: string; input: string; output: string }>;
   profileDigest?: ProfileDigest;
+  consecutiveFallbacks: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -109,7 +110,121 @@ const AgentTurnOutputSchema = z.union([
 ]);
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Profile Summarization
+// ---------------------------------------------------------------------------
+
+export function summarizeProfile(profile: ProfileDigest): string {
+  const lines: string[] = [];
+
+  // Name / Title / XP on one line
+  lines.push(
+    `Engineer: ${profile.name ?? 'Unknown'} | Title: ${profile.title ?? 'N/A'} | XP: ${profile.xp}`
+  );
+
+  // Handles on one line (only non-null ones)
+  const handles = Object.entries(profile.handles)
+    .filter(([, v]) => v !== null)
+    .map(([k, v]) => `${k}:${v}`);
+  lines.push(`Handles: ${handles.length ? handles.join(' ') : 'None'}`);
+
+  // Stats as a compact sentence
+  const s = profile.stats;
+  const statsParts: string[] = [];
+  if (s.totalCommits || s.totalPRs || s.totalReviews) {
+    statsParts.push(`${s.totalCommits} commits, ${s.totalPRs} PRs, ${s.totalReviews} reviews`);
+  }
+  if (s.leetcodeEasy || s.leetcodeMedium || s.leetcodeHard) {
+    statsParts.push(`LeetCode: ${s.leetcodeEasy}E/${s.leetcodeMedium}M/${s.leetcodeHard}H`);
+  }
+  if (s.codeforcesRating || s.codeforcesSolved) {
+    statsParts.push(`Codeforces: ${s.codeforcesRating} rating, ${s.codeforcesSolved} solved`);
+  }
+  if (s.hackerrankBadges) {
+    statsParts.push(`HackerRank: ${s.hackerrankBadges} badges`);
+  }
+  lines.push(`Stats: ${statsParts.join('. ')}`);
+
+  // Projects: Top 3 by XP
+  const topProjects = [...profile.projects]
+    .sort((a, b) => b.xpValue - a.xpValue)
+    .slice(0, 3);
+  const projectStrs = topProjects.map(
+    (p) => `${p.name}(${p.language ?? '?'}) ★${p.stars} ${p.rarity}`
+  );
+  const projectLine =
+    projectStrs.join(', ') +
+    (profile.projects.length > 3 ? ` + ${profile.projects.length - 3} others` : '');
+  lines.push(`Projects: ${projectLine || 'None'}`);
+
+  // Badges: Top 3 by rarity (Legendary > Epic > Rare > Common)
+  const rarityOrder: Record<string, number> = {
+    Legendary: 4,
+    Epic: 3,
+    Rare: 2,
+    Common: 1,
+  };
+  const topBadges = [...profile.badges]
+    .sort((a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0))
+    .slice(0, 3);
+  const badgeStrs = topBadges.map((b) => `[${b.rarity}] ${b.name}`);
+  const badgeLine =
+    badgeStrs.join(', ') +
+    (profile.badges.length > 3 ? ` + ${profile.badges.length - 3} others` : '');
+  lines.push(`Badges: ${badgeLine || 'None'}`);
+
+  // Skill Tree
+  const unlockedCount = profile.skillTree?.unlockedNodes.length ?? 0;
+  lines.push(
+    `Skill Tree: Grind=${profile.skillTree?.currentGrind ?? 'None'} | Unlocked=${unlockedCount}`
+  );
+
+  // Activity summary: group last 30 days by platform
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const recentActivity = profile.activityLog.filter((a) => a.timestamp >= thirtyDaysAgo);
+
+  const activityByPlatform = new Map<string, Map<string, number>>();
+  for (const a of recentActivity) {
+    if (!activityByPlatform.has(a.platform)) {
+      activityByPlatform.set(a.platform, new Map());
+    }
+    const typeMap = activityByPlatform.get(a.platform)!;
+    typeMap.set(a.activityType, (typeMap.get(a.activityType) ?? 0) + 1);
+  }
+
+  const activityParts: string[] = [];
+  for (const [platform, types] of activityByPlatform) {
+    const typeStrs = Array.from(types.entries())
+      .map(([t, c]) => `${c} ${t}`)
+      .join(', ');
+    activityParts.push(`${platform}: ${typeStrs}`);
+  }
+  lines.push(`Activity(30d): ${activityParts.join(' | ') || 'None'}`);
+
+  // Duels: win/loss count
+  const wins = profile.duels.filter((d) => d.winnerId === profile.userId).length;
+  const losses = profile.duels.filter(
+    (d) => d.winnerId !== null && d.winnerId !== profile.userId
+  ).length;
+  lines.push(`Duels: ${wins}W/${losses}L`);
+
+  // Guild
+  lines.push(`Guild: ${profile.guild?.name ?? 'None'}`);
+
+  // Ghost snapshot
+  if (profile.ghostSnapshot) {
+    lines.push(
+      `Ghost: W${profile.ghostSnapshot.weekNumber} ${profile.ghostSnapshot.year} | ${profile.ghostSnapshot.totalXP} XP`
+    );
+  } else {
+    lines.push('Ghost: None');
+  }
+
+  return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Prompt Builders
 // ---------------------------------------------------------------------------
 
 function buildSystemPrompt(maxSteps: number): string {
@@ -131,39 +246,82 @@ Rules:
 - Be specific, honest, and evidence-based. Don't sugarcoat weaknesses.
 - When you need market data, ALWAYS call web_search. Don't make up salary numbers.
 - When ready to finalize, return type: "complete" with the full structured analysis.
-- Each response should include a brief reasoning sentence before any action.`;
+- Each response should include a brief reasoning sentence before any action.
+
+You MUST respond with ONLY a single JSON object. No markdown code blocks. No extra text.
+
+Choose ONE of these formats:
+
+1. THINKING: {"type":"thinking","content":"brief reasoning"}
+2. TOOL CALL: {"type":"tool_call","tool":"web_search","input":"search query","reasoning":"why"}
+3. QUESTIONS: {"type":"question","questions":["q1","q2"],"reasoning":"why"}
+4. COMPLETE: {"type":"complete","analysis":{"archetype":"...","summary":"...","paths":[...],"skillGaps":[...],"actionPlan":[...],"thinking":"..."}}
+
+For COMPLETE, paths need: title, matchScore (0-100), salaryRange, demand ("High"|"Medium"|"Low"), pros[], cons[], skillCoverage.
+skillGaps need: skill, priority ("Critical"|"High"|"Medium"|"Low"), reason.
+actionPlan need: step (1-12), description, platform (optional), estimatedHours (optional).`;
 }
 
 function buildPrompt(state: AgentState): string {
   const parts: string[] = [];
   for (const msg of state.messages) {
     if (msg.role === 'system') {
-      parts.push(`<system>\n${msg.content}\n</system>`);
+      parts.push(`=== SYSTEM ===\n${msg.content}`);
     } else if (msg.role === 'user') {
-      parts.push(`<user>\n${msg.content}\n</user>`);
+      parts.push(`=== USER ===\n${msg.content}`);
     } else if (msg.role === 'assistant') {
-      parts.push(`<assistant>\n${msg.content}\n</assistant>`);
+      parts.push(`=== ASSISTANT ===\n${msg.content}`);
     } else if (msg.role === 'tool') {
-      parts.push(`<tool name="${msg.name ?? 'unknown'}">\n${msg.content}\n</tool>`);
+      parts.push(`=== TOOL: ${msg.name ?? 'unknown'} ===\n${msg.content}`);
     }
   }
   return parts.join('\n\n');
 }
 
+function buildSimplifiedPrompt(state: AgentState): string {
+  const systemMsg = state.messages[0];
+  const profileMsg = state.messages[1];
+  const parts: string[] = [];
+  if (systemMsg) parts.push(`=== SYSTEM ===\n${systemMsg.content}`);
+  if (profileMsg) parts.push(`=== USER ===\n${profileMsg.content}`);
+  return parts.join('\n\n');
+}
+
+function truncateMessages(state: AgentState): void {
+  const maxMessages = 8;
+  if (state.messages.length <= maxMessages) return;
+  if (state.messages.length < 2) return;
+
+  // Always keep system (index 0) and profile summary (index 1)
+  const systemMsg = state.messages[0];
+  const profileMsg = state.messages[1];
+
+  const remaining = state.messages.slice(2);
+  const allowedRemaining = maxMessages - 2;
+  const truncated = remaining.slice(-allowedRemaining);
+
+  state.messages = [systemMsg, profileMsg, ...truncated];
+}
+
+// ---------------------------------------------------------------------------
+// State Management
+// ---------------------------------------------------------------------------
+
 function createInitialState(profile: ProfileDigest, maxSteps: number): AgentState {
   const systemPrompt = buildSystemPrompt(maxSteps);
-  const profileJson = JSON.stringify(profile, null, 2);
+  const profileSummary = summarizeProfile(profile);
   return {
     phase: 'ingest',
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `--- USER PROFILE ---\n${profileJson}` },
+      { role: 'user', content: profileSummary },
     ],
     researchedPaths: [],
     pendingPaths: [],
     userAnswers: {},
     toolCalls: [],
     profileDigest: profile,
+    consecutiveFallbacks: 0,
   };
 }
 
@@ -201,17 +359,20 @@ function getFallbackForState(
     };
   }
 
-  // If we have no researched paths yet, ask a question or think
+  // If we have no researched paths yet, FORCE a web search to make progress
   if (state.researchedPaths.length === 0) {
     return {
-      type: 'thinking' as const,
-      content: 'I need to analyze the profile and identify promising career paths before taking further action.',
+      type: 'tool_call' as const,
+      tool: 'web_search',
+      input: 'software engineer career paths 2025 salary demand',
+      reasoning:
+        'No research has been conducted yet. I must search for current market data to identify viable career paths.',
     };
   }
 
   return {
     type: 'thinking' as const,
-    content: 'Continuing research and synthesis based on available data.',
+    content: 'Continuing synthesis based on available data.',
   };
 }
 
@@ -241,7 +402,11 @@ async function executeTool(tool: string, input: string): Promise<string> {
       const results = await duckduckgoSearch(input, 5);
       return JSON.stringify({ query: input, results });
     } catch (err: any) {
-      return JSON.stringify({ query: input, error: err?.message ?? 'Search failed', results: [] });
+      return JSON.stringify({
+        query: input,
+        error: err?.message ?? 'Search failed',
+        results: [],
+      });
     }
   }
 
@@ -302,6 +467,7 @@ export async function runAgentTurn(
       if (!state.pendingPaths) state.pendingPaths = [];
       if (!state.userAnswers) state.userAnswers = {};
       if (!state.toolCalls) state.toolCalls = [];
+      if (typeof state.consecutiveFallbacks !== 'number') state.consecutiveFallbacks = 0;
     } catch {
       state = await bootstrapState(userId, record.maxSteps);
     }
@@ -312,9 +478,7 @@ export async function runAgentTurn(
   // 4. Handle user answers
   if (userAnswers && Object.keys(userAnswers).length > 0) {
     state.userAnswers = { ...state.userAnswers, ...userAnswers };
-    const answerLines = Object.entries(userAnswers).map(
-      ([q, a]) => `Q: ${q}\nA: ${a}`
-    );
+    const answerLines = Object.entries(userAnswers).map(([q, a]) => `Q: ${q}\nA: ${a}`);
     state.messages.push({
       role: 'user',
       content: `Here are my answers to your questions:\n${answerLines.join('\n\n')}`,
@@ -326,20 +490,79 @@ export async function runAgentTurn(
   if (forceComplete) {
     state.messages.push({
       role: 'system',
-      content: 'You have reached the maximum number of turns. You MUST return type: "complete" with the full structured analysis now. Do not call any tools.',
+      content:
+        'You have reached the maximum number of turns. You MUST return type: "complete" with the full structured analysis now. Do not call any tools.',
     });
   }
 
-  // 6. LLM loop (supports up to 3 tool calls per turn)
+  // 6. Manage message history
+  truncateMessages(state);
+
+  // 7. LLM call with fallback detection
+  let llmOutput: z.infer<typeof AgentTurnOutputSchema>;
+  let usedFallback = false;
+
+  try {
+    llmOutput = await groqGenerateObject(AgentTurnOutputSchema, buildPrompt(state));
+  } catch (error) {
+    usedFallback = true;
+    state.consecutiveFallbacks++;
+
+    if (state.consecutiveFallbacks >= 2) {
+      const errorMsg =
+        'The AI agent is having trouble processing this request. The profile may be too complex or the service is experiencing issues. Please try regenerating the analysis.';
+      await prisma.careerAnalysis.update({
+        where: { sessionId },
+        data: { status: 'error', agentState: state as any },
+      });
+      return {
+        type: 'error',
+        actions: [],
+        nextAction: null,
+        sessionId,
+        step: record.stepCount,
+        maxSteps: record.maxSteps,
+        status: 'error',
+        error: errorMsg,
+      };
+    }
+
+    // Try simplified prompt: system + profile summary only
+    try {
+      llmOutput = await groqGenerateObject(
+        AgentTurnOutputSchema,
+        buildSimplifiedPrompt(state)
+      );
+      usedFallback = false;
+    } catch (secondError) {
+      state.consecutiveFallbacks++;
+      const errorMsg =
+        'The AI agent is having trouble processing this request. The profile may be too complex or the service is experiencing issues. Please try regenerating the analysis.';
+      await prisma.careerAnalysis.update({
+        where: { sessionId },
+        data: { status: 'error', agentState: state as any },
+      });
+      return {
+        type: 'error',
+        actions: [],
+        nextAction: null,
+        sessionId,
+        step: record.stepCount,
+        maxSteps: record.maxSteps,
+        status: 'error',
+        error: errorMsg,
+      };
+    }
+  }
+
+  if (!usedFallback) {
+    state.consecutiveFallbacks = 0;
+  }
+
+  // 8. Tool execution loop (supports up to 3 tool calls per turn)
   const actions: AgentAction[] = [];
   let toolCallCount = 0;
   const maxToolCallsPerTurn = 3;
-
-  let llmOutput = await groqGenerateObject(
-    AgentTurnOutputSchema,
-    buildPrompt(state),
-    getFallbackForState(state, forceComplete)
-  );
 
   while (llmOutput.type === 'tool_call' && toolCallCount < maxToolCallsPerTurn) {
     toolCallCount++;
@@ -389,15 +612,70 @@ export async function runAgentTurn(
       }
     }
 
+    // Truncate before next LLM call
+    truncateMessages(state);
+
     // Call LLM again with tool result
-    llmOutput = await groqGenerateObject(
-      AgentTurnOutputSchema,
-      buildPrompt(state),
-      getFallbackForState(state, forceComplete)
-    );
+    try {
+      llmOutput = await groqGenerateObject(AgentTurnOutputSchema, buildPrompt(state));
+    } catch (error) {
+      usedFallback = true;
+      state.consecutiveFallbacks++;
+
+      if (state.consecutiveFallbacks >= 2) {
+        const errorMsg =
+          'The AI agent is having trouble processing this request. The profile may be too complex or the service is experiencing issues. Please try regenerating the analysis.';
+        const thinkingLog = appendThinking(record.thinking ?? '', actions);
+        await prisma.careerAnalysis.update({
+          where: { sessionId },
+          data: { status: 'error', agentState: state as any, thinking: thinkingLog },
+        });
+        return {
+          type: 'error',
+          actions,
+          nextAction: null,
+          sessionId,
+          step: record.stepCount + 1,
+          maxSteps: record.maxSteps,
+          status: 'error',
+          error: errorMsg,
+        };
+      }
+
+      try {
+        llmOutput = await groqGenerateObject(
+          AgentTurnOutputSchema,
+          buildSimplifiedPrompt(state)
+        );
+        usedFallback = false;
+      } catch (secondError) {
+        state.consecutiveFallbacks++;
+        const errorMsg =
+          'The AI agent is having trouble processing this request. The profile may be too complex or the service is experiencing issues. Please try regenerating the analysis.';
+        const thinkingLog = appendThinking(record.thinking ?? '', actions);
+        await prisma.careerAnalysis.update({
+          where: { sessionId },
+          data: { status: 'error', agentState: state as any, thinking: thinkingLog },
+        });
+        return {
+          type: 'error',
+          actions,
+          nextAction: null,
+          sessionId,
+          step: record.stepCount + 1,
+          maxSteps: record.maxSteps,
+          status: 'error',
+          error: errorMsg,
+        };
+      }
+    }
+
+    if (!usedFallback) {
+      state.consecutiveFallbacks = 0;
+    }
   }
 
-  // 7. Process final output
+  // 9. Process final output
   if (llmOutput.type === 'thinking') {
     const action: AgentAction = { type: 'thinking', content: llmOutput.content };
     actions.push(action);
@@ -436,7 +714,9 @@ export async function runAgentTurn(
     actions.push(action);
     state.messages.push({
       role: 'assistant',
-      content: `I have some clarifying questions:\n${llmOutput.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nReasoning: ${llmOutput.reasoning}`,
+      content: `I have some clarifying questions:\n${llmOutput.questions
+        .map((q, i) => `${i + 1}. ${q}`)
+        .join('\n')}\n\nReasoning: ${llmOutput.reasoning}`,
     });
 
     const newStepCount = record.stepCount + 1;
@@ -467,7 +747,9 @@ export async function runAgentTurn(
     const analysis = llmOutput.analysis;
     const action: AgentAction = {
       type: 'thinking',
-      content: `Analysis complete. Archetype: ${analysis.archetype}. Paths: ${analysis.paths.map((p) => p.title).join(', ')}.`,
+      content: `Analysis complete. Archetype: ${analysis.archetype}. Paths: ${analysis.paths
+        .map((p) => p.title)
+        .join(', ')}.`,
     };
     actions.push(action);
 
