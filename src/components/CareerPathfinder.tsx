@@ -2,19 +2,19 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
 import {
   Compass,
   Loader2,
   Target,
   Sparkles,
-  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { staggerItem, scaleInItem } from "@/lib/motion";
+import { staggerItem } from "@/lib/motion";
+import { useCareerAgent, type AgentAnalysis } from "@/hooks/useCareerAgent";
 import { CareerPathfinderModal } from "./CareerPathfinderModal";
+
+/* ── Backward-compatible types (used by ProfileView) ── */
 
 export interface CareerPath {
   title: string;
@@ -50,12 +50,7 @@ export interface CareerAnalysisData {
   updatedAt?: string;
 }
 
-interface CareerPathfinderProps {
-  userId: string;
-  isOwnProfile: boolean;
-  analysis?: CareerAnalysisData;
-  name?: string;
-}
+/* ── Helpers ── */
 
 export function formatRelativeDate(date: string | undefined): string {
   if (!date) return "";
@@ -82,186 +77,142 @@ export function getScoreBarColor(score: number): string {
   return "from-red-500 to-red-400";
 }
 
-export function CareerPathfinder({ isOwnProfile, analysis, name }: CareerPathfinderProps) {
+/* ── Converter ── */
+
+function convertPropAnalysis(data: CareerAnalysisData): AgentAnalysis {
+  return {
+    archetype: data.archetype || "",
+    summary: data.summary || "",
+    paths: (data.paths || []).map((p) => ({
+      title: p.title,
+      matchScore: p.matchScore,
+      salaryRange: p.salaryRange,
+      demand: (p.demandLevel as "High" | "Medium" | "Low") || "Medium",
+      pros: p.pros,
+      cons: p.cons,
+      skillCoverage: String(p.skillCoverage),
+    })),
+    skillGaps: (data.skillGaps || []).map((g) => ({
+      skill: g.name,
+      priority: (g.priority === "High"
+        ? "High"
+        : g.priority === "Medium"
+        ? "Medium"
+        : "Low") as "Critical" | "High" | "Medium" | "Low",
+      reason: "",
+    })),
+    actionPlan: (data.actionPlan || []).map((a) => ({
+      step: a.step,
+      description: a.description,
+    })),
+    thinking: data.thinking || "",
+  };
+}
+
+/* ── Props ── */
+
+interface CareerPathfinderProps {
+  userId: string;
+  isOwnProfile: boolean;
+  analysis?: CareerAnalysisData;
+  name?: string;
+}
+
+/* ── Component ── */
+
+export function CareerPathfinder({
+  userId,
+  isOwnProfile,
+  analysis,
+  name,
+}: CareerPathfinderProps) {
+  const agent = useCareerAgent(userId);
   const [showModal, setShowModal] = useState(false);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [triggering, setTriggering] = useState(false);
 
-  async function triggerAnalysis() {
-    if (!isOwnProfile) return;
-    setTriggering(true);
-    try {
-      const res = await fetch("/api/career-analysis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "start" }),
-      });
-      if (!res.ok) throw new Error("Failed to start analysis");
-      const data = await res.json();
-      toast.success(data.message || "Analysis started!");
-      window.location.reload();
-    } catch {
-      toast.error("Failed to start analysis. Try again.");
-    } finally {
-      setTriggering(false);
-    }
-  }
+  const hasCompleteAnalysis = agent.status === "complete" || !!analysis;
+  const displayArchetype = agent.analysis?.archetype ?? analysis?.archetype;
+  const displayTopPath = agent.analysis?.paths?.[0] ?? analysis?.paths?.[0];
 
-  async function submitAnswers() {
-    if (!analysis?.questions) return;
-    setSubmitting(true);
-    try {
-      const filled: Record<string, string> = {};
-      analysis.questions.forEach((q, i) => {
-        filled[q.question] = answers[i] || "";
-      });
-      const res = await fetch("/api/career-analysis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "answer", answers: filled }),
-      });
-      if (!res.ok) throw new Error("Failed to submit answers");
-      toast.success("Answers submitted! The Ghost is analyzing...");
-      window.location.reload();
-    } catch {
-      toast.error("Failed to submit answers.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const handleStart = () => {
+    agent.start();
+    setShowModal(true);
+  };
+
+  const handleRegenerate = () => {
+    agent.start();
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    agent.cancel();
+  };
+
+  const modalStatus =
+    agent.status !== "idle" ? agent.status : analysis ? "complete" : "idle";
+  const modalAnalysis =
+    agent.analysis ?? (analysis ? convertPropAnalysis(analysis) : null);
 
   // No analysis state
-  if (!analysis) {
+  if (!hasCompleteAnalysis) {
     return (
-      <motion.div
-        variants={staggerItem}
-        initial="hidden"
-        animate="visible"
-        className="glass-card p-6"
-      >
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-standard)] bg-accent/10 border border-accent/20">
-            <Compass className="h-6 w-6 text-accent" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-subheading text-white">
-              Career Pathfinder
-            </h2>
-            <p className="text-sm text-fg-muted mt-1">
-              Discover your ideal career path with AI-powered research tailored to your profile.
-            </p>
-            {isOwnProfile && (
-              <Button
-                onClick={triggerAnalysis}
-                disabled={triggering}
-                className="mt-4"
-              >
-                {triggering ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                Analyze My Profile
-              </Button>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  // Analyzing state
-  if (analysis.status === "analyzing") {
-    return (
-      <motion.div
-        variants={staggerItem}
-        initial="hidden"
-        animate="visible"
-        className="glass-card p-6"
-      >
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="mb-4"
-          >
-            <Loader2 className="h-10 w-10 text-accent" />
-          </motion.div>
-          <h3 className="text-subheading text-white">The Ghost is researching...</h3>
-          <p className="text-sm text-fg-muted mt-2 max-w-xs">
-            Analyzing your skills, experience, and market trends to find your perfect career paths.
-          </p>
-          <div className="mt-5 w-48 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-accent to-cyan-500"
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              style={{ width: "60%" }}
-            />
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  // Questions state
-  if (analysis.status === "questions" && analysis.questions && analysis.questions.length > 0) {
-    return (
-      <motion.div
-        variants={staggerItem}
-        initial="hidden"
-        animate="visible"
-        className="glass-card p-6"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <Lightbulb className="h-5 w-5 text-accent" />
-          <h2 className="text-heading text-white">Quick Questions</h2>
-        </div>
-        <p className="text-sm text-fg-muted mb-5">
-          Help us tailor your career analysis by answering a few quick questions.
-        </p>
-        <div className="space-y-4">
-          {analysis.questions.map((q, i) => (
-            <motion.div
-              key={i}
-              variants={scaleInItem}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: i * 0.08 }}
-            >
-              <label className="text-label text-fg-dim mb-1.5 block">
-                {q.question}
-              </label>
-              <Input
-                value={answers[i] || ""}
-                onChange={(e) => setAnswers((prev) => ({ ...prev, [i]: e.target.value }))}
-                placeholder="Your answer..."
-                className="bg-white/[0.02]"
-              />
-            </motion.div>
-          ))}
-        </div>
-        <Button
-          onClick={submitAnswers}
-          disabled={submitting}
-          className="mt-5 w-full"
+      <>
+        <motion.div
+          variants={staggerItem}
+          initial="hidden"
+          animate="visible"
+          className="glass-card p-6"
         >
-          {submitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-standard)] bg-accent/10 border border-accent/20">
+              <Compass className="h-6 w-6 text-accent" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-subheading text-white">Career Pathfinder</h2>
+              <p className="text-sm text-fg-muted mt-1">
+                Discover your ideal career path with AI-powered research tailored
+                to your profile.
+              </p>
+              {isOwnProfile && (
+                <Button
+                  onClick={handleStart}
+                  disabled={agent.isLoading}
+                  className="mt-4"
+                >
+                  {agent.isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  Analyze My Profile
+                </Button>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        <AnimatePresence>
+          {showModal && (
+            <CareerPathfinderModal
+              status={agent.status}
+              actions={agent.actions}
+              step={agent.step}
+              maxSteps={agent.maxSteps}
+              pendingQuestions={agent.pendingQuestions}
+              analysis={agent.analysis}
+              error={agent.error}
+              isLoading={agent.isLoading}
+              onClose={handleCloseModal}
+              onSubmitAnswers={agent.submitAnswers}
+              name={name}
+            />
           )}
-          Submit Answers
-        </Button>
-      </motion.div>
+        </AnimatePresence>
+      </>
     );
   }
 
-  // Complete / has analysis state
-  const topPath = analysis.paths?.[0];
-  const updatedText = formatRelativeDate(analysis.updatedAt);
-
+  // Analysis complete state
   return (
     <>
       <motion.div
@@ -277,53 +228,91 @@ export function CareerPathfinder({ isOwnProfile, analysis, name }: CareerPathfin
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-subheading text-white">Career Pathfinder</h2>
-                {analysis.archetype && (
+                <h2 className="text-subheading text-white">
+                  Career Pathfinder
+                </h2>
+                {displayArchetype && (
                   <Badge variant="default" className="text-[10px]">
-                    {analysis.archetype}
+                    {displayArchetype}
                   </Badge>
                 )}
               </div>
-              {topPath && (
+              {displayTopPath && (
                 <div className="mt-2">
                   <div className="flex items-center gap-2">
                     <span className="text-label text-fg-muted">Top Match</span>
-                    <span className={`text-stat text-lg ${getScoreColor(topPath.matchScore)}`}>
-                      {topPath.matchScore}
+                    <span
+                      className={`text-stat text-lg ${getScoreColor(
+                        displayTopPath.matchScore
+                      )}`}
+                    >
+                      {displayTopPath.matchScore}
                     </span>
                   </div>
                   <div className="mt-1 w-40 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${topPath.matchScore}%` }}
+                      animate={{ width: `${displayTopPath.matchScore}%` }}
                       transition={{ duration: 0.8, ease: "easeOut" }}
-                      className={`h-full rounded-full bg-gradient-to-r ${getScoreBarColor(topPath.matchScore)}`}
+                      className={`h-full rounded-full bg-gradient-to-r ${getScoreBarColor(
+                        displayTopPath.matchScore
+                      )}`}
                     />
                   </div>
-                  <p className="text-sm text-fg-dim mt-1">{topPath.title}</p>
+                  <p className="text-sm text-fg-dim mt-1">
+                    {displayTopPath.title}
+                  </p>
                 </div>
               )}
-              {updatedText && (
-                <p className="text-xs text-fg-muted mt-2">Updated {updatedText}</p>
+              {analysis?.updatedAt && (
+                <p className="text-xs text-fg-muted mt-2">
+                  Updated {formatRelativeDate(analysis.updatedAt)}
+                </p>
               )}
             </div>
           </div>
         </div>
-        <Button
-          onClick={() => setShowModal(true)}
-          variant="outline"
-          className="mt-4 w-full"
-        >
-          <Target className="h-4 w-4" />
-          View Full Analysis
-        </Button>
+
+        <div className="flex gap-2 mt-4">
+          <Button
+            onClick={() => setShowModal(true)}
+            variant="outline"
+            className="flex-1"
+          >
+            <Target className="h-4 w-4" />
+            View Full Analysis
+          </Button>
+          {isOwnProfile && (
+            <Button
+              onClick={handleRegenerate}
+              disabled={agent.isLoading}
+              variant="outline"
+              className="flex-1"
+            >
+              {agent.isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Regenerate
+            </Button>
+          )}
+        </div>
       </motion.div>
 
       <AnimatePresence>
         {showModal && (
           <CareerPathfinderModal
-            analysis={analysis}
-            onClose={() => setShowModal(false)}
+            status={modalStatus}
+            actions={agent.actions}
+            step={agent.step}
+            maxSteps={agent.maxSteps}
+            pendingQuestions={agent.pendingQuestions}
+            analysis={modalAnalysis}
+            error={agent.error}
+            isLoading={agent.isLoading}
+            onClose={handleCloseModal}
+            onSubmitAnswers={agent.submitAnswers}
             name={name}
           />
         )}
