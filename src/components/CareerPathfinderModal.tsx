@@ -14,12 +14,69 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { staggerItem, scaleInItem, springBouncy } from "@/lib/motion";
-import {
-  CareerAnalysisData,
-  formatRelativeDate,
-  getScoreColor,
-  getScoreBarColor,
-} from "./CareerPathfinder";
+
+/* ── Duplicated from CareerPathfinder.tsx to avoid circular dep ── */
+
+interface CareerPath {
+  title: string;
+  matchScore: number;
+  salaryRange: string;
+  demandLevel: string;
+  pros: string[];
+  cons: string[];
+  skillCoverage: number;
+}
+
+interface SkillGap {
+  name: string;
+  priority: "High" | "Medium" | "Low";
+}
+
+interface ActionStep {
+  step: number;
+  description: string;
+}
+
+interface CareerAnalysisData {
+  id: string;
+  userId: string;
+  status: "pending" | "questions" | "analyzing" | "complete";
+  summary?: string;
+  archetype?: string;
+  paths?: CareerPath[];
+  skillGaps?: SkillGap[];
+  actionPlan?: ActionStep[];
+  thinking?: string;
+  questions?: { question: string; answer?: string }[];
+  updatedAt?: string;
+}
+
+function formatRelativeDate(date: string | undefined): string {
+  if (!date) return "";
+  const diff = Date.now() - new Date(date).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return "Just now";
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
+}
+
+function getScoreColor(score: number): string {
+  if (score >= 80) return "text-accent";
+  if (score >= 60) return "text-blue-400";
+  if (score >= 40) return "text-amber-400";
+  return "text-red-400";
+}
+
+function getScoreBarColor(score: number): string {
+  if (score >= 80) return "from-accent to-purple-400";
+  if (score >= 60) return "from-blue-500 to-blue-400";
+  if (score >= 40) return "from-amber-500 to-amber-400";
+  return "from-red-500 to-red-400";
+}
+
+/* ─────────────────────────────────────────────────────────────── */
 
 interface CareerPathfinderModalProps {
   analysis: CareerAnalysisData;
