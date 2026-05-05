@@ -193,9 +193,6 @@ function parseAnalysis(text: string) {
     notableProjects: [],
   };
 
-  // Ensure arrays are always returned even if parsing finds no entries
-  const ensureArray = (val: unknown) => (Array.isArray(val) ? val : []);
-
   let section: string | null = null;
   for (const line of lines) {
     if (line.startsWith('ARCHETYPE:')) {
@@ -218,7 +215,14 @@ function parseAnalysis(text: string) {
     }
   }
 
-  return result;
+  return {
+    archetype: result.archetype ?? '',
+    grindPath: result.grindPath ?? '',
+    strengths: Array.isArray(result.strengths) ? result.strengths : [],
+    gaps: Array.isArray(result.gaps) ? result.gaps : [],
+    recommendedFocus: result.recommendedFocus ?? '',
+    notableProjects: Array.isArray(result.notableProjects) ? result.notableProjects : [],
+  };
 }
 
 export async function POST(req: Request) {
