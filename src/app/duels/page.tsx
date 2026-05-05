@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Swords, Clock, Trophy, Check, X, Zap, TrendingUp } from "lucide-react";
+import { Swords, Clock, Trophy, Check, X } from "lucide-react";
 import { pageEntrance, staggerItem } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useUser } from "@clerk/nextjs";
 
 interface DuelPlayer {
   id: string;
@@ -35,8 +34,8 @@ interface Duel {
 }
 
 export default function DuelsPage() {
-  const { user: clerkUser } = useUser();
   const [duels, setDuels] = useState<Duel[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"active" | "past">("active");
 
@@ -47,6 +46,7 @@ export default function DuelsPage() {
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         setDuels(data.duels || []);
+        setCurrentUserId(data.currentUserId);
       } catch {
         setDuels([]);
       } finally {
@@ -69,15 +69,23 @@ export default function DuelsPage() {
       const refresh = await fetch("/api/duels");
       const data = await refresh.json();
       setDuels(data.duels || []);
+      setCurrentUserId(data.currentUserId);
     } catch {
       toast.error(`Failed to ${action} duel.`);
     }
   }
 
-  const filtered = duels.filter((d) => {
+  const tabDuels = duels.filter((d) => {
     if (tab === "active") return d.status === "active";
     return d.status === "completed" || d.status === "declined";
   });
+
+  const yourDuels = tabDuels.filter(
+    (d) => d.challenger.id === currentUserId || d.opponent.id === currentUserId
+  );
+  const otherDuels = tabDuels.filter(
+    (d) => d.challenger.id !== currentUserId && d.opponent.id !== currentUserId
+  );
 
   return (
     <motion.main
@@ -118,20 +126,48 @@ export default function DuelsPage() {
             Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-32 w-full rounded-[var(--radius-standard)]" />
             ))
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-16 text-fg-muted">
-              <Swords className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No {tab} duels.</p>
-            </div>
           ) : (
-            filtered.map((duel) => (
-              <DuelCard
-                key={duel.id}
-                duel={duel}
-                currentUserId={clerkUser ? undefined : undefined}
-                onRespond={respondToDuel}
-              />
-            ))
+            <>
+              {/* Your Duels */}
+              <div className="space-y-4">
+                <div className="text-label text-fg-muted mb-2">Your Duels</div>
+                {yourDuels.length === 0 ? (
+                  <div className="text-center py-8 text-fg-muted">
+                    <Swords className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                    <p>No {tab} duels.</p>
+                  </div>
+                ) : (
+                  yourDuels.map((duel) => (
+                    <DuelCard
+                      key={duel.id}
+                      duel={duel}
+                      currentUserId={currentUserId}
+                      onRespond={respondToDuel}
+                    />
+                  ))
+                )}
+              </div>
+
+              {/* Other Duels */}
+              <div className="space-y-4">
+                <div className="text-label text-fg-muted mb-2">Other Duels</div>
+                {otherDuels.length === 0 ? (
+                  <div className="text-center py-8 text-fg-muted">
+                    <Swords className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                    <p>No {tab} duels.</p>
+                  </div>
+                ) : (
+                  otherDuels.map((duel) => (
+                    <DuelCard
+                      key={duel.id}
+                      duel={duel}
+                      currentUserId={currentUserId}
+                      onRespond={respondToDuel}
+                    />
+                  ))
+                )}
+              </div>
+            </>
           )}
         </motion.div>
       </div>
@@ -141,6 +177,7 @@ export default function DuelsPage() {
 
 function DuelCard({
   duel,
+  currentUserId,
   onRespond,
 }: {
   duel: Duel;
@@ -150,6 +187,9 @@ function DuelCard({
   const isPending = duel.status === "pending";
   const isActive = duel.status === "active";
   const isCompleted = duel.status === "completed";
+
+  const isCurrentUserChallenger = currentUserId === duel.challenger.id;
+  const isCurrentUserOpponent = currentUserId === duel.opponent.id;
 
   const challengerGain = isActive || isCompleted
     ? duel.challenger.xp - duel.challengerStartXP
@@ -191,7 +231,7 @@ function DuelCard({
       <div className="flex items-center gap-4">
         {/* Challenger */}
         <div className="flex-1 text-center">
-          <Avatar className="h-14 w-14 mx-auto border-2 border-accent/40">
+          <Avatar className={`h-14 w-14 mx-auto border-2 ${isCurrentUserChallenger ? 'border-accent ring-2 ring-accent/40 shadow-[0_0_10px_rgba(139,92,246,0.2)]' : 'border-accent/40'}`}>
             <AvatarImage src={duel.challenger.imageUrl || undefined} />
             <AvatarFallback className="bg-gradient-to-br from-accent to-cyan-500 text-white text-lg font-bold">
               {(duel.challenger.name || duel.challenger.githubHandle || "?").charAt(0).toUpperCase()}
@@ -200,6 +240,11 @@ function DuelCard({
           <p className="text-sm font-bold text-white mt-2 truncate">
             {duel.challenger.name || duel.challenger.githubHandle || "Anonymous"}
           </p>
+          {isCurrentUserChallenger && (
+            <span className="inline-block mt-1 px-1.5 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-[10px] font-bold text-accent uppercase tracking-wider">
+              You
+            </span>
+          )}
           <p className="text-xs text-fg-muted">
             {isActive || isCompleted ? `+${challengerGain.toLocaleString()} XP` : `${duel.challenger.xp.toLocaleString()} XP`}
           </p>
@@ -215,7 +260,7 @@ function DuelCard({
 
         {/* Opponent */}
         <div className="flex-1 text-center">
-          <Avatar className="h-14 w-14 mx-auto border-2 border-cyan-500/40">
+          <Avatar className={`h-14 w-14 mx-auto border-2 ${isCurrentUserOpponent ? 'border-cyan-500 ring-2 ring-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'border-cyan-500/40'}`}>
             <AvatarImage src={duel.opponent.imageUrl || undefined} />
             <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-accent text-white text-lg font-bold">
               {(duel.opponent.name || duel.opponent.githubHandle || "?").charAt(0).toUpperCase()}
@@ -224,6 +269,11 @@ function DuelCard({
           <p className="text-sm font-bold text-white mt-2 truncate">
             {duel.opponent.name || duel.opponent.githubHandle || "Anonymous"}
           </p>
+          {isCurrentUserOpponent && (
+            <span className="inline-block mt-1 px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+              You
+            </span>
+          )}
           <p className="text-xs text-fg-muted">
             {isActive || isCompleted ? `+${opponentGain.toLocaleString()} XP` : `${duel.opponent.xp.toLocaleString()} XP`}
           </p>
