@@ -15,6 +15,7 @@ import { StreakHeatmap } from "@/components/StreakHeatmap";
 import { ContributionGraph } from "@/components/ContributionGraph";
 import { pageEntrance, staggerItem, statReveal } from "@/lib/motion";
 import { XPBreakdownModal } from "@/components/XPBreakdownModal";
+import { CareerPathfinder } from "@/components/CareerPathfinder";
 
 const platformIcons: Record<string, React.ReactNode> = {
   githubHandle: <Code2 className="h-4 w-4" />,
@@ -638,6 +639,13 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
           </Link>
         </motion.div>
       )}
+
+      {/* Career Pathfinder */}
+      <CareerPathfinder
+        userId={profile.id}
+        isOwnProfile={isOwnProfile}
+        analysis={profile.careerAnalysis}
+      />
 
       {/* Sync Status */}
       <motion.div variants={staggerItem} className="glass-card p-6">

@@ -70,6 +70,7 @@ model User {
   guild             Guild?   @relation("GuildMembers", fields: [guildId], references: [id])
   adminOfGuilds     Guild[]  @relation("GuildAdmin")
   donatedKeys       DonatedKey[]
+  careerAnalysis    CareerAnalysis?
 
   @@index([xp])
   @@index([clerkId])
@@ -80,21 +81,39 @@ model ActivityLog {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  platform     String // 'GITHUB', 'LEETCODE', 'HACKERRANK', 'CODEFORCES'
-  activityType String // 'COMMIT', 'PR', 'PROBLEM_SOLVED', 'CONTEST', 'BADGE'
+  platform     String
+  activityType String
   description  String?
   xpAwarded    Int      @default(0)
-  metadata     Json? // AI classifications, diff complexity, problem tags, etc.
+  metadata     Json?
   timestamp    DateTime @default(now())
-
-  // Deduplication: external ID from the platform (PR URL, submission ID, etc.)
-  externalId String?
+  externalId   String?
 
   @@index([userId])
   @@index([platform])
   @@index([timestamp])
   @@unique([userId, externalId])
 }
+
+model CareerAnalysis {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String   @default("pending") // pending | questions | analyzing | complete
+  summary     String?  @db.Text
+  archetype   String?
+  paths       Json?    // Array of ranked career paths
+  skillGaps   Json?    // Skills to learn
+  actionPlan  Json?    // Next 90 days plan
+  thinking    String?  @db.Text // Full agent reasoning chain
+  questions   Json?    // Questions asked + answers
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
 
 model SkillTreeState {
   id            String   @id @default(cuid())
