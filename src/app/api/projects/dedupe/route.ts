@@ -84,16 +84,18 @@ export async function POST(req: Request): Promise<NextResponse<DedupeResult | { 
           });
         }
 
-        const remainingLogs = await tx.activityLog.findMany({
-          where: { userId },
-          select: { xpAwarded: true },
+        // Get user's current XP and subtract only the duplicate project XP
+        // Do NOT recalculate from scratch — not all XP sources are activityLogs
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          select: { xp: true },
         });
-
-        const recalculatedXP = remainingLogs.reduce((sum, log) => sum + log.xpAwarded, 0);
+        const currentXP = user?.xp ?? 0;
+        const newXP = Math.max(0, currentXP - userXPDeducted);
 
         await tx.user.update({
           where: { id: userId },
-          data: { xp: recalculatedXP },
+          data: { xp: newXP },
         });
       });
 
