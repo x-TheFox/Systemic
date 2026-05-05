@@ -146,7 +146,7 @@ export function LeaderboardTable() {
 
   return (
     <div className="space-y-8">
-      {/* ── Podium — Top 3 (asymmetric) ── */}
+      {/* ── Podium - Top 3 (asymmetric) ── */}
       <motion.div
         variants={podiumContainer}
         initial="hidden"
@@ -158,7 +158,7 @@ export function LeaderboardTable() {
         {top3[1] && (
           <PodiumCard rank={2} user={top3[1]} maxXP={maxXP} />
         )}
-        {/* Rank 1 — elevated */}
+        {/* Rank 1 - elevated */}
         {top3[0] && (
           <div className="sm:-mt-6">
             <PodiumCard rank={1} user={top3[0]} maxXP={maxXP} />
@@ -170,7 +170,7 @@ export function LeaderboardTable() {
         )}
       </motion.div>
 
-      {/* ── Middle — Rank 4+ ── */}
+      {/* ── Middle - Rank 4+ ── */}
       {middleUsers.length > 0 && (
         <motion.div
           variants={rankContainer}
@@ -251,7 +251,7 @@ export function LeaderboardTable() {
         </motion.div>
       )}
 
-      {/* ── Bottom — Last 2 ── */}
+      {/* ── Bottom - Last 2 ── */}
       {bottom2.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}

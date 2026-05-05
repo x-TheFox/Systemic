@@ -23,19 +23,19 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://systemic.app'),
-  title: "Systemics — AI-Augmented Developer Leaderboard",
+  title: "Systemics - AI-Augmented Developer Leaderboard",
   description: "Track your grind across GitHub, LeetCode, Codeforces, and HackerRank with AI-generated skill trees, dynamic badges, and weekly reports.",
   icons: {
     icon: '/icon.svg',
   },
   openGraph: {
-    title: "Systemics — AI-Augmented Developer Leaderboard",
+    title: "Systemics - AI-Augmented Developer Leaderboard",
     description: "Track your grind. Forge your legacy. Join the guild.",
     images: [{ url: "/api/og", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Systemics — AI-Augmented Developer Leaderboard",
+    title: "Systemics - AI-Augmented Developer Leaderboard",
     description: "Track your grind. Forge your legacy. Join the guild.",
     images: [{ url: "/api/og", width: 1200, height: 630 }],
   },

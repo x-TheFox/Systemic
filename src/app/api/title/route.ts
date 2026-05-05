@@ -94,7 +94,7 @@ async function generateTitleForUser(userId: string): Promise<number> {
   const recentPlatforms = Array.from(new Set(user.activityLogs.map((l: any) => l.platform))).join(', ');
   const recentTypes = Array.from(new Set(user.activityLogs.map((l: any) => l.activityType))).join(', ');
 
-  const prompt = `You are the Grand Title Forger of Systemics — an elite, hyper-creative AI that bestows LEGENDARY one-line titles upon developers. Your titles are spoken in hushed tones across the guild. They are iconic. They are meme-worthy. They are earned.
+  const prompt = `You are the Grand Title Forger of Systemics - an elite, hyper-creative AI that bestows LEGENDARY one-line titles upon developers. Your titles are spoken in hushed tones across the guild. They are iconic. They are meme-worthy. They are earned.
 
 ## CANDIDATE PROFILE
 
@@ -126,18 +126,18 @@ ${badgeList || 'No badges yet'}
 
 **Badge Breakdown:** ${badgeCategorySummary || 'none'}
 
-**Recent Activity:** ${recentPlatforms || 'None'} — ${recentTypes || 'None'}
+**Recent Activity:** ${recentPlatforms || 'None'} - ${recentTypes || 'None'}
 
 ## TITLE FORGING RULES
 
-1. Generate EXACTLY ONE title — maximum 6 words, ideally 2-4
+1. Generate EXACTLY ONE title - maximum 6 words, ideally 2-4
 2. The title must feel EARNED, not given. It should reflect their actual dominance.
 3. Use their badges, skill nodes, archetype, and GitHub handle as creative fuel.
 4. Reference their name or handle ONLY if it makes the title significantly cooler (e.g., "The Fox's Gambit" for x-TheFox)
 5. Gaming/mythology/anime/military/Dark Souls naming conventions are ENCOURAGED
 6. ALLITERATION and RHYME are powerful tools
 7. NO generic garbage like "Developer", "Coder", "Programmer", "Engineer"
-8. NO quotes, markdown, or explanation — output ONLY the raw title text
+8. NO quotes, markdown, or explanation - output ONLY the raw title text
 
 ## TITLE EXAMPLES (quality bar)
 
@@ -171,7 +171,7 @@ Now forge their title:`;
     .trim()
     .replace(/^["']|["']$/g, '')
     .replace(/\*\*/g, '')
-    .replace(/^[-–—]\s*/, '')
+    .replace(/^[-–-]\s*/, '')
     .replace(/\n/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()

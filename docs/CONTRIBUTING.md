@@ -34,10 +34,10 @@ git checkout -b feature/your-feature-name
 ```
 
 Branch naming:
-- `feature/description` — new features
-- `fix/description` — bug fixes
-- `docs/description` — documentation
-- `refactor/description` — code cleanup
+- `feature/description` - new features
+- `fix/description` - bug fixes
+- `docs/description` - documentation
+- `refactor/description` - code cleanup
 
 ---
 
@@ -197,10 +197,10 @@ Include:
 ## Areas Needing Help
 
 Check the issue tracker for:
-- `good first issue` — easy entry points
-- `help wanted` — maintainers need assistance
-- `bug` — something is broken
-- `enhancement` — new features
+- `good first issue` - easy entry points
+- `help wanted` - maintainers need assistance
+- `bug` - something is broken
+- `enhancement` - new features
 
 ---
 

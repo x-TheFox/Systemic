@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
 
-    // SINGLE USER SYNC — called by GitHub Actions loop
+    // SINGLE USER SYNC - called by GitHub Actions loop
     if (userId) {
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) {
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // ORCHESTRATION MODE — return list of users needing sync
+    // ORCHESTRATION MODE - return list of users needing sync
     const users = await prisma.user.findMany({
       select: { id: true, email: true },
       orderBy: { updatedAt: 'asc' }, // sync stalest first
@@ -86,16 +86,16 @@ async function syncUser(user: any) {
   if (user.githubHandle) {
     try {
       const ghMetrics = await fetchGitHubMetrics(user.githubHandle, process.env.GITHUB_TOKEN);
-      // Never let stats regress — if API returns 0, keep the previous value
+      // Never let stats regress - if API returns 0, keep the previous value
       totalCommits = Math.max(ghMetrics.commits, 0);
       totalPRs = Math.max(ghMetrics.mergedPRs, 0);
       // If API returns fewer than we already have, keep the higher value
       if (totalCommits < prevCommits && prevCommits > 0) {
-        console.log(`[Sync] GitHub returned ${totalCommits} commits but we had ${prevCommits} — keeping previous value`);
+        console.log(`[Sync] GitHub returned ${totalCommits} commits but we had ${prevCommits} - keeping previous value`);
         totalCommits = prevCommits;
       }
       if (totalPRs < prevPRs && prevPRs > 0) {
-        console.log(`[Sync] GitHub returned ${totalPRs} PRs but we had ${prevPRs} — keeping previous value`);
+        console.log(`[Sync] GitHub returned ${totalPRs} PRs but we had ${prevPRs} - keeping previous value`);
         totalPRs = prevPRs;
       }
 
@@ -159,7 +159,7 @@ async function syncUser(user: any) {
         });
       }
 
-      // Individual PRs (deduped by PR URL — process ALL, skip already-logged)
+      // Individual PRs (deduped by PR URL - process ALL, skip already-logged)
       const prScores: number[] = [];
       for (const pr of ghMetrics.recentPRs) {
         const existing = await prisma.activityLog.findUnique({
@@ -297,15 +297,15 @@ async function syncUser(user: any) {
 
       // Never let stats regress to 0 if we had data before
       if (leetcodeEasy < prevLeetcodeEasy && prevLeetcodeEasy > 0) {
-        console.log(`[Sync] LeetCode returned ${leetcodeEasy} easy but we had ${prevLeetcodeEasy} — keeping previous`);
+        console.log(`[Sync] LeetCode returned ${leetcodeEasy} easy but we had ${prevLeetcodeEasy} - keeping previous`);
         leetcodeEasy = prevLeetcodeEasy;
       }
       if (leetcodeMedium < prevLeetcodeMedium && prevLeetcodeMedium > 0) {
-        console.log(`[Sync] LeetCode returned ${leetcodeMedium} medium but we had ${prevLeetcodeMedium} — keeping previous`);
+        console.log(`[Sync] LeetCode returned ${leetcodeMedium} medium but we had ${prevLeetcodeMedium} - keeping previous`);
         leetcodeMedium = prevLeetcodeMedium;
       }
       if (leetcodeHard < prevLeetcodeHard && prevLeetcodeHard > 0) {
-        console.log(`[Sync] LeetCode returned ${leetcodeHard} hard but we had ${prevLeetcodeHard} — keeping previous`);
+        console.log(`[Sync] LeetCode returned ${leetcodeHard} hard but we had ${prevLeetcodeHard} - keeping previous`);
         leetcodeHard = prevLeetcodeHard;
       }
 
@@ -345,11 +345,11 @@ async function syncUser(user: any) {
 
       // Never let stats regress to 0
       if (codeforcesSolved < prevCodeforcesSolved && prevCodeforcesSolved > 0) {
-        console.log(`[Sync] Codeforces returned ${codeforcesSolved} solved but we had ${prevCodeforcesSolved} — keeping previous`);
+        console.log(`[Sync] Codeforces returned ${codeforcesSolved} solved but we had ${prevCodeforcesSolved} - keeping previous`);
         codeforcesSolved = prevCodeforcesSolved;
       }
       if (codeforcesRating < prevCodeforcesRating && prevCodeforcesRating > 0) {
-        console.log(`[Sync] Codeforces rating ${codeforcesRating} < previous ${prevCodeforcesRating} — keeping previous`);
+        console.log(`[Sync] Codeforces rating ${codeforcesRating} < previous ${prevCodeforcesRating} - keeping previous`);
         codeforcesRating = prevCodeforcesRating;
       }
 
@@ -390,7 +390,7 @@ async function syncUser(user: any) {
       hackerrankBadges = hrMetrics.badges;
 
       if (hackerrankBadges < prevHackerrankBadges && prevHackerrankBadges > 0) {
-        console.log(`[Sync] HackerRank returned ${hackerrankBadges} badges but we had ${prevHackerrankBadges} — keeping previous`);
+        console.log(`[Sync] HackerRank returned ${hackerrankBadges} badges but we had ${prevHackerrankBadges} - keeping previous`);
         hackerrankBadges = prevHackerrankBadges;
       }
 

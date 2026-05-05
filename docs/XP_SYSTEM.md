@@ -8,7 +8,7 @@ How Systemics converts multi-platform activity into a unified scoring system.
 
 The goal is fairness across platforms. A LeetCode Hard and a complex GitHub PR should be roughly comparable in effort and skill demonstration.
 
-**XP is not just volume — it's weighted by complexity.**
+**XP is not just volume - it's weighted by complexity.**
 
 ---
 

@@ -58,7 +58,7 @@ export async function generateBadgesForUser(userId: string, commits?: string[], 
     .map((b: any) => b.name);
 
   const existingBadgeText = existingBadgeNames.length > 0
-    ? `\nEXISTING BADGES (DO NOT repeat these — generate NEW unique badges):\n${existingBadgeNames.map((n: string) => `- ${n}`).join('\n')}`
+    ? `\nEXISTING BADGES (DO NOT repeat these - generate NEW unique badges):\n${existingBadgeNames.map((n: string) => `- ${n}`).join('\n')}`
     : '';
 
   const hasCommits = commits && commits.length > 0;
@@ -69,13 +69,13 @@ export async function generateBadgesForUser(userId: string, commits?: string[], 
   // Dynamic rarity guidance based on relative guild standing
   let rarityGuidance = '';
   if (percentile >= 90) {
-    rarityGuidance = `This user is TOP-TIER in the guild — Rank #${rank} of ${scores.length} (top ${100 - percentile}%). Relative power: ${relativePower}% of the strongest member. They should be DROWNING in LEGENDARY and EPIC badges. Legendary should be ~40-50% of badges, Epic ~30%, Rare ~15%, Common only for the most basic foundations (~5%). This is a guild leader — their badges must reflect dominance.`;
+    rarityGuidance = `This user is TOP-TIER in the guild - Rank #${rank} of ${scores.length} (top ${100 - percentile}%). Relative power: ${relativePower}% of the strongest member. They should be DROWNING in LEGENDARY and EPIC badges. Legendary should be ~40-50% of badges, Epic ~30%, Rare ~15%, Common only for the most basic foundations (~5%). This is a guild leader - their badges must reflect dominance.`;
   } else if (percentile >= 70) {
-    rarityGuidance = `This user is HIGH-TIER in the guild — Rank #${rank} of ${scores.length} (top ${100 - percentile}%). Relative power: ${relativePower}%. They should get plenty of EPIC and RARE, with some LEGENDARY for their absolute best work (~10-15%). Epic ~30%, Rare ~35%, Common ~20%.`;
+    rarityGuidance = `This user is HIGH-TIER in the guild - Rank #${rank} of ${scores.length} (top ${100 - percentile}%). Relative power: ${relativePower}%. They should get plenty of EPIC and RARE, with some LEGENDARY for their absolute best work (~10-15%). Epic ~30%, Rare ~35%, Common ~20%.`;
   } else if (percentile >= 40) {
-    rarityGuidance = `This user is MID-TIER in the guild — Rank #${rank} of ${scores.length} (${percentile}th percentile). Relative power: ${relativePower}%. MOST badges should be COMMON and RARE. Legendary ONLY for truly exceptional moments (~2-3 max). Epic only for clear mastery (~10%). Rare for solid work (~30%). Common for the rest (~55%).`;
+    rarityGuidance = `This user is MID-TIER in the guild - Rank #${rank} of ${scores.length} (${percentile}th percentile). Relative power: ${relativePower}%. MOST badges should be COMMON and RARE. Legendary ONLY for truly exceptional moments (~2-3 max). Epic only for clear mastery (~10%). Rare for solid work (~30%). Common for the rest (~55%).`;
   } else {
-    rarityGuidance = `This user is BEGINNER-TIER in the guild — Rank #${rank} of ${scores.length} (${percentile}th percentile). Relative power: ${relativePower}%. ALMOST ALL badges must be COMMON. Rare ONLY for genuinely notable moments (~10% max). Epic/Legendary are FORBIDDEN unless they did something truly insane — and even then, cap at 1 epic max. Do NOT inflate rarity. They are still learning.`;
+    rarityGuidance = `This user is BEGINNER-TIER in the guild - Rank #${rank} of ${scores.length} (${percentile}th percentile). Relative power: ${relativePower}%. ALMOST ALL badges must be COMMON. Rare ONLY for genuinely notable moments (~10% max). Epic/Legendary are FORBIDDEN unless they did something truly insane - and even then, cap at 1 epic max. Do NOT inflate rarity. They are still learning.`;
   }
 
   const prompt = `You are the Badge Smith of Systemics, a competitive developer guild. You forge UNIQUE, HYPED, RARE badges for developers based on their entire skill profile.
@@ -102,19 +102,19 @@ ${unlockedNodes}
 DEEP DIVE ARCHETYPE: ${deepDiveData?.archetype || 'Unknown'}
 GRIND PATH: ${deepDiveData?.grindPath || 'Unknown'}
 
-RARITY RUBRIC — THIS IS CRITICAL. Rarity must reflect ACTUAL achievement level, not be spread evenly:
+RARITY RUBRIC - THIS IS CRITICAL. Rarity must reflect ACTUAL achievement level, not be spread evenly:
 ${rarityGuidance}
 
 ABSOLUTE RARITY DEFINITIONS:
 - LEGENDARY (#f59e0b gold): Once-in-a-gang feats. Major systems built, 100+ commit projects shipped, architectural decisions that changed everything, mastery that few possess. NEVER give legendary for basic work.
-- EPIC (#a855f7 purple): Clear mastery in a domain. Complex features shipped, deep expertise demonstrated, significant impact. Not for "wrote some code" — for "wrote code that mattered."
+- EPIC (#a855f7 purple): Clear mastery in a domain. Complex features shipped, deep expertise demonstrated, significant impact. Not for "wrote some code" - for "wrote code that mattered."
 - RARE (#3b82f6 blue): Notable achievements. Solid contributions, good problem solving, above-average work. The "they know their stuff" tier.
 - COMMON (#6b7280 gray): Basic skill recognition. Any real work gets common, but it's still an achievement. Foundation-level, first steps, minor contributions.
 
 RULES:
-1. Generate as many badges as warranted — NO LIMIT. Look at every commit message and create a badge for significant work, patterns, or skills shown.
-2. Each badge must be UNIQUE — do NOT repeat existing badge names listed above.
-3. Descriptions MUST reference specific commit messages, patterns, or actual work done — tie each badge to real evidence.
+1. Generate as many badges as warranted - NO LIMIT. Look at every commit message and create a badge for significant work, patterns, or skills shown.
+2. Each badge must be UNIQUE - do NOT repeat existing badge names listed above.
+3. Descriptions MUST reference specific commit messages, patterns, or actual work done - tie each badge to real evidence.
 4. Names must be HYPE and GAMING-STYLE (e.g., "Cache Commander", "DOM Dominator", "Pipeline Warlord").
 5. RARITY MUST FOLLOW THE RUBRIC ABOVE. Do NOT spread rarities evenly. A beginner does NOT get legendary badges. An elite user does NOT get flooded with common badges.
 6. Colors: common=#6b7280 gray, rare=#3b82f6 blue, epic=#a855f7 purple, legendary=#f59e0b gold
@@ -122,7 +122,7 @@ RULES:
 8. Categories: skill | grind | social | special
 9. If there are no meaningful commits to badge, generate 0 badges.
 
-OUTPUT FORMAT (exactly this format, no markdown code blocks — repeat for every badge):
+OUTPUT FORMAT (exactly this format, no markdown code blocks - repeat for every badge):
 BADGE 1
 name: <name>
 description: <description>

@@ -109,7 +109,7 @@ export default function DonateKeyPage() {
               <h2 className="text-heading text-white">Why donate a key?</h2>
               <p className="text-sm text-fg-muted mt-1">
                 Systemics runs on Groq LLMs to analyze GitHub repos, generate skill trees, 
-                award badges, and more. API keys have rate limits — by donating yours, you 
+                award badges, and more. API keys have rate limits - by donating yours, you 
                 help the whole community grind faster. Your key is encrypted and never exposed.
               </p>
             </div>
@@ -253,7 +253,7 @@ export default function DonateKeyPage() {
                   <div className={`h-2 w-2 rounded-full ${key.isActive ? 'bg-success' : 'bg-fg-muted'}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white font-mono truncate">
-                      {key.provider} — {key.id.slice(0, 8)}...
+                      {key.provider} - {key.id.slice(0, 8)}...
                     </p>
                     <p className="text-[11px] text-fg-muted">
                       {key.useCount.toLocaleString()} uses

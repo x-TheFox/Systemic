@@ -4,7 +4,7 @@ import { currentUser } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/guild-duels — list guild duels
+// GET /api/guild-duels - list guild duels
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/guild-duels — challenge another guild
+// POST /api/guild-duels - challenge another guild
 export async function POST(req: Request) {
   try {
     const user = await currentUser();

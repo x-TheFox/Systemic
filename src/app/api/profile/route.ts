@@ -67,7 +67,7 @@ export async function GET(req: Request) {
     let dbUser;
 
     if (githubHandle) {
-      // Public profile lookup — use public-safe select (no email, no activityLogs, no ghostSnapshots)
+      // Public profile lookup - use public-safe select (no email, no activityLogs, no ghostSnapshots)
       dbUser = await prisma.user.findFirst({
         where: {
           githubHandle: {

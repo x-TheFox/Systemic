@@ -375,7 +375,7 @@ export function XPBreakdownModal({
                                         >
                                           <div className="flex-1 min-w-0">
                                             <p className="text-sm text-white truncate">
-                                              {item.description || "—"}
+                                              {item.description || "-"}
                                             </p>
                                             {formatMeta(item.metadata) && (
                                               <p className="text-xs text-fg-muted mt-0.5">

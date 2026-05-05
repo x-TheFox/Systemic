@@ -87,7 +87,7 @@ List the 5-10 most important files to read to understand what this project does.
     .map(([path, content]) => `--- ${path} ---\n${content.slice(0, 3000)}`)
     .join('\n\n');
 
-  const cardPrompt = `You are a brutal but fair project evaluator for an elite developer guild. Rate this repository HONESTLY — most developers underrate their own work, so YOU must compensate.
+  const cardPrompt = `You are a brutal but fair project evaluator for an elite developer guild. Rate this repository HONESTLY - most developers underrate their own work, so YOU must compensate.
 
 Repo: ${repoName}
 Description: ${repoDescription || 'N/A'}
@@ -96,13 +96,13 @@ Language: ${repoLanguage || 'Unknown'}${forkContext}
 Key files:
 ${filesContext}
 
-RARITY RUBRIC — be GENEROUS. When in doubt, rank UP:
+RARITY RUBRIC - be GENEROUS. When in doubt, rank UP:
 • common: Toy scripts, hello-world tutorials, config repos, single-file utilities
 • rare: Solid personal tools, CLI apps, simple CRUD apps, basic libraries
 • epic: Production-grade apps with multiple features, good architecture, tests, auth, databases, APIs
-• legendary: ANY of the following — distributed systems, real-time features (WebSockets/Pusher), AI/LLM integration, multi-user platforms, payment systems, complex state management, microservices, competitive/gamified systems, open-source with community usage, full-stack with 5+ integrated services. IF it has a database + auth + real-time + AI + multiple user flows, it is LEGENDARY. Period.
+• legendary: ANY of the following - distributed systems, real-time features (WebSockets/Pusher), AI/LLM integration, multi-user platforms, payment systems, complex state management, microservices, competitive/gamified systems, open-source with community usage, full-stack with 5+ integrated services. IF it has a database + auth + real-time + AI + multiple user flows, it is LEGENDARY. Period.
 
-XP VALUE RUBRIC — DO NOT be stingy:
+XP VALUE RUBRIC - DO NOT be stingy:
 • common: 50-150 XP
 • rare: 200-500 XP
 • epic: 600-1500 XP

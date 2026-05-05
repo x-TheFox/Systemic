@@ -125,7 +125,7 @@ export async function fetchGitHubMetrics(handle: string, token?: string): Promis
     console.error('GitHub GraphQL error:', gqlResponse.status);
   }
 
-  // Process REST — get total merged PRs from search API
+  // Process REST - get total merged PRs from search API
   if (restResponse.ok) {
     const restData = await restResponse.json();
     totalMergedPRs = restData?.total_count || 0;

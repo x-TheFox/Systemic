@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/donated-keys/active
  * Returns all active donated Groq keys, decrypted.
- * Protected by CRON_SECRET — only internal services should call this.
+ * Protected by CRON_SECRET - only internal services should call this.
  */
 export async function GET(req: Request) {
   try {

@@ -85,7 +85,7 @@ export async function POST(req: Request): Promise<NextResponse<DedupeResult | { 
         }
 
         // Get user's current XP and subtract only the duplicate project XP
-        // Do NOT recalculate from scratch — not all XP sources are activityLogs
+        // Do NOT recalculate from scratch - not all XP sources are activityLogs
         const user = await tx.user.findUnique({
           where: { id: userId },
           select: { xp: true },

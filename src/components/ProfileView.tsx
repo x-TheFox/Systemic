@@ -365,7 +365,7 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
                 onClick={() => setSelectedBadge(profile.badges[0])}
                 className="w-full py-2 text-center text-xs text-fg-muted hover:text-fg-dim transition-colors mt-2"
               >
-                +{weeklyBadges.length + aiBadges.length - 4} more badges — tap to see all
+                +{weeklyBadges.length + aiBadges.length - 4} more badges - tap to see all
               </button>
             )}
           </motion.div>

@@ -223,7 +223,7 @@ RULES:
 5. Return EMPTY newNodes array if nothing new is warranted
 6. Position nodes to not overlap (spread X, increase Y per tier)
 
-RETURN FORMAT — a JSON object with this exact structure:
+RETURN FORMAT - a JSON object with this exact structure:
 {
   "newNodes": [
     {
@@ -334,16 +334,16 @@ RECENT COMMITS:
 ${recentCommits}
 
 RULES:
-1. Start with ONE root node (tier 0) that should ALWAYS be unlocked — "Code Initiate" or similar
+1. Start with ONE root node (tier 0) that should ALWAYS be unlocked - "Code Initiate" or similar
 2. Create 2-4 PATH branches at tier 1 that match the user's ACTUAL skills
 3. Create deeper nodes (tier 2-3) that represent REAL skills this user clearly has
 4. If user has STRONG signals in an area, make those nodes UNLOCKED
 5. For weaker signals, make nodes LOCKED with reasonable requirements
 6. Names must be MEMORABLE and HYPE (gaming-style). No generic names.
-7. Requirements should be ACHIEVABLE — roughly 1.2-2x their current stats
+7. Requirements should be ACHIEVABLE - roughly 1.2-2x their current stats
 8. Position nodes so paths spread out horizontally (X) and deepen vertically (Y)
 
-RETURN FORMAT — a JSON object with this exact structure:
+RETURN FORMAT - a JSON object with this exact structure:
 {
   "nodes": [
     {

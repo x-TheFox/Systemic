@@ -56,7 +56,7 @@ export const XP_TABLE = {
   } as Record<number, number>,
 } as const;
 
-// Cumulative milestones — one-time XP bonuses when thresholds are crossed
+// Cumulative milestones - one-time XP bonuses when thresholds are crossed
 export const MILESTONE_XP = {
   COMMITS: [
     { threshold: 10, xp: 100, label: 'First Blood' },

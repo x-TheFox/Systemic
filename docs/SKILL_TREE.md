@@ -42,7 +42,7 @@ generatedBy : "ai" or "system"
 createdAt   : timestamp
 ```
 
-**Key constraint**: `@@unique([userId, nodeId])` — each user can only have one node with a given ID.
+**Key constraint**: `@@unique([userId, nodeId])` - each user can only have one node with a given ID.
 
 ---
 

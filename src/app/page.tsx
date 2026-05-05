@@ -45,7 +45,7 @@ export default function Home() {
       animate="visible"
       className="mx-auto max-w-[1440px] px-4 sm:px-6 py-8 space-y-8"
     >
-      {/* Hero Stats Row — asymmetric */}
+      {/* Hero Stats Row - asymmetric */}
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -58,22 +58,22 @@ export default function Home() {
             <HeroStatCard
               icon={<Zap className="h-5 w-5" />}
               label="Total XP"
-              value={stats?.xp?.toLocaleString() ?? "—"}
+              value={stats?.xp?.toLocaleString() ?? "-"}
               color="accent"
               isHero
             />
           </motion.div>
           <motion.div variants={statReveal} className="sm:col-span-2">
-            <StatCard icon={<GitBranch className="h-4 w-4" />} label="Commits" value={stats?.totalCommits?.toLocaleString() ?? "—"} color="cyan" />
+            <StatCard icon={<GitBranch className="h-4 w-4" />} label="Commits" value={stats?.totalCommits?.toLocaleString() ?? "-"} color="cyan" />
           </motion.div>
           <motion.div variants={statReveal} className="sm:col-span-2">
-            <StatCard icon={<Brain className="h-4 w-4" />} label="LC Hard" value={stats?.leetcodeHard?.toString() ?? "—"} color="pink" />
+            <StatCard icon={<Brain className="h-4 w-4" />} label="LC Hard" value={stats?.leetcodeHard?.toString() ?? "-"} color="pink" />
           </motion.div>
           <motion.div variants={statReveal} className="sm:col-span-2">
-            <StatCard icon={<Trophy className="h-4 w-4" />} label="PRs" value={stats?.totalPRs?.toLocaleString() ?? "—"} color="amber" />
+            <StatCard icon={<Trophy className="h-4 w-4" />} label="PRs" value={stats?.totalPRs?.toLocaleString() ?? "-"} color="amber" />
           </motion.div>
           <motion.div variants={statReveal} className="sm:col-span-2">
-            <StatCard icon={<Activity className="h-4 w-4" />} label="Status" value={stats ? "Active" : "—"} color="success" />
+            <StatCard icon={<Activity className="h-4 w-4" />} label="Status" value={stats ? "Active" : "-"} color="success" />
           </motion.div>
         </div>
       )}
@@ -85,7 +85,7 @@ export default function Home() {
 
       {/* Main asymmetric grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left column — 60% */}
+        {/* Left column - 60% */}
         <div className="lg:col-span-7 space-y-6">
           {/* Leaderboard Preview */}
           <motion.div variants={staggerItem} className="glass-card p-6">
@@ -105,7 +105,7 @@ export default function Home() {
           </motion.div>
         </div>
 
-        {/* Right column — 40% */}
+        {/* Right column - 40% */}
         <div className="lg:col-span-5 space-y-6">
           {/* The Pulse */}
           <motion.div variants={staggerItem} className="glass-card p-6">
@@ -127,7 +127,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Tech-Tree Progression — full width */}
+      {/* Tech-Tree Progression - full width */}
       <motion.div variants={staggerItem} className="glass-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <Zap className="h-5 w-5 text-accent" />

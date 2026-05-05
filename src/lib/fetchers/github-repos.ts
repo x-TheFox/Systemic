@@ -155,7 +155,7 @@ export async function checkForkContribution(owner: string, repo: string, token?:
     });
 
     if (!compareRes.ok) {
-      // Compare API failed — err on side of including, but warn
+      // Compare API failed - err on side of including, but warn
       console.warn(`[ForkCheck] Compare API failed for ${owner}/${repo}, assuming fork has contributions`);
       return { isFork: true, hasContribution: true, aheadBy: 0, parentFullName: parent.full_name };
     }

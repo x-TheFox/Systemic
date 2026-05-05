@@ -106,7 +106,7 @@ NOTABLE_PROJECTS:
 - <project 2 and why it's impressive>
 - <project 3 and why it's impressive>
 
-Be thorough, specific, and honest. Don't flatter — identify real strengths AND real gaps.`);
+Be thorough, specific, and honest. Don't flatter - identify real strengths AND real gaps.`);
 
     console.log(`[DeepDive] LLM analysis complete.`);
 

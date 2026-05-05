@@ -6,7 +6,7 @@ import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/donated-keys — list user's donated keys (masked)
+// GET /api/donated-keys - list user's donated keys (masked)
 export async function GET(req: Request) {
   try {
     const user = await currentUser();
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/donated-keys — submit a new key
+// POST /api/donated-keys - submit a new key
 export async function POST(req: Request) {
   try {
     const user = await currentUser();
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
   }
 }
 
-// DELETE /api/donated-keys?id=xxx — revoke a key
+// DELETE /api/donated-keys?id=xxx - revoke a key
 export async function DELETE(req: Request) {
   try {
     const user = await currentUser();

@@ -11,7 +11,7 @@
 
 <p align="center">
   <strong>An AI-augmented competitive leaderboard for developers.</strong><br>
-  Track your grind across GitHub, LeetCode, Codeforces, HackerRank, and TryHackMe — with skill trees that grow with you, badges that accumulate forever, and an AI that never sleeps.
+  Track your grind across GitHub, LeetCode, Codeforces, HackerRank, and TryHackMe - with skill trees that grow with you, badges that accumulate forever, and an AI that never sleeps.
 </p>
 
 ---
@@ -34,9 +34,9 @@ Automatically fetches your coding activity every 6 hours via GitHub Actions:
 **Stat Regression Guards**: XP and stats NEVER regress. If any platform API returns a lower value than stored, the higher value is preserved.
 
 ### AI-Forged Badges (Permanent Collection)
-Every sync cycle, the Badge Smith generates 4 unique badges for each player based on their actual skill profile. Badges are **permanent** — they accumulate forever and are never deleted. Weekly leaderboard badges (MVP, Silver Runner, Bronze Challenger, The Lurker, The Penultimate) rotate each week.
+Every sync cycle, the Badge Smith generates 4 unique badges for each player based on their actual skill profile. Badges are **permanent** - they accumulate forever and are never deleted. Weekly leaderboard badges (MVP, Silver Runner, Bronze Challenger, The Lurker, The Penultimate) rotate each week.
 
-- Badge names are unique — the AI is told your existing badge names and generates new ones each time
+- Badge names are unique - the AI is told your existing badge names and generates new ones each time
 - Rarity tiers: Common, Rare, Epic, Legendary
 - Sorted by rarity in the UI
 - Badge categories: skill, grind, social, special
@@ -45,7 +45,7 @@ Every sync cycle, the Badge Smith generates 4 unique badges for each player base
 The Title Master grants each player a hype one-line title (2-5 words) based on their dominant skills and archetype. Previous titles are archived to **PastTitle** history and displayed as pills on the profile.
 
 ### AI-Generated Skill Trees
-Your tech tree isn't static — it's alive. The Ghost (our AI Architect) generates personalized skill nodes based on your actual activity:
+Your tech tree isn't static - it's alive. The Ghost (our AI Architect) generates personalized skill nodes based on your actual activity:
 
 - Grind LeetCode hards? → It spawns **"Kernel Whisperer"** and **"Concurrency Master"** nodes
 - Ship frontend PRs? → It reveals **"React Artisan"** and **"DOM Surgeon"** paths
@@ -66,7 +66,7 @@ A 5-axis spider chart visualizing your true skills:
 **Ghost Mode**: Toggle an overlay of your stats from last week to compete against your past self.
 
 ### The Pulse (Unlimited Real-time Feed)
-Real-time milestone feed powered by Pusher — no artificial limits:
+Real-time milestone feed powered by Pusher - no artificial limits:
 - PR merges, commits, LeetCode solves, Codeforces contests, HackerRank badges, TryHackMe hacks
 - Node unlocks, achievements, rank-ups, XP milestones
 - All activity types merged and sorted by timestamp (newest first)
@@ -243,7 +243,7 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 1. Push to GitHub
 2. Import project in [Vercel Dashboard](https://vercel.com/dashboard)
 3. Add all environment variables from `.env.example`
-4. Deploy — Vercel runs `prisma generate` in `postinstall` and `build` scripts
+4. Deploy - Vercel runs `prisma generate` in `postinstall` and `build` scripts
 
 ### GitHub Actions Cron Jobs
 
@@ -375,7 +375,7 @@ sequenceDiagram
 
 - **XP never regresses**: `Math.max(user.xp, user.xp + totalDeltaXP)` and per-platform stat guards
 - **PRs use real timestamps**: Activity logs for PRs use `mergedAt`/`createdAt`, not sync time
-- **AI badges accumulate forever**: No `deleteMany` — new badges are generated around existing ones
+- **AI badges accumulate forever**: No `deleteMany` - new badges are generated around existing ones
 - **Weekly badges rotate**: Only `weekly_leaderboard` category badges are deleted each week
 - **Past titles are archived**: Before regenerating, current title is saved to PastTitle with week/year
 - **PR deduplication**: Uses `externalId` (PR URL) as unique constraint

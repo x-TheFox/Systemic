@@ -112,7 +112,7 @@ export async function POST(req: Request) {
           where: { userId: item.userId, repoUrl: item.repoUrl },
         });
         if (existingProject) {
-          console.log(`[Project] Skipping duplicate ${repoName} — already analyzed`);
+          console.log(`[Project] Skipping duplicate ${repoName} - already analyzed`);
           await prisma.projectQueue.update({
             where: { id: item.id },
             data: { status: 'done' },
