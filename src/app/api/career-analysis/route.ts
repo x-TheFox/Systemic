@@ -86,11 +86,11 @@ export async function POST(req: Request) {
             cancelledAt: null,
             archetype: null,
             summary: null,
-            paths: null,
-            skillGaps: null,
-            actionPlan: null,
+            paths: Prisma.JsonNull,
+            skillGaps: Prisma.JsonNull,
+            actionPlan: Prisma.JsonNull,
             thinking: null,
-            questions: null,
+            questions: Prisma.JsonNull,
           },
         });
       } else {
