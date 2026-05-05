@@ -28,14 +28,14 @@ const SkillGapSchema = z.object({
 });
 
 const ActionStepSchema = z.object({
-  week: z.number().min(1).max(12),
-  action: z.string(),
+  step: z.number().min(1).max(12),
+  description: z.string(),
   platform: z.string().optional(),
   estimatedHours: z.number().optional(),
 });
 
 const RankedPathSchema = z.object({
-  name: z.string(),
+  title: z.string(),
   matchScore: z.number().min(0).max(100),
   salaryRange: z.string(),
   demand: z.enum(['High', 'Medium', 'Low']),
@@ -446,7 +446,7 @@ export async function synthesizeAnalysis(
   const fallback: CareerAnalysisOutput = {
     summary: `We analyzed ${profile.name ?? 'this engineer'}\'s profile and identified them as a ${hypotheses.archetype}. Due to processing constraints, this is a preliminary assessment.`,
     paths: researchResults.map((r) => ({
-      name: r.path,
+      title: r.path,
       matchScore: r.matchScore,
       salaryRange: r.salaryRange,
       demand: r.demand,
@@ -456,8 +456,8 @@ export async function synthesizeAnalysis(
     })),
     skillGaps: [],
     actionPlan: [
-      { week: 1, action: 'Review the ranked career paths and pick a primary focus.', estimatedHours: 2 },
-      { week: 2, action: 'Complete a small project or course in the chosen direction.', estimatedHours: 10 },
+      { step: 1, description: 'Review the ranked career paths and pick a primary focus.', estimatedHours: 2 },
+      { step: 2, description: 'Complete a small project or course in the chosen direction.', estimatedHours: 10 },
     ],
     thinking: 'Fallback synthesis due to LLM failure. Partial data used.',
   };

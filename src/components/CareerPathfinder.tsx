@@ -112,10 +112,10 @@ export function CareerPathfinder({ isOwnProfile, analysis, name }: CareerPathfin
     if (!analysis?.questions) return;
     setSubmitting(true);
     try {
-      const filled = analysis.questions.map((q, i) => ({
-        question: q.question,
-        answer: answers[i] || "",
-      }));
+      const filled: Record<string, string> = {};
+      analysis.questions.forEach((q, i) => {
+        filled[q.question] = answers[i] || "";
+      });
       const res = await fetch("/api/career-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -140,7 +140,7 @@ export default function ComparePage() {
     { label: "HR Badges", k1: "hackerrankBadges", k2: "hackerrankBadges" },
   ];
 
-  const comparisonSections = deepDive
+  const comparisonSections = deepDive?.comparison
     ? deepDive.comparison
         .split('\n')
         .map(l => l.trim())
@@ -324,7 +324,7 @@ export default function ComparePage() {
                       </div>
 
                       {/* Skill Signals */}
-                      {Object.keys(dev.skillSignals).length > 0 && (
+                      {dev.skillSignals && Object.keys(dev.skillSignals).length > 0 && (
                         <div className="space-y-2">
                           <h4 className="text-label text-fg-dim flex items-center gap-1.5">
                             <Layers className="h-3 w-3" />
@@ -352,14 +352,14 @@ export default function ComparePage() {
                       )}
 
                       {/* Top Repos */}
-                      {dev.repos.length > 0 && (
+                      {dev.repos?.length > 0 && (
                         <div className="space-y-2">
                           <h4 className="text-label text-fg-dim flex items-center gap-1.5">
                             <GitBranch className="h-3 w-3" />
                             Top Repositories
                           </h4>
                           <div className="space-y-1.5">
-                            {dev.repos.slice(0, 4).map((repo) => (
+                            {dev.repos?.slice(0, 4).map((repo) => (
                               <div key={repo.name} className="flex items-center justify-between text-xs">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <GitCommit className="h-3 w-3 text-fg-muted shrink-0" />
@@ -383,14 +383,14 @@ export default function ComparePage() {
 
                       {/* Strengths & Gaps */}
                       <div className="grid grid-cols-1 gap-3">
-                        {dev.strengths.length > 0 && (
+                        {dev.strengths?.length > 0 && (
                           <div className="space-y-1.5">
                             <h4 className="text-label text-success flex items-center gap-1.5">
                               <TrendingUp className="h-3 w-3" />
                               Strengths
                             </h4>
                             <ul className="space-y-1">
-                              {dev.strengths.slice(0, 3).map((s, idx) => (
+                              {dev.strengths?.slice(0, 3).map((s, idx) => (
                                 <li key={idx} className="text-xs text-fg-dim flex items-start gap-1.5">
                                   <span className="text-success mt-0.5">+</span>
                                   <span>{s}</span>
@@ -399,14 +399,14 @@ export default function ComparePage() {
                             </ul>
                           </div>
                         )}
-                        {dev.gaps.length > 0 && (
+                        {dev.gaps?.length > 0 && (
                           <div className="space-y-1.5">
                             <h4 className="text-label text-destructive flex items-center gap-1.5">
                               <AlertTriangle className="h-3 w-3" />
                               Gaps
                             </h4>
                             <ul className="space-y-1">
-                              {dev.gaps.slice(0, 3).map((g, idx) => (
+                              {dev.gaps?.slice(0, 3).map((g, idx) => (
                                 <li key={idx} className="text-xs text-fg-dim flex items-start gap-1.5">
                                   <span className="text-destructive mt-0.5">-</span>
                                   <span>{g}</span>
