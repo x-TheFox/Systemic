@@ -291,11 +291,11 @@ DOMINANT PATH: ${s1.dominantPath}
 TOP LANGUAGES: ${topLangs1}
 REPOSITORIES: ${s1.repos.length}
 TOP REPOS:
-${s1.repos.slice(0, 5).map(r => `- ${r.name} (${r.language || 'unknown'}, ${r.commits} commits, ${r.stars} stars)`).join('\n')}
+${(s1.repos?.slice(0, 5) ?? []).map(r => `- ${r.name} (${r.language || 'unknown'}, ${r.commits} commits, ${r.stars} stars)`).join('\n')}
 STRENGTHS:
-${s1.strengths.slice(0, 4).map(s => `- ${s}`).join('\n')}
+${(s1.strengths?.slice(0, 4) ?? []).map(s => `- ${s}`).join('\n')}
 GAPS:
-${s1.gaps.slice(0, 3).map(g => `- ${g}`).join('\n')}
+${(s1.gaps?.slice(0, 3) ?? []).map(g => `- ${g}`).join('\n')}
 SKILL SIGNALS:
 ${skillSignals1}
 
@@ -306,11 +306,11 @@ DOMINANT PATH: ${s2.dominantPath}
 TOP LANGUAGES: ${topLangs2}
 REPOSITORIES: ${s2.repos.length}
 TOP REPOS:
-${s2.repos.slice(0, 5).map(r => `- ${r.name} (${r.language || 'unknown'}, ${r.commits} commits, ${r.stars} stars)`).join('\n')}
+${(s2.repos?.slice(0, 5) ?? []).map(r => `- ${r.name} (${r.language || 'unknown'}, ${r.commits} commits, ${r.stars} stars)`).join('\n')}
 STRENGTHS:
-${s2.strengths.slice(0, 4).map(s => `- ${s}`).join('\n')}
+${(s2.strengths?.slice(0, 4) ?? []).map(s => `- ${s}`).join('\n')}
 GAPS:
-${s2.gaps.slice(0, 3).map(g => `- ${g}`).join('\n')}
+${(s2.gaps?.slice(0, 3) ?? []).map(g => `- ${g}`).join('\n')}
 SKILL SIGNALS:
 ${skillSignals2}
 
