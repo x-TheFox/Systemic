@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { staggerItem, scaleInItem, springBouncy } from "@/lib/motion";
+import ReactMarkdown from "react-markdown";
 
 /* ── Duplicated from CareerPathfinder.tsx to avoid circular dep ── */
 
@@ -159,7 +160,9 @@ export function CareerPathfinderModal({ analysis, onClose, name }: CareerPathfin
                     <h3 className="text-label text-fg-dim">Summary</h3>
                   </div>
                   <div className="glass-card p-4">
-                    <p className="text-sm text-fg-dim leading-relaxed">{analysis.summary}</p>
+                    <div className="text-sm text-fg-dim leading-relaxed prose prose-invert prose-sm max-w-none">
+                      <ReactMarkdown>{analysis.summary}</ReactMarkdown>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -322,7 +325,9 @@ export function CareerPathfinderModal({ analysis, onClose, name }: CareerPathfin
                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 border border-accent/20 text-xs font-bold text-accent">
                           {step.step}
                         </span>
-                        <p className="text-sm text-fg-dim leading-relaxed pt-0.5">{step.description}</p>
+                        <div className="text-sm text-fg-dim leading-relaxed pt-0.5 prose prose-invert prose-sm max-w-none">
+                          <ReactMarkdown>{step.description}</ReactMarkdown>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
@@ -362,9 +367,9 @@ export function CareerPathfinderModal({ analysis, onClose, name }: CareerPathfin
                         className="overflow-hidden"
                       >
                         <div className="glass-card p-4 mt-3">
-                          <pre className="text-xs text-fg-muted whitespace-pre-wrap leading-relaxed font-mono">
-                            {analysis.thinking}
-                          </pre>
+                          <div className="text-xs text-fg-muted leading-relaxed prose prose-invert prose-sm max-w-none">
+                            <ReactMarkdown>{analysis.thinking}</ReactMarkdown>
+                          </div>
                         </div>
                       </motion.div>
                     )}
