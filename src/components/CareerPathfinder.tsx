@@ -8,6 +8,7 @@ import {
   Loader2,
   Target,
   Sparkles,
+  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,7 @@ interface CareerPathfinderProps {
   userId: string;
   isOwnProfile: boolean;
   analysis?: CareerAnalysisData;
+  name?: string;
 }
 
 export function formatRelativeDate(date: string | undefined): string {
