@@ -28,8 +28,16 @@ jobs:
 
           echo "=== Base URL: $BASE_URL ==="
 
+          echo "=== Resolving regular duels ==="
           curl -sS --fail --max-time 60 --connect-timeout 10 \
             -X POST "${BASE_URL}/api/duels/resolve" \
+            -H "Authorization: ${AUTH}" \
+            -H "Content-Type: application/json"
+
+          echo ""
+          echo "=== Resolving guild duels ==="
+          curl -sS --fail --max-time 60 --connect-timeout 10 \
+            -X POST "${BASE_URL}/api/guild-duels/resolve" \
             -H "Authorization: ${AUTH}" \
             -H "Content-Type: application/json"
 

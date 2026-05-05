@@ -25,6 +25,18 @@ const privateUserInclude = {
   badges: { orderBy: { createdAt: 'desc' as const } },
   dynamicNodes: true,
   pastTitles: { orderBy: { createdAt: 'desc' as const }, take: 20 },
+  guild: {
+    include: {
+      members: {
+        select: { id: true, name: true, email: true, imageUrl: true, githubHandle: true, title: true, xp: true },
+        orderBy: { xp: 'desc' as const },
+      },
+      admin: {
+        select: { id: true, name: true, githubHandle: true, imageUrl: true },
+      },
+      badges: true,
+    },
+  },
 };
 
 const publicUserSelect = {
@@ -52,6 +64,13 @@ const publicUserSelect = {
   pastTitles: { orderBy: { createdAt: 'desc' as const }, take: 20 },
   guild: {
     include: {
+      members: {
+        select: { id: true, name: true, email: true, imageUrl: true, githubHandle: true, title: true, xp: true },
+        orderBy: { xp: 'desc' as const },
+      },
+      admin: {
+        select: { id: true, name: true, githubHandle: true, imageUrl: true },
+      },
       badges: true,
     },
   },

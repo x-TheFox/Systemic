@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { BadgeGrid, BadgeCard } from "@/components/BadgeGrid";
 import { StreakHeatmap } from "@/components/StreakHeatmap";
+import { ContributionGraph } from "@/components/ContributionGraph";
 import { pageEntrance, staggerItem, statReveal } from "@/lib/motion";
 import { XPBreakdownModal } from "@/components/XPBreakdownModal";
 
@@ -61,6 +62,27 @@ interface Project {
 interface ProfileViewProps {
   profile: any;
   isOwnProfile: boolean;
+}
+
+function formatRelativeTime(date: Date | string | null): string {
+  if (!date) return "Never synced";
+  const diff = Date.now() - new Date(date).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return "Just now";
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
+}
+
+function getSyncStatusColor(date: Date | string | null): string {
+  if (!date) return "text-destructive";
+  const diff = Date.now() - new Date(date).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 24) return "text-success";
+  const days = Math.floor(hours / 24);
+  if (days < 7) return "text-warning";
+  return "text-destructive";
 }
 
 export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
@@ -400,6 +422,13 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
           </motion.div>
         )}
 
+        {/* Contribution Graph */}
+        {profile.id && (
+          <motion.div variants={staggerItem} className="glass-card p-6">
+            <ContributionGraph userId={profile.id} />
+          </motion.div>
+        )}
+
         {/* Projects */}
         {profile.githubHandle && (
           <motion.div variants={staggerItem} className="glass-card p-6">
@@ -573,12 +602,12 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
                 {/* Big Guild Icon */}
                 <div className="relative flex-shrink-0">
                   {profile.guild.iconUrl ? (
-                    <div className="h-20 w-20 rounded-[var(--radius-standard)] overflow-hidden border-2 border-white/[0.08] bg-white/[0.03] flex items-center justify-center shadow-glow">
+                    <div className="h-28 w-28 rounded-[var(--radius-container)] overflow-hidden border-2 border-white/[0.08] bg-white/[0.03] flex items-center justify-center shadow-glow">
                       <img src={profile.guild.iconUrl} alt={profile.guild.name} className="h-full w-full object-contain p-2" />
                     </div>
                   ) : (
-                    <div className="h-20 w-20 rounded-[var(--radius-standard)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border-2 border-accent/30 flex items-center justify-center shadow-glow">
-                      <span className="text-3xl font-bold text-accent">{profile.guild.name.charAt(0).toUpperCase()}</span>
+                    <div className="h-28 w-28 rounded-[var(--radius-container)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border-2 border-accent/30 flex items-center justify-center shadow-glow">
+                      <span className="text-4xl font-bold text-accent">{profile.guild.name.charAt(0).toUpperCase()}</span>
                     </div>
                   )}
                 </div>
@@ -609,6 +638,36 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
           </Link>
         </motion.div>
       )}
+
+      {/* Sync Status */}
+      <motion.div variants={staggerItem} className="glass-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <RefreshCw className="h-5 w-5 text-accent" />
+          <h2 className="text-heading text-white">Sync Status</h2>
+        </div>
+        <div className="space-y-3">
+          {[
+            { label: "GitHub", date: profile?.lastSyncedGitHub },
+            { label: "LeetCode", date: profile?.lastSyncedLeetCode },
+            { label: "Codeforces", date: profile?.lastSyncedCodeforces },
+            { label: "HackerRank", date: profile?.lastSyncedHackerRank },
+          ].map(({ label, date }) => {
+            const colorClass = getSyncStatusColor(date);
+            const dotColor = colorClass === "text-success" ? "bg-emerald-500" : colorClass === "text-warning" ? "bg-amber-500" : "bg-red-500";
+            return (
+              <div key={label} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className={`h-2 w-2 rounded-full ${dotColor}`} />
+                  <span className="text-sm text-fg-dim">{label}</span>
+                </div>
+                <span className={`text-sm font-medium ${colorClass}`}>
+                  {formatRelativeTime(date)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
 
       {/* Unlocked Skill Nodes */}
       {profile?.dynamicNodes && profile.dynamicNodes.length > 0 && (
