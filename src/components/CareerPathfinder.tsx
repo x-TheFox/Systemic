@@ -215,7 +215,7 @@ export function CareerPathfinder({ userId, isOwnProfile, analysis, name }: Caree
         className="glass-card p-6"
       >
         <div className="flex items-center gap-2 mb-4">
-          <Target className="h-5 w-5 text-accent" />
+          <Lightbulb className="h-5 w-5 text-accent" />
           <h2 className="text-heading text-white">Quick Questions</h2>
         </div>
         <p className="text-sm text-fg-muted mb-5">
