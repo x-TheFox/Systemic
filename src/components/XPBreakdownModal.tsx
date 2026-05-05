@@ -204,7 +204,10 @@ export function XPBreakdownModal({
       setExpanded(new Set());
 
       try {
-        const res = await fetch(`/api/xp-breakdown?userId=${encodeURIComponent(userId)}`);
+        const res = await fetch(`/api/xp-breakdown?userId=${encodeURIComponent(userId)}&_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
+        });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error || `Error ${res.status}`);
