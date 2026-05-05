@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { currentUser } from '@clerk/nextjs/server';
 import { runAgentTurn } from '@/lib/ai/careerAgentEngine';
+import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
             status: 'running',
             stepCount: 0,
             maxSteps: 20,
-            agentState: null,
+            agentState: Prisma.JsonNull,
             cancelledAt: null,
             archetype: null,
             summary: null,
