@@ -25,8 +25,8 @@ export async function duckduckgoSearch(query: string, maxResults: number = 5): P
     const results: SearchResult[] = [];
 
     // Parse results from DDG HTML
-    // DDG HTML format: each result is in a .result div
-    const resultBlocks = html.split('<div class="result results_links"');
+    // DDG HTML format: each result is in a .result div (class may include results_links_deep web-result)
+    const resultBlocks = html.split(/<div\s+class="result\s+[^"]*">/);
 
     for (let i = 1; i < resultBlocks.length && results.length < maxResults; i++) {
       const block = resultBlocks[i];
