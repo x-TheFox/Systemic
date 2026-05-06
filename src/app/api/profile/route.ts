@@ -25,10 +25,6 @@ const privateUserInclude = {
   badges: { orderBy: { createdAt: 'desc' as const } },
   dynamicNodes: true,
   pastTitles: { orderBy: { createdAt: 'desc' as const }, take: 20 },
-  lastSyncedGitHub: true,
-  lastSyncedLeetCode: true,
-  lastSyncedCodeforces: true,
-  lastSyncedHackerRank: true,
   careerAnalysis: true,
   guild: {
     include: {
