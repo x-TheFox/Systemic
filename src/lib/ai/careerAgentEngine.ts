@@ -52,41 +52,17 @@ type AgentState = {
 
 const AgentTurnOutputSchema = z.object({
   type: z.enum(['thinking', 'tool_call', 'question', 'complete']),
-  content: z.string().optional().describe('Brief reasoning or thinking text'),
-  tool: z.enum(['web_search', 'get_profile_detail']).optional().describe('Tool name when type=tool_call'),
-  input: z.string().optional().describe('Tool input when type=tool_call'),
-  questions: z.array(z.string()).max(3).optional().describe('Questions when type=question'),
-  analysis: z.object({
-    archetype: z.string(),
-    summary: z.string(),
-    paths: z.array(
-      z.object({
-        title: z.string(),
-        matchScore: z.number().min(0).max(100),
-        salaryRange: z.string(),
-        demand: z.enum(['High', 'Medium', 'Low']),
-        pros: z.array(z.string()),
-        cons: z.array(z.string()),
-        skillCoverage: z.string(),
-      })
-    ),
-    skillGaps: z.array(
-      z.object({
-        skill: z.string(),
-        priority: z.enum(['Critical', 'High', 'Medium', 'Low']),
-        reason: z.string(),
-      })
-    ),
-    actionPlan: z.array(
-      z.object({
-        step: z.number().min(1).max(12),
-        description: z.string(),
-        platform: z.string().optional(),
-        estimatedHours: z.number().optional(),
-      })
-    ),
-    thinking: z.string(),
-  }).optional().describe('Full analysis when type=complete'),
+  content: z.string().optional(),
+  tool: z.enum(['web_search', 'get_profile_detail']).optional(),
+  input: z.string().optional(),
+  questions: z.array(z.string()).max(3).optional(),
+  // Complete analysis fields — all flat, all optional strings
+  archetype: z.string().optional(),
+  summary: z.string().optional(),
+  paths_json: z.string().optional().describe('JSON string containing array of path objects'),
+  gaps_json: z.string().optional().describe('JSON string containing array of skill gap objects'),
+  plan_json: z.string().optional().describe('JSON string containing array of action step objects'),
+  thinking: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -234,19 +210,24 @@ Rules:
 - When ready to finalize, return type: "complete" with the full structured analysis.
 - Each response should include a brief reasoning sentence before any action.
 
-You MUST respond with ONLY a single JSON object matching this schema:
-{
-  "type": "thinking" | "tool_call" | "question" | "complete",
-  "content": "reasoning text (required for thinking, optional otherwise)",
-  "tool": "web_search" | "get_profile_detail" (only when type=tool_call),
-  "input": "tool argument" (only when type=tool_call),
-  "questions": ["q1", "q2"] (only when type=question, max 3),
-  "analysis": { ... } (only when type=complete)
-}
+You MUST respond with ONLY a single JSON object. No markdown code blocks. No extra text.
 
-For COMPLETE, paths need: title, matchScore (0-100), salaryRange, demand ("High"|"Medium"|"Low"), pros[], cons[], skillCoverage.
-skillGaps need: skill, priority ("Critical"|"High"|"Medium"|"Low"), reason.
-actionPlan need: step (1-12), description, platform (optional), estimatedHours (optional).`;
+The JSON object has these fields:
+- "type": "thinking" | "tool_call" | "question" | "complete"
+- "content": "your reasoning" (always include this)
+- "tool": "web_search" (only when type=tool_call)
+- "input": "search query" (only when type=tool_call)
+- "questions": ["q1", "q2"] (only when type=question, max 3)
+
+When type="complete", also include these string fields:
+- "archetype": "Engineer archetype label"
+- "summary": "2-3 sentence summary"
+- "paths_json": 'JSON array of paths: [{"title":"...","matchScore":85,"salaryRange":"$100k-$150k","demand":"High","pros":["..."],"cons":["..."],"skillCoverage":"..."}, ...]'
+- "gaps_json": 'JSON array of gaps: [{"skill":"...","priority":"High","reason":"..."}, ...]'
+- "plan_json": 'JSON array of steps: [{"step":1,"description":"...","platform":"...","estimatedHours":10}, ...]'
+- "thinking": "your reasoning chain"
+
+Keep JSON string values short to avoid truncation.`;
 }
 
 function buildPrompt(state: AgentState): string {
@@ -319,58 +300,51 @@ function getFallbackForState(
 ): z.infer<typeof AgentTurnOutputSchema> {
   if (forceComplete) {
     return {
-      type: 'complete' as const,
-      analysis: {
-        archetype: 'Generalist Software Engineer',
-        summary: 'Analysis completed due to step limit. This is a preliminary assessment.',
-        paths: [
-          {
-            title: 'Fullstack Engineer',
-            matchScore: 50,
-            salaryRange: '$100k - $150k',
-            demand: 'High' as const,
-            pros: ['Broad skill set applicable to many teams'],
-            cons: ['May lack deep specialization'],
-            skillCoverage: 'User has general development experience.',
-          },
-        ],
-        skillGaps: [],
-        actionPlan: [
-          {
-            step: 1,
-            description: 'Review career paths and identify a primary focus area.',
-            estimatedHours: 2,
-          },
-        ],
-        thinking: 'Forced completion due to reaching the maximum number of agent turns.',
-      },
+      type: 'complete',
+      content: 'Forced completion due to reaching the maximum number of agent turns.',
+      archetype: 'Generalist Software Engineer',
+      summary: 'Analysis completed due to step limit. This is a preliminary assessment.',
+      paths_json: JSON.stringify([{
+        title: 'Fullstack Engineer',
+        matchScore: 50,
+        salaryRange: '$100k - $150k',
+        demand: 'High',
+        pros: ['Broad skill set applicable to many teams'],
+        cons: ['May lack deep specialization'],
+        skillCoverage: 'User has general development experience.',
+      }]),
+      gaps_json: JSON.stringify([]),
+      plan_json: JSON.stringify([{
+        step: 1,
+        description: 'Review career paths and identify a primary focus area.',
+        estimatedHours: 2,
+      }]),
+      thinking: 'Forced completion due to reaching the maximum number of agent turns.',
     };
   }
 
   // If we have no researched paths yet, FORCE a web search to make progress
   if (state.researchedPaths.length === 0) {
     return {
-      type: 'tool_call' as const,
+      type: 'tool_call',
+      content: 'No research has been conducted yet. I must search for current market data to identify viable career paths.',
       tool: 'web_search',
       input: 'software engineer career paths 2025 salary demand',
-      content:
-        'No research has been conducted yet. I must search for current market data to identify viable career paths.',
     };
   }
 
   // If research done but no questions asked yet, force more research or thinking
   if (state.researchedPaths.length < 2) {
     return {
-      type: 'tool_call' as const,
+      type: 'tool_call',
+      content: 'Need more research before asking questions or synthesizing. Conducting additional search.',
       tool: 'web_search',
       input: `${state.profileDigest?.skillTree?.currentGrind ?? 'software engineer'} job market 2025 requirements`,
-      content:
-        'Need more research before asking questions or synthesizing. Conducting additional search.',
     };
   }
 
   return {
-    type: 'thinking' as const,
+    type: 'thinking',
     content: 'Continuing synthesis based on available data.',
   };
 }
@@ -389,6 +363,19 @@ function appendThinking(existing: string, actions: AgentAction[]): string {
     }
   }
   return log.trim();
+}
+
+function safeParseJSON<T>(jsonString: string | undefined, fallback: T): T {
+  if (!jsonString) return fallback;
+  try {
+    // Basic repair: remove trailing commas, fix single quotes
+    let text = jsonString.trim();
+    text = text.replace(/,\s*([}\]])/g, '$1');
+    text = text.replace(/'/g, '"');
+    return JSON.parse(text) as T;
+  } catch {
+    return fallback;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -799,12 +786,53 @@ export async function runAgentTurn(
   }
 
   if (llmOutput.type === 'complete') {
-    const analysis = llmOutput.analysis!;
+    // Parse JSON string fields with fallback
+    const paths = safeParseJSON<any[]>(llmOutput.paths_json, []);
+    const skillGaps = safeParseJSON<any[]>(llmOutput.gaps_json, []);
+    const actionPlan = safeParseJSON<any[]>(llmOutput.plan_json, []);
+
+    const analysis: CompleteAnalysis = {
+      archetype: llmOutput.archetype ?? 'Software Engineer',
+      summary: llmOutput.summary ?? 'Analysis complete.',
+      paths: paths.map((p: any) => ({
+        title: p.title ?? 'Unknown Path',
+        matchScore: Math.min(100, Math.max(0, Number(p.matchScore) || 50)),
+        salaryRange: p.salaryRange ?? 'Unknown',
+        demand: ['High', 'Medium', 'Low'].includes(p.demand) ? p.demand : 'Medium',
+        pros: Array.isArray(p.pros) ? p.pros : [],
+        cons: Array.isArray(p.cons) ? p.cons : [],
+        skillCoverage: p.skillCoverage ?? 'General experience.',
+      })),
+      skillGaps: skillGaps.map((g: any) => ({
+        skill: g.skill ?? 'Unknown',
+        priority: ['Critical', 'High', 'Medium', 'Low'].includes(g.priority) ? g.priority : 'Medium',
+        reason: g.reason ?? '',
+      })),
+      actionPlan: actionPlan.map((a: any) => ({
+        step: Math.min(12, Math.max(1, Number(a.step) || 1)),
+        description: a.description ?? 'No description.',
+        platform: a.platform,
+        estimatedHours: a.estimatedHours ? Number(a.estimatedHours) : undefined,
+      })),
+      thinking: llmOutput.thinking ?? '',
+    };
+
+    // Ensure at least one path
+    if (analysis.paths.length === 0) {
+      analysis.paths = [{
+        title: 'Software Engineer',
+        matchScore: 50,
+        salaryRange: 'Unknown',
+        demand: 'Medium',
+        pros: ['General development skills'],
+        cons: ['No specific path identified'],
+        skillCoverage: 'General experience.',
+      }];
+    }
+
     const action: AgentAction = {
       type: 'thinking',
-      content: `Analysis complete. Archetype: ${analysis.archetype}. Paths: ${analysis.paths
-        .map((p) => p.title)
-        .join(', ')}.`,
+      content: `Analysis complete. Archetype: ${analysis.archetype}. Paths: ${analysis.paths.map((p) => p.title).join(', ')}.`,
     };
     actions.push(action);
 

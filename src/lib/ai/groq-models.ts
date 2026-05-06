@@ -657,6 +657,7 @@ export async function groqGenerateStructured<T extends z.ZodType>(
       const { text } = await generateText({
         model: keyEntry.client(model),
         prompt: jsonPrompt,
+        maxOutputTokens: 4000,
       });
 
       if (keyEntry.source === 'donated' && keyEntry.id) {
@@ -739,6 +740,7 @@ export async function groqGenerateStructured<T extends z.ZodType>(
       const { text } = await generateText({
         model: keyEntry.client(model),
         prompt: jsonPrompt,
+        maxOutputTokens: 4000,
       });
       const raw = extractJSON(text);
       const parsed = schema.parse(raw);
