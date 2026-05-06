@@ -37,7 +37,7 @@ export default function PublicProfilePage() {
       }
 
       try {
-        const res = await fetch(`/api/profile?githubHandle=${handle}`);
+        const res = await fetch(`/api/profile?githubHandle=${handle}`, { cache: "no-store" });
         if (!res.ok) {
           if (res.status === 404) {
             setNotFound(true);

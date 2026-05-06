@@ -28,7 +28,7 @@ export default function ProfilePage() {
       }
 
       try {
-        const res = await fetch(`/api/profile?clerkId=${clerkUser.id}`);
+        const res = await fetch(`/api/profile?clerkId=${clerkUser.id}`, { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to load");
         const data = await res.json();
         setProfile(data.user);

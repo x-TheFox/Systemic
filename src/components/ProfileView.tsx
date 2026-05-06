@@ -110,7 +110,7 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
         return;
       }
       try {
-        const res = await fetch(`/api/projects?handle=${profile.githubHandle}`);
+        const res = await fetch(`/api/projects?handle=${profile.githubHandle}`, { cache: "no-store" });
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         setProjects(data.projects || []);
