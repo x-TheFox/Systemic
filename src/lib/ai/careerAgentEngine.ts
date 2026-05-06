@@ -50,26 +50,12 @@ type AgentState = {
 // Zod Schemas
 // ---------------------------------------------------------------------------
 
-const ThinkingSchema = z.object({
-  type: z.literal('thinking'),
-  content: z.string(),
-});
-
-const ToolCallSchema = z.object({
-  type: z.literal('tool_call'),
-  tool: z.enum(['web_search', 'get_profile_detail']),
-  input: z.string(),
-  reasoning: z.string(),
-});
-
-const QuestionSchema = z.object({
-  type: z.literal('question'),
-  questions: z.array(z.string()).max(3),
-  reasoning: z.string(),
-});
-
-const CompleteSchema = z.object({
-  type: z.literal('complete'),
+const AgentTurnOutputSchema = z.object({
+  type: z.enum(['thinking', 'tool_call', 'question', 'complete']),
+  content: z.string().optional().describe('Brief reasoning or thinking text'),
+  tool: z.enum(['web_search', 'get_profile_detail']).optional().describe('Tool name when type=tool_call'),
+  input: z.string().optional().describe('Tool input when type=tool_call'),
+  questions: z.array(z.string()).max(3).optional().describe('Questions when type=question'),
   analysis: z.object({
     archetype: z.string(),
     summary: z.string(),
@@ -100,15 +86,8 @@ const CompleteSchema = z.object({
       })
     ),
     thinking: z.string(),
-  }),
+  }).optional().describe('Full analysis when type=complete'),
 });
-
-const AgentTurnOutputSchema = z.union([
-  ThinkingSchema,
-  ToolCallSchema,
-  QuestionSchema,
-  CompleteSchema,
-]);
 
 // ---------------------------------------------------------------------------
 // Profile Summarization
@@ -255,14 +234,15 @@ Rules:
 - When ready to finalize, return type: "complete" with the full structured analysis.
 - Each response should include a brief reasoning sentence before any action.
 
-You MUST respond with ONLY a single JSON object. No markdown code blocks. No extra text.
-
-Choose ONE of these formats:
-
-1. THINKING: {"type":"thinking","content":"brief reasoning"}
-2. TOOL CALL: {"type":"tool_call","tool":"web_search","input":"search query","reasoning":"why"}
-3. QUESTIONS: {"type":"question","questions":["q1","q2"],"reasoning":"why"}
-4. COMPLETE: {"type":"complete","analysis":{"archetype":"...","summary":"...","paths":[...],"skillGaps":[...],"actionPlan":[...],"thinking":"..."}}
+You MUST respond with ONLY a single JSON object matching this schema:
+{
+  "type": "thinking" | "tool_call" | "question" | "complete",
+  "content": "reasoning text (required for thinking, optional otherwise)",
+  "tool": "web_search" | "get_profile_detail" (only when type=tool_call),
+  "input": "tool argument" (only when type=tool_call),
+  "questions": ["q1", "q2"] (only when type=question, max 3),
+  "analysis": { ... } (only when type=complete)
+}
 
 For COMPLETE, paths need: title, matchScore (0-100), salaryRange, demand ("High"|"Medium"|"Low"), pros[], cons[], skillCoverage.
 skillGaps need: skill, priority ("Critical"|"High"|"Medium"|"Low"), reason.
@@ -373,7 +353,7 @@ function getFallbackForState(
       type: 'tool_call' as const,
       tool: 'web_search',
       input: 'software engineer career paths 2025 salary demand',
-      reasoning:
+      content:
         'No research has been conducted yet. I must search for current market data to identify viable career paths.',
     };
   }
@@ -384,7 +364,7 @@ function getFallbackForState(
       type: 'tool_call' as const,
       tool: 'web_search',
       input: `${state.profileDigest?.skillTree?.currentGrind ?? 'software engineer'} job market 2025 requirements`,
-      reasoning:
+      content:
         'Need more research before asking questions or synthesizing. Conducting additional search.',
     };
   }
@@ -583,18 +563,18 @@ export async function runAgentTurn(
 
     const toolAction: AgentAction = {
       type: 'tool_call',
-      tool: llmOutput.tool,
-      input: llmOutput.input,
-      reasoning: llmOutput.reasoning,
+      tool: llmOutput.tool ?? 'web_search',
+      input: llmOutput.input ?? '',
+      reasoning: llmOutput.content ?? '',
     };
     actions.push(toolAction);
 
     // Execute tool
-    const result = await executeTool(llmOutput.tool, llmOutput.input);
+    const result = await executeTool(toolAction.tool, toolAction.input);
     const resultAction: AgentAction = {
       type: 'tool_result',
-      tool: llmOutput.tool,
-      input: llmOutput.input,
+      tool: toolAction.tool,
+      input: toolAction.input,
       result,
     };
     actions.push(resultAction);
@@ -602,22 +582,22 @@ export async function runAgentTurn(
     // Update state
     state.messages.push({
       role: 'assistant',
-      content: `I will call ${llmOutput.tool}("${llmOutput.input}"). Reasoning: ${llmOutput.reasoning}`,
+      content: `I will call ${toolAction.tool}("${toolAction.input}"). Reasoning: ${llmOutput.content ?? ''}`,
     });
     state.messages.push({
       role: 'tool',
       content: result,
-      name: llmOutput.tool,
+      name: toolAction.tool,
     });
     state.toolCalls.push({
       step: record.stepCount + 1,
-      tool: llmOutput.tool,
-      input: llmOutput.input,
+      tool: toolAction.tool,
+      input: toolAction.input,
       output: result,
     });
 
-    if (llmOutput.tool === 'web_search') {
-      const topic = llmOutput.input;
+    if (toolAction.tool === 'web_search') {
+      const topic = toolAction.input;
       if (!state.researchedPaths.includes(topic)) {
         state.researchedPaths.push(topic);
       }
@@ -675,9 +655,9 @@ export async function runAgentTurn(
 
   // 9. Process final output
   if (llmOutput.type === 'thinking') {
-    const action: AgentAction = { type: 'thinking', content: llmOutput.content };
+    const action: AgentAction = { type: 'thinking', content: llmOutput.content ?? '' };
     actions.push(action);
-    state.messages.push({ role: 'assistant', content: llmOutput.content });
+    state.messages.push({ role: 'assistant', content: llmOutput.content ?? '' });
 
     const newStepCount = record.stepCount + 1;
     const thinkingLog = appendThinking(record.thinking ?? '', actions);
@@ -779,17 +759,18 @@ export async function runAgentTurn(
     }
 
     // Actually ask questions
+    const questions = llmOutput.questions ?? [];
     const action: AgentAction = {
       type: 'question',
-      questions: llmOutput.questions,
-      reasoning: llmOutput.reasoning,
+      questions,
+      reasoning: llmOutput.content ?? '',
     };
     actions.push(action);
     state.messages.push({
       role: 'assistant',
-      content: `I have some clarifying questions:\n${llmOutput.questions
+      content: `I have some clarifying questions:\n${questions
         .map((q, i) => `${i + 1}. ${q}`)
-        .join('\n')}\n\nReasoning: ${llmOutput.reasoning}`,
+        .join('\n')}\n\nReasoning: ${llmOutput.content ?? ''}`,
     });
     state.questionsAsked = true;
 
@@ -818,7 +799,7 @@ export async function runAgentTurn(
   }
 
   if (llmOutput.type === 'complete') {
-    const analysis = llmOutput.analysis;
+    const analysis = llmOutput.analysis!;
     const action: AgentAction = {
       type: 'thinking',
       content: `Analysis complete. Archetype: ${analysis.archetype}. Paths: ${analysis.paths
