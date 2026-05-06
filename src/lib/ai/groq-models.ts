@@ -1,5 +1,5 @@
 import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import { generateText, generateObject } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/crypto';
@@ -557,6 +557,111 @@ export async function groqGenerateObject<T extends z.ZodType>(
     }
     throw error;
   }
+}
+
+export async function groqGenerateStructured<T extends z.ZodType>(
+  schema: T,
+  prompt: string,
+  fallback?: z.infer<T>
+): Promise<{ result: z.infer<T>; usedFallback: boolean }> {
+  const pool = await getPool();
+
+  const attempts: { keyEntry: KeyEntry; model: string }[] = [];
+  for (const model of MODEL_PRIORITY) {
+    for (const keyEntry of pool) {
+      attempts.push({ keyEntry, model });
+    }
+  }
+
+  let lastError: any = null;
+  let triedCount = 0;
+
+  for (const { keyEntry, model } of attempts) {
+    if (!tracker.isAvailable(keyEntry.keyIndex, model)) continue;
+    triedCount++;
+
+    try {
+      tracker.recordRequest(keyEntry.keyIndex, model, prompt.length / 2);
+
+      const { object } = await generateObject({
+        model: keyEntry.client(model),
+        schema,
+        prompt,
+        mode: 'auto',
+      });
+
+      if (keyEntry.source === 'donated' && keyEntry.id) {
+        incrementKeyUsage(keyEntry.id);
+      }
+
+      console.log(
+        `[Groq] Structured output success on ${keyEntry.source} key #${keyEntry.keyIndex + 1} + ${model} after ${triedCount} attempt(s)`
+      );
+
+      return { result: object as z.infer<T>, usedFallback: false };
+    } catch (error: any) {
+      lastError = error;
+
+      if (isRateLimitError(error)) {
+        const retryAfter = getRetryAfter(error);
+        tracker.recordHeaders(keyEntry.keyIndex, model, {
+          status: 429,
+          retryAfter,
+        });
+        console.warn(
+          `[Groq] Rate limited on ${keyEntry.source} key #${keyEntry.keyIndex + 1} + ${model}. Blocked ${retryAfter}s.`
+        );
+        continue;
+      }
+
+      console.warn(
+        `[Groq] Structured gen error on ${keyEntry.source} key #${keyEntry.keyIndex + 1} + ${model}: ${error?.message?.slice(0, 120)}`
+      );
+      continue;
+    }
+  }
+
+  // All combos exhausted. Find earliest unblock time and wait (capped at 120s)
+  let earliestUnblock = Infinity;
+  for (const { keyEntry, model } of attempts) {
+    const t = tracker.getNextAvailableTime(keyEntry.keyIndex, model);
+    if (t < earliestUnblock) earliestUnblock = t;
+  }
+
+  const waitMs = Math.max(0, earliestUnblock - Date.now());
+  const waitSec = Math.min(Math.ceil(waitMs / 1000), 120);
+
+  if (waitSec > 0) {
+    console.warn(`[Groq] All ${triedCount} structured gen attempts exhausted. Waiting ${waitSec}s...`);
+    await sleep(waitSec * 1000);
+  }
+
+  // Final attempt on whatever is now available
+  for (const { keyEntry, model } of attempts) {
+    if (!tracker.isAvailable(keyEntry.keyIndex, model)) continue;
+    try {
+      const { object } = await generateObject({
+        model: keyEntry.client(model),
+        schema,
+        prompt,
+        mode: 'auto',
+      });
+      return { result: object as z.infer<T>, usedFallback: false };
+    } catch (e: any) {
+      lastError = e;
+      break;
+    }
+  }
+
+  // Everything failed — use fallback if provided
+  if (fallback !== undefined) {
+    console.error(
+      `[Groq] All structured gen attempts failed. Using fallback. Last error: ${lastError?.message?.slice(0, 200)}`
+    );
+    return { result: fallback, usedFallback: true };
+  }
+
+  throw lastError || new Error('[Groq] All keys and models exhausted for structured generation.');
 }
 
 // Debug export for observability

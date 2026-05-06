@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { groqGenerateObject } from './groq-models';
+import { groqGenerateStructured } from './groq-models';
 import { duckduckgoSearch } from '../search/duckduckgo';
 import { ingestProfile, ProfileDigest, CareerAnalysisOutput } from './careerAgent';
 
@@ -525,63 +525,49 @@ export async function runAgentTurn(
 
   // 7. LLM call with fallback detection
   let llmOutput: z.infer<typeof AgentTurnOutputSchema>;
-  let usedFallback = false;
 
-  try {
-    llmOutput = await groqGenerateObject(AgentTurnOutputSchema, buildPrompt(state));
-  } catch (error) {
-    usedFallback = true;
-    state.consecutiveFallbacks++;
+  const fallback = getFallbackForState(state, forceComplete);
 
-    if (state.consecutiveFallbacks >= 2) {
-      const errorMsg =
-        'The AI agent is having trouble processing this request. The profile may be too complex or the service is experiencing issues. Please try regenerating the analysis.';
-      await prisma.careerAnalysis.update({
-        where: { sessionId },
-        data: { status: 'error', agentState: state as any },
-      });
-      return {
-        type: 'error',
-        actions: [],
-        nextAction: null,
-        sessionId,
-        step: record.stepCount,
-        maxSteps: record.maxSteps,
-        status: 'error',
-        error: errorMsg,
-      };
-    }
+  let result = await groqGenerateStructured(
+    AgentTurnOutputSchema,
+    buildPrompt(state),
+    fallback
+  );
 
-    // Try simplified prompt: system + profile summary only
-    try {
-      llmOutput = await groqGenerateObject(
-        AgentTurnOutputSchema,
-        buildSimplifiedPrompt(state)
-      );
-      usedFallback = false;
-    } catch (secondError) {
-      state.consecutiveFallbacks++;
-      const errorMsg =
-        'The AI agent is having trouble processing this request. The profile may be too complex or the service is experiencing issues. Please try regenerating the analysis.';
-      await prisma.careerAnalysis.update({
-        where: { sessionId },
-        data: { status: 'error', agentState: state as any },
-      });
-      return {
-        type: 'error',
-        actions: [],
-        nextAction: null,
-        sessionId,
-        step: record.stepCount,
-        maxSteps: record.maxSteps,
-        status: 'error',
-        error: errorMsg,
-      };
-    }
+  // Retry with simplified prompt if first attempt used fallback
+  if (result.usedFallback) {
+    const secondAttempt = await groqGenerateStructured(
+      AgentTurnOutputSchema,
+      buildSimplifiedPrompt(state),
+      fallback
+    );
+    result = secondAttempt;
   }
 
-  if (!usedFallback) {
+  llmOutput = result.result;
+
+  if (result.usedFallback) {
+    state.consecutiveFallbacks++;
+  } else {
     state.consecutiveFallbacks = 0;
+  }
+
+  if (state.consecutiveFallbacks >= 5) {
+    const errorMsg = 'The AI service is experiencing sustained issues. Please try again later.';
+    await prisma.careerAnalysis.update({
+      where: { sessionId },
+      data: { status: 'error', agentState: state as any },
+    });
+    return {
+      type: 'error',
+      actions: [],
+      nextAction: null,
+      sessionId,
+      step: record.stepCount,
+      maxSteps: record.maxSteps,
+      status: 'error',
+      error: errorMsg,
+    };
   }
 
   // 8. Tool execution loop (supports up to 3 tool calls per turn)
@@ -641,62 +627,49 @@ export async function runAgentTurn(
     truncateMessages(state);
 
     // Call LLM again with tool result
-    try {
-      llmOutput = await groqGenerateObject(AgentTurnOutputSchema, buildPrompt(state));
-    } catch (error) {
-      usedFallback = true;
-      state.consecutiveFallbacks++;
+    const loopFallback = getFallbackForState(state, forceComplete);
 
-      if (state.consecutiveFallbacks >= 2) {
-        const errorMsg =
-          'The AI agent is having trouble processing this request. The profile may be too complex or the service is experiencing issues. Please try regenerating the analysis.';
-        const thinkingLog = appendThinking(record.thinking ?? '', actions);
-        await prisma.careerAnalysis.update({
-          where: { sessionId },
-          data: { status: 'error', agentState: state as any, thinking: thinkingLog },
-        });
-        return {
-          type: 'error',
-          actions,
-          nextAction: null,
-          sessionId,
-          step: record.stepCount + 1,
-          maxSteps: record.maxSteps,
-          status: 'error',
-          error: errorMsg,
-        };
-      }
+    let loopResult = await groqGenerateStructured(
+      AgentTurnOutputSchema,
+      buildPrompt(state),
+      loopFallback
+    );
 
-      try {
-        llmOutput = await groqGenerateObject(
-          AgentTurnOutputSchema,
-          buildSimplifiedPrompt(state)
-        );
-        usedFallback = false;
-      } catch (secondError) {
-        state.consecutiveFallbacks++;
-        const errorMsg =
-          'The AI agent is having trouble processing this request. The profile may be too complex or the service is experiencing issues. Please try regenerating the analysis.';
-        const thinkingLog = appendThinking(record.thinking ?? '', actions);
-        await prisma.careerAnalysis.update({
-          where: { sessionId },
-          data: { status: 'error', agentState: state as any, thinking: thinkingLog },
-        });
-        return {
-          type: 'error',
-          actions,
-          nextAction: null,
-          sessionId,
-          step: record.stepCount + 1,
-          maxSteps: record.maxSteps,
-          status: 'error',
-          error: errorMsg,
-        };
-      }
+    // Retry with simplified prompt if first attempt used fallback
+    if (loopResult.usedFallback) {
+      const secondAttempt = await groqGenerateStructured(
+        AgentTurnOutputSchema,
+        buildSimplifiedPrompt(state),
+        loopFallback
+      );
+      loopResult = secondAttempt;
     }
 
-    if (!usedFallback) {
+    llmOutput = loopResult.result;
+
+    if (loopResult.usedFallback) {
+      state.consecutiveFallbacks++;
+    } else {
       state.consecutiveFallbacks = 0;
+    }
+
+    if (state.consecutiveFallbacks >= 5) {
+      const errorMsg = 'The AI service is experiencing sustained issues. Please try again later.';
+      const thinkingLog = appendThinking(record.thinking ?? '', actions);
+      await prisma.careerAnalysis.update({
+        where: { sessionId },
+        data: { status: 'error', agentState: state as any, thinking: thinkingLog },
+      });
+      return {
+        type: 'error',
+        actions,
+        nextAction: null,
+        sessionId,
+        step: record.stepCount + 1,
+        maxSteps: record.maxSteps,
+        status: 'error',
+        error: errorMsg,
+      };
     }
   }
 
