@@ -147,9 +147,13 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   }
 
   async function triggerSync() {
+    if (!profile?.id) {
+      toast.error("Profile not loaded. Try again later.");
+      return;
+    }
     toast.info("Sync triggered in the background. Check back in a minute!");
     try {
-      const res = await fetch("/api/sync", {
+      const res = await fetch(`/api/sync?userId=${profile.id}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ""}` },
       });
