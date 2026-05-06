@@ -145,7 +145,11 @@ export function CareerPathfinder({
 
   const handleCloseModal = () => {
     setShowModal(false);
-    agent.cancel();
+    // Only cancel if the agent is actively running or waiting for answers.
+    // If complete, error, or already cancelled, just close without mutating state.
+    if (agent.status === "running" || agent.status === "questions") {
+      agent.cancel();
+    }
   };
 
   const modalStatus =
