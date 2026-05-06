@@ -1,5 +1,5 @@
 import { createGroq } from '@ai-sdk/groq';
-import { generateText, generateObject } from 'ai';
+import { generateText } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/crypto';
@@ -424,6 +424,76 @@ function extractJSON(text: string): any {
   return recursivelyCleanObject(parsed);
 }
 
+function repairJSON(text: string): string {
+  text = text.trim();
+
+  // Remove markdown code blocks
+  text = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/g, '$1');
+
+  // Remove wrapper tags
+  text = stripLLMWrappers(text);
+
+  // Extract just the first JSON object or array
+  const objectMatch = text.match(/\{[\s\S]*\}/);
+  const arrayMatch = text.match(/\[[\s\S]*\]/);
+  if (objectMatch) {
+    text = objectMatch[0];
+  } else if (arrayMatch) {
+    text = arrayMatch[0];
+  }
+
+  // Remove trailing commas before } or ]
+  text = text.replace(/,\s*([}\]])/g, '$1');
+
+  // Remove single-line comments
+  text = text.replace(/\/\/.*$/gm, '');
+
+  // Remove multi-line comments
+  text = text.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // Fix single quotes to double quotes (basic: only outside of existing double quotes)
+  // This is a best-effort heuristic
+  let inString = false;
+  let escaped = false;
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+    if (char === '\\') {
+      result += char;
+      escaped = true;
+      continue;
+    }
+    if (char === '"' && !inString) {
+      inString = true;
+      result += char;
+      continue;
+    }
+    if (char === '"' && inString) {
+      inString = false;
+      result += char;
+      continue;
+    }
+    if (char === "'" && !inString) {
+      result += '"';
+      continue;
+    }
+    result += char;
+  }
+
+  // Fix unquoted keys: match word: or word followed by colon, wrap in quotes
+  result = result.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
+
+  // Remove BOM and other invisible chars
+  result = result.replace(/^\uFEFF/, '');
+
+  return result.trim();
+}
+
 async function incrementKeyUsage(keyId: string) {
   try {
     await prisma.donatedKey.update({
@@ -565,6 +635,7 @@ export async function groqGenerateStructured<T extends z.ZodType>(
   fallback?: z.infer<T>
 ): Promise<{ result: z.infer<T>; usedFallback: boolean }> {
   const pool = await getPool();
+  const jsonPrompt = `${prompt}\n\nIMPORTANT: Return ONLY a single valid JSON object. Do not wrap in markdown code blocks. Do not add any explanatory text before or after the JSON. Do not use trailing commas.`;
 
   const attempts: { keyEntry: KeyEntry; model: string }[] = [];
   for (const model of MODEL_PRIORITY) {
@@ -583,22 +654,47 @@ export async function groqGenerateStructured<T extends z.ZodType>(
     try {
       tracker.recordRequest(keyEntry.keyIndex, model, prompt.length / 2);
 
-      const { object } = await generateObject({
+      const { text } = await generateText({
         model: keyEntry.client(model),
-        schema,
-        prompt,
-        mode: 'tool', // Force tool-calling mode for strict schema compliance
+        prompt: jsonPrompt,
       });
 
       if (keyEntry.source === 'donated' && keyEntry.id) {
         incrementKeyUsage(keyEntry.id);
       }
 
+      // Try parsing raw first
+      let raw: any;
+      let parseError: any;
+      try {
+        raw = extractJSON(text);
+      } catch (e) {
+        parseError = e;
+      }
+
+      // If raw parse failed, try repair
+      if (!raw) {
+        try {
+          const repaired = repairJSON(text);
+          raw = JSON.parse(repaired);
+          raw = recursivelyCleanObject(raw);
+        } catch (e) {
+          // Both raw and repair failed — log and continue to next key
+          console.warn(
+            `[Groq] JSON parse failed on ${keyEntry.source} key #${keyEntry.keyIndex + 1} + ${model}: ${parseError?.message?.slice(0, 80)} | repair: ${(e as any)?.message?.slice(0, 80)}`
+          );
+          continue;
+        }
+      }
+
+      // Validate with Zod
+      const parsed = schema.parse(raw);
+
       console.log(
         `[Groq] Structured output success on ${keyEntry.source} key #${keyEntry.keyIndex + 1} + ${model} after ${triedCount} attempt(s)`
       );
 
-      return { result: object as z.infer<T>, usedFallback: false };
+      return { result: parsed as z.infer<T>, usedFallback: false };
     } catch (error: any) {
       lastError = error;
 
@@ -640,13 +736,13 @@ export async function groqGenerateStructured<T extends z.ZodType>(
   for (const { keyEntry, model } of attempts) {
     if (!tracker.isAvailable(keyEntry.keyIndex, model)) continue;
     try {
-      const { object } = await generateObject({
+      const { text } = await generateText({
         model: keyEntry.client(model),
-        schema,
-        prompt,
-        mode: 'tool',
+        prompt: jsonPrompt,
       });
-      return { result: object as z.infer<T>, usedFallback: false };
+      const raw = extractJSON(text);
+      const parsed = schema.parse(raw);
+      return { result: parsed as z.infer<T>, usedFallback: false };
     } catch (e: any) {
       lastError = e;
       break;
