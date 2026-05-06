@@ -78,9 +78,9 @@ export async function fetchLeetCodeMetrics(handle: string): Promise<LeetCodeMetr
       contestAttended: contestRanking.attendedContestsCount || 0,
       contestTopPercentage: contestRanking.topPercentage || 0,
     };
-  } catch (error) {
-    console.error('LeetCode fetch error:', error);
-    return { solved: { easy: 0, medium: 0, hard: 0, total: 0 }, rating: 0, ranking: 0, contestAttended: 0, contestTopPercentage: 0 };
+  } catch (error: any) {
+    console.error('[LeetCode] Error fetching metrics:', error);
+    throw new Error(`LeetCode fetch failed: ${error?.message || 'Unknown error'}`);
   }
 }
 
@@ -124,7 +124,8 @@ export async function fetchLeetCodeProblemTags(handle: string): Promise<Record<s
     });
 
     return tags;
-  } catch {
-    return {};
+  } catch (error: any) {
+    console.error('[LeetCode] Error fetching problem tags:', error);
+    throw new Error(`LeetCode problem tags fetch failed: ${error?.message || 'Unknown error'}`);
   }
 }

@@ -48,8 +48,8 @@ export async function fetchCodeforcesMetrics(handle: string): Promise<Codeforces
       solvedCount: solvedProblems.size,
       contestRating: user.rating || 0,
     };
-  } catch (error) {
-    console.error('Codeforces fetch error:', error);
-    return { handle, rating: 0, maxRating: 0, rank: '', maxRank: '', solvedCount: 0, contestRating: 0 };
+  } catch (error: any) {
+    console.error('[Codeforces] Error fetching metrics:', error);
+    throw new Error(`Codeforces fetch failed: ${error?.message || 'Unknown error'}`);
   }
 }

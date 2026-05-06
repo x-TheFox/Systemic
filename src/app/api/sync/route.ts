@@ -79,6 +79,10 @@ async function syncUser(user: any) {
   let codeforcesSolved = prevCodeforcesSolved;
   let hackerrankBadges = prevHackerrankBadges;
 
+  let leetcodeSyncSuccess = false;
+  let codeforcesSyncSuccess = false;
+  let hackerrankSyncSuccess = false;
+
   const isFirstSync = !user.lastSyncedGitHub && !user.lastSyncedLeetCode && !user.lastSyncedCodeforces && !user.lastSyncedHackerRank;
   let deepDiveResult: any = null;
 
@@ -291,23 +295,11 @@ async function syncUser(user: any) {
   if (user.leetcodeHandle) {
     try {
       const lcMetrics = await fetchLeetCodeMetrics(user.leetcodeHandle);
-      leetcodeEasy = lcMetrics.solved.easy;
-      leetcodeMedium = lcMetrics.solved.medium;
-      leetcodeHard = lcMetrics.solved.hard;
 
-      // Never let stats regress to 0 if we had data before
-      if (leetcodeEasy < prevLeetcodeEasy && prevLeetcodeEasy > 0) {
-        console.log(`[Sync] LeetCode returned ${leetcodeEasy} easy but we had ${prevLeetcodeEasy} - keeping previous`);
-        leetcodeEasy = prevLeetcodeEasy;
-      }
-      if (leetcodeMedium < prevLeetcodeMedium && prevLeetcodeMedium > 0) {
-        console.log(`[Sync] LeetCode returned ${leetcodeMedium} medium but we had ${prevLeetcodeMedium} - keeping previous`);
-        leetcodeMedium = prevLeetcodeMedium;
-      }
-      if (leetcodeHard < prevLeetcodeHard && prevLeetcodeHard > 0) {
-        console.log(`[Sync] LeetCode returned ${leetcodeHard} hard but we had ${prevLeetcodeHard} - keeping previous`);
-        leetcodeHard = prevLeetcodeHard;
-      }
+      // Never let stats regress - if API returns fewer than we have, keep the higher value
+      leetcodeEasy = Math.max(lcMetrics.solved.easy, prevLeetcodeEasy ?? 0);
+      leetcodeMedium = Math.max(lcMetrics.solved.medium, prevLeetcodeMedium ?? 0);
+      leetcodeHard = Math.max(lcMetrics.solved.hard, prevLeetcodeHard ?? 0);
 
       const deltaEasy = Math.max(0, leetcodeEasy - prevLeetcodeEasy);
       const deltaMedium = Math.max(0, leetcodeMedium - prevLeetcodeMedium);
@@ -331,6 +323,7 @@ async function syncUser(user: any) {
           metadata: { solved: lcMetrics.solved, rating: lcMetrics.rating, delta: { easy: deltaEasy, medium: deltaMedium, hard: deltaHard } },
         });
       }
+      leetcodeSyncSuccess = true;
     } catch (err) {
       console.error('LeetCode sync error for', user.leetcodeHandle, err);
     }
@@ -340,18 +333,10 @@ async function syncUser(user: any) {
   if (user.codeforcesHandle) {
     try {
       const cfMetrics = await fetchCodeforcesMetrics(user.codeforcesHandle);
-      codeforcesRating = cfMetrics.rating;
-      codeforcesSolved = cfMetrics.solvedCount;
 
-      // Never let stats regress to 0
-      if (codeforcesSolved < prevCodeforcesSolved && prevCodeforcesSolved > 0) {
-        console.log(`[Sync] Codeforces returned ${codeforcesSolved} solved but we had ${prevCodeforcesSolved} - keeping previous`);
-        codeforcesSolved = prevCodeforcesSolved;
-      }
-      if (codeforcesRating < prevCodeforcesRating && prevCodeforcesRating > 0) {
-        console.log(`[Sync] Codeforces rating ${codeforcesRating} < previous ${prevCodeforcesRating} - keeping previous`);
-        codeforcesRating = prevCodeforcesRating;
-      }
+      // Never let stats regress - if API returns fewer than we have, keep the higher value
+      codeforcesSolved = Math.max(cfMetrics.solvedCount, prevCodeforcesSolved ?? 0);
+      codeforcesRating = Math.max(cfMetrics.rating, prevCodeforcesRating ?? 0);
 
       const deltaSolved = Math.max(0, codeforcesSolved - prevCodeforcesSolved);
       const deltaRatingMilestone = Math.max(0, Math.floor(codeforcesRating / 100) - Math.floor(prevCodeforcesRating / 100));
@@ -378,6 +363,7 @@ async function syncUser(user: any) {
           metadata: { rank: cfMetrics.rank, maxRating: cfMetrics.maxRating, deltaSolved, deltaRatingMilestone },
         });
       }
+      codeforcesSyncSuccess = true;
     } catch (err) {
       console.error('Codeforces sync error for', user.codeforcesHandle, err);
     }
@@ -387,12 +373,9 @@ async function syncUser(user: any) {
   if (user.hackerrankHandle) {
     try {
       const hrMetrics = await fetchHackerRankMetrics(user.hackerrankHandle);
-      hackerrankBadges = hrMetrics.badges;
 
-      if (hackerrankBadges < prevHackerrankBadges && prevHackerrankBadges > 0) {
-        console.log(`[Sync] HackerRank returned ${hackerrankBadges} badges but we had ${prevHackerrankBadges} - keeping previous`);
-        hackerrankBadges = prevHackerrankBadges;
-      }
+      // Never let stats regress - if API returns fewer than we have, keep the higher value
+      hackerrankBadges = Math.max(hrMetrics.badges, prevHackerrankBadges ?? 0);
 
       const deltaBadges = Math.max(0, hackerrankBadges - prevHackerrankBadges);
       const hrXP = (deltaBadges * XP_TABLE.HACKERRANK.BADGE) +
@@ -411,6 +394,7 @@ async function syncUser(user: any) {
           metadata: { badges: hackerrankBadges, certificates: hrMetrics.certificates, stars: hrMetrics.stars, deltaBadges },
         });
       }
+      hackerrankSyncSuccess = true;
     } catch (err) {
       console.error('HackerRank sync error for', user.hackerrankHandle, err);
     }
@@ -467,9 +451,9 @@ async function syncUser(user: any) {
       codeforcesSolved,
       hackerrankBadges,
       lastSyncedGitHub: user.githubHandle ? now : user.lastSyncedGitHub,
-      lastSyncedLeetCode: user.leetcodeHandle ? now : user.lastSyncedLeetCode,
-      lastSyncedCodeforces: user.codeforcesHandle ? now : user.lastSyncedCodeforces,
-      lastSyncedHackerRank: user.hackerrankHandle ? now : user.lastSyncedHackerRank,
+      lastSyncedLeetCode: leetcodeSyncSuccess ? now : user.lastSyncedLeetCode,
+      lastSyncedCodeforces: codeforcesSyncSuccess ? now : user.lastSyncedCodeforces,
+      lastSyncedHackerRank: hackerrankSyncSuccess ? now : user.lastSyncedHackerRank,
     },
   });
 
