@@ -1,5 +1,5 @@
 import { createGroq } from '@ai-sdk/groq';
-import { generateText, generateObject } from 'ai';
+import { generateText } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/crypto';
@@ -565,6 +565,7 @@ export async function groqGenerateStructured<T extends z.ZodType>(
   fallback?: z.infer<T>
 ): Promise<{ result: z.infer<T>; usedFallback: boolean }> {
   const pool = await getPool();
+  const jsonPrompt = `${prompt}\n\nIMPORTANT: Return ONLY a valid JSON object matching the required schema. Do not wrap in markdown code blocks. Do not add any explanatory text before or after the JSON.`;
 
   const attempts: { keyEntry: KeyEntry; model: string }[] = [];
   for (const model of MODEL_PRIORITY) {
@@ -583,22 +584,28 @@ export async function groqGenerateStructured<T extends z.ZodType>(
     try {
       tracker.recordRequest(keyEntry.keyIndex, model, prompt.length / 2);
 
-      const { object } = await generateObject({
+      const { text } = await generateText({
         model: keyEntry.client(model),
-        schema,
-        prompt,
-        mode: 'auto',
+        prompt: jsonPrompt,
+        providerOptions: {
+          groq: {
+            responseFormat: { type: 'json_object' },
+          },
+        },
       });
 
       if (keyEntry.source === 'donated' && keyEntry.id) {
         incrementKeyUsage(keyEntry.id);
       }
 
+      const raw = extractJSON(text);
+      const parsed = schema.parse(raw);
+
       console.log(
         `[Groq] Structured output success on ${keyEntry.source} key #${keyEntry.keyIndex + 1} + ${model} after ${triedCount} attempt(s)`
       );
 
-      return { result: object as z.infer<T>, usedFallback: false };
+      return { result: parsed as z.infer<T>, usedFallback: false };
     } catch (error: any) {
       lastError = error;
 
@@ -640,13 +647,18 @@ export async function groqGenerateStructured<T extends z.ZodType>(
   for (const { keyEntry, model } of attempts) {
     if (!tracker.isAvailable(keyEntry.keyIndex, model)) continue;
     try {
-      const { object } = await generateObject({
+      const { text } = await generateText({
         model: keyEntry.client(model),
-        schema,
-        prompt,
-        mode: 'auto',
+        prompt: jsonPrompt,
+        providerOptions: {
+          groq: {
+            responseFormat: { type: 'json_object' },
+          },
+        },
       });
-      return { result: object as z.infer<T>, usedFallback: false };
+      const raw = extractJSON(text);
+      const parsed = schema.parse(raw);
+      return { result: parsed as z.infer<T>, usedFallback: false };
     } catch (e: any) {
       lastError = e;
       break;
