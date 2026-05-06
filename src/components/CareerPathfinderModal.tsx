@@ -14,6 +14,7 @@ import {
   TrendingUp,
   BookOpen,
   Sparkles,
+  Play,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,8 +34,10 @@ interface CareerPathfinderModalProps {
   analysis: AgentAnalysis | null;
   error: string | null;
   isLoading: boolean;
+  paused: boolean;
   onClose: () => void;
   onSubmitAnswers: (answers: Record<string, string>) => void;
+  onContinue: () => void;
   name?: string;
 }
 
@@ -100,8 +103,10 @@ export function CareerPathfinderModal({
   analysis,
   error,
   isLoading,
+  paused,
   onClose,
   onSubmitAnswers,
+  onContinue,
   name,
 }: CareerPathfinderModalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -191,12 +196,22 @@ export function CareerPathfinderModal({
         <div className="flex-1 flex flex-col overflow-hidden">
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4">
             {(status === "running" || status === "questions") && (
-              <TerminalLog
-                actions={actions}
-                isLoading={isLoading}
-                expandedTools={expandedTools}
-                toggleTool={toggleTool}
-              />
+              <>
+                <TerminalLog
+                  actions={actions}
+                  isLoading={isLoading}
+                  expandedTools={expandedTools}
+                  toggleTool={toggleTool}
+                />
+                {paused && !isLoading && (
+                  <div className="flex justify-center py-4">
+                    <Button onClick={onContinue} className="gap-2">
+                      <Play className="h-4 w-4" />
+                      Continue Analysis
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
 
             {status === "complete" && analysis && (

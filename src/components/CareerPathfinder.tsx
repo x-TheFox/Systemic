@@ -202,8 +202,10 @@ export function CareerPathfinder({
               analysis={agent.analysis}
               error={agent.error}
               isLoading={agent.isLoading}
+              paused={agent.paused}
               onClose={handleCloseModal}
               onSubmitAnswers={agent.submitAnswers}
+              onContinue={agent.continue_}
               name={name}
             />
           )}
@@ -311,8 +313,10 @@ export function CareerPathfinder({
             analysis={modalAnalysis}
             error={agent.error}
             isLoading={agent.isLoading}
+            paused={agent.paused}
             onClose={handleCloseModal}
             onSubmitAnswers={agent.submitAnswers}
+            onContinue={agent.continue_}
             name={name}
           />
         )}

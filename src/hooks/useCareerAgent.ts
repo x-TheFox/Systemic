@@ -61,6 +61,7 @@ export function useCareerAgent(userId: string) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [stepTrigger, setStepTrigger] = useState(0);
+  const [paused, setPaused] = useState(false);
 
   const inFlightRef = useRef(false);
   const scheduledRef = useRef(false);
@@ -75,6 +76,7 @@ export function useCareerAgent(userId: string) {
       setStatus("complete");
       setAnalysis(result.analysis ?? null);
       setPendingQuestions(null);
+      setPaused(false);
       return;
     }
 
@@ -82,12 +84,14 @@ export function useCareerAgent(userId: string) {
       setStatus("error");
       setError(result.error ?? "An unknown error occurred");
       setPendingQuestions(null);
+      setPaused(false);
       return;
     }
 
     if (result.type === "cancelled") {
       setStatus("cancelled");
       setPendingQuestions(null);
+      setPaused(false);
       return;
     }
 
@@ -98,12 +102,18 @@ export function useCareerAgent(userId: string) {
           a.type === "question"
       );
       setPendingQuestions(questionAction?.questions ?? null);
+      setPaused(false);
       return;
     }
 
     // step_complete
     setStatus("running");
     setPendingQuestions(null);
+
+    const hadWork = result.actions.some(
+      (a) => a.type === "tool_call" || a.type === "tool_result" || a.type === "question"
+    );
+    setPaused(!hadWork && result.type === "step_complete");
 
     if (result.nextAction === "step") {
       setStepTrigger((n) => n + 1);
@@ -148,19 +158,25 @@ export function useCareerAgent(userId: string) {
       status === "running" &&
       !isLoading &&
       !inFlightRef.current &&
-      !scheduledRef.current
+      !scheduledRef.current &&
+      !paused
     ) {
       scheduledRef.current = true;
       const id = setTimeout(() => {
         scheduledRef.current = false;
         stepForward();
-      }, 500);
+      }, 800);
       return () => {
         clearTimeout(id);
         scheduledRef.current = false;
       };
     }
-  }, [stepTrigger, status, isLoading, stepForward]);
+  }, [stepTrigger, status, isLoading, paused, stepForward]);
+
+  const continue_ = useCallback(() => {
+    setPaused(false);
+    setStepTrigger((n) => n + 1);
+  }, []);
 
   const start = useCallback(async () => {
     if (inFlightRef.current) return;
@@ -173,6 +189,7 @@ export function useCareerAgent(userId: string) {
     setPendingQuestions(null);
     setStatus("running");
     setStepTrigger(0);
+    setPaused(false);
 
     try {
       const res = await fetch("/api/career-analysis", {
@@ -302,6 +319,7 @@ export function useCareerAgent(userId: string) {
     stepForward,
     submitAnswers,
     cancel,
+    continue_,
     status,
     actions,
     step,
@@ -310,5 +328,6 @@ export function useCareerAgent(userId: string) {
     analysis,
     error,
     isLoading,
+    paused,
   };
 }
