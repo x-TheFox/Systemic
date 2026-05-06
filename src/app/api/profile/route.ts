@@ -29,6 +29,7 @@ const privateUserInclude = {
   lastSyncedLeetCode: true,
   lastSyncedCodeforces: true,
   lastSyncedHackerRank: true,
+  careerAnalysis: true,
   guild: {
     include: {
       members: {
@@ -66,6 +67,7 @@ const publicUserSelect = {
   lastSyncedLeetCode: true,
   lastSyncedCodeforces: true,
   lastSyncedHackerRank: true,
+  careerAnalysis: true,
   badges: { orderBy: { createdAt: 'desc' as const } },
   skillTreeState: true,
   dynamicNodes: true,
