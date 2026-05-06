@@ -219,7 +219,7 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
     { key: "totalCommits", label: "Commits", value: profile?.totalCommits || 0, color: "cyan" as const },
     { key: "totalPRs", label: "PRs", value: profile?.totalPRs || 0, color: "success" as const },
     { key: "totalReviews", label: "Reviews", value: profile?.totalReviews || 0, color: "purple" as const },
-    { key: "leetcodeHard", label: "LC Hard", value: profile?.leetcodeHard || 0, color: "pink" as const },
+    { key: "totalLC", label: "Total LC", value: (profile?.leetcodeEasy || 0) + (profile?.leetcodeMedium || 0) + (profile?.leetcodeHard || 0), color: "pink" as const },
     { key: "codeforcesRating", label: "CF Rating", value: profile?.codeforcesRating || 0, color: "amber" as const },
     { key: "hackerrankBadges", label: "HR Badges", value: profile?.hackerrankBadges || 0, color: "warning" as const },
   ];
