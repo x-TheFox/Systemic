@@ -43,6 +43,7 @@ type AgentState = {
   toolCalls: Array<{ step: number; tool: string; input: string; output: string }>;
   profileDigest?: ProfileDigest;
   consecutiveFallbacks: number;
+  questionsAsked: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -234,11 +235,17 @@ You have access to these tools:
 - web_search(query): Search the web for current market data, salary ranges, job requirements, and demand levels.
 - get_profile_detail(detail): Fetch specific profile details (currently limited — use the profile digest already in context).
 
+PHASE RULES (MUST FOLLOW):
+1. RESEARCH PHASE: First, analyze the profile and conduct AT LEAST 2 web searches to understand current market conditions for relevant career paths.
+2. QUESTIONS PHASE: ONLY after conducting at least 2 web searches, you MAY ask 1-3 clarifying questions. The questions MUST be specific and relevant to what you discovered in your research.
+3. SYNTHESIS PHASE: After receiving answers (if any), synthesize the final analysis. NEVER ask questions again after answers are received.
+4. You may ask questions AT MOST ONCE during the entire analysis.
+
 Your workflow:
-1. Analyze the user's profile and identify 3-6 promising career paths
-2. Research each path using web_search — check salary, requirements, demand, how the user's skills map
-3. If the profile is ambiguous or sparse, ask 1-3 clarifying questions
-4. Synthesize a final analysis with: archetype, ranked paths (0-100), skill gaps with priorities, 90-day action plan
+1. Analyze the user's profile
+2. Research paths using web_search (at least 2 searches minimum)
+3. Ask clarifying questions ONLY if needed and ONLY after research
+4. Synthesize final analysis with: archetype, ranked paths (0-100), skill gaps with priorities, 90-day action plan
 
 Rules:
 - You have a maximum of ${maxSteps} turns total. Use them wisely.
@@ -322,6 +329,7 @@ function createInitialState(profile: ProfileDigest, maxSteps: number): AgentStat
     toolCalls: [],
     profileDigest: profile,
     consecutiveFallbacks: 0,
+    questionsAsked: false,
   };
 }
 
@@ -367,6 +375,17 @@ function getFallbackForState(
       input: 'software engineer career paths 2025 salary demand',
       reasoning:
         'No research has been conducted yet. I must search for current market data to identify viable career paths.',
+    };
+  }
+
+  // If research done but no questions asked yet, force more research or thinking
+  if (state.researchedPaths.length < 2) {
+    return {
+      type: 'tool_call' as const,
+      tool: 'web_search',
+      input: `${state.profileDigest?.skillTree?.currentGrind ?? 'software engineer'} job market 2025 requirements`,
+      reasoning:
+        'Need more research before asking questions or synthesizing. Conducting additional search.',
     };
   }
 
@@ -468,6 +487,7 @@ export async function runAgentTurn(
       if (!state.userAnswers) state.userAnswers = {};
       if (!state.toolCalls) state.toolCalls = [];
       if (typeof state.consecutiveFallbacks !== 'number') state.consecutiveFallbacks = 0;
+      if (typeof state.questionsAsked !== 'boolean') state.questionsAsked = false;
     } catch {
       state = await bootstrapState(userId, record.maxSteps);
     }
@@ -483,6 +503,11 @@ export async function runAgentTurn(
       role: 'user',
       content: `Here are my answers to your questions:\n${answerLines.join('\n\n')}`,
     });
+    state.messages.push({
+      role: 'system',
+      content: 'Questions have been answered. You MUST NOT ask more questions. Proceed directly to synthesizing the final analysis. Return type: "complete" with the full structured analysis.',
+    });
+    state.questionsAsked = true;
   }
 
   // 5. Check max steps
@@ -706,6 +731,81 @@ export async function runAgentTurn(
   }
 
   if (llmOutput.type === 'question') {
+    // ENFORCE: questions only after at least 2 searches
+    if (state.researchedPaths.length < 2) {
+      // Override to a forced web search
+      const forcedAction: AgentAction = {
+        type: 'tool_call',
+        tool: 'web_search',
+        input: `${state.profileDigest?.skillTree?.currentGrind ?? 'software engineer'} career paths 2025 salary requirements`,
+        reasoning: 'Need to conduct more research before asking relevant questions.',
+      };
+      actions.push(forcedAction);
+      state.messages.push({
+        role: 'assistant',
+        content: 'I need to conduct more research before asking relevant questions.',
+      });
+
+      const newStepCount = record.stepCount + 1;
+      const thinkingLog = appendThinking(record.thinking ?? '', actions);
+      await prisma.careerAnalysis.update({
+        where: { sessionId },
+        data: {
+          stepCount: newStepCount,
+          agentState: state as any,
+          status: 'running',
+          thinking: thinkingLog,
+        },
+      });
+
+      return {
+        type: 'step_complete',
+        actions,
+        nextAction: 'step',
+        sessionId,
+        step: newStepCount,
+        maxSteps: record.maxSteps,
+        status: 'running',
+      };
+    }
+
+    // ENFORCE: questions at most once
+    if (state.questionsAsked) {
+      // Override to force completion
+      const forcedAction: AgentAction = {
+        type: 'thinking',
+        content: 'Questions were already asked and answered. Proceeding to final synthesis.',
+      };
+      actions.push(forcedAction);
+      state.messages.push({
+        role: 'assistant',
+        content: 'Questions were already asked and answered. Proceeding to final synthesis.',
+      });
+
+      const newStepCount = record.stepCount + 1;
+      const thinkingLog = appendThinking(record.thinking ?? '', actions);
+      await prisma.careerAnalysis.update({
+        where: { sessionId },
+        data: {
+          stepCount: newStepCount,
+          agentState: state as any,
+          status: 'running',
+          thinking: thinkingLog,
+        },
+      });
+
+      return {
+        type: 'step_complete',
+        actions,
+        nextAction: 'step',
+        sessionId,
+        step: newStepCount,
+        maxSteps: record.maxSteps,
+        status: 'running',
+      };
+    }
+
+    // Actually ask questions
     const action: AgentAction = {
       type: 'question',
       questions: llmOutput.questions,
@@ -718,6 +818,7 @@ export async function runAgentTurn(
         .map((q, i) => `${i + 1}. ${q}`)
         .join('\n')}\n\nReasoning: ${llmOutput.reasoning}`,
     });
+    state.questionsAsked = true;
 
     const newStepCount = record.stepCount + 1;
     const thinkingLog = appendThinking(record.thinking ?? '', actions);
