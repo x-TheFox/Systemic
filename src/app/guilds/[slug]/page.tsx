@@ -2,11 +2,10 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Users, Trophy, Crown, ArrowLeft, LogOut, Pencil, Upload, X, Loader2 } from "lucide-react";
 import { pageEntrance, staggerItem } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -148,240 +147,248 @@ export default function GuildDetailPage() {
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <Skeleton className="w-96 h-96 rounded-[var(--radius-container)]" />
+        <Skeleton className="w-96 h-96 rounded-2xl bg-[#111113] border border-white/[0.04]" />
       </main>
     );
   }
 
   if (!guild) {
     return (
-      <main className="min-h-screen flex items-center justify-center text-fg-muted">
-        Guild not found.
+      <main className="min-h-screen flex items-center justify-center text-white/40">
+        Guild not found in the manifest.
       </main>
     );
   }
 
   const sortedMembers = [...guild.members].sort((a, b) => b.xp - a.xp);
+  const totalGuildXP = guild.members.reduce((s, m) => s + m.xp, 0);
 
   return (
     <motion.main
       variants={pageEntrance}
       initial="hidden"
       animate="visible"
-      className="min-h-screen p-4 md:p-8"
+      className="max-w-[1440px] mx-auto p-4 md:p-8 min-h-screen space-y-8"
     >
-      <div className="mx-auto max-w-4xl space-y-6">
-        {/* Hero Header with Big Icon */}
-        <motion.div variants={staggerItem} className="glass-card p-6 md:p-8">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            {/* Big Guild Icon */}
-            <div className="relative flex-shrink-0">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Navigation & Actions */}
+        <div className="flex items-center justify-between">
+          <Link href="/guilds" className="inline-flex items-center gap-2 text-white/50 hover:text-white transition-colors group">
+            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-[#111113] border border-white/[0.06] group-hover:border-white/[0.12] transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+            </div>
+            <span className="text-sm font-semibold tracking-wide">Back to Ecosystem</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  if (!editing && guild) {
+                    setEditForm({
+                      name: guild.name,
+                      description: guild.description || "",
+                      iconUrl: guild.iconUrl || "",
+                    });
+                  }
+                  setEditing(!editing);
+                }}
+                className="h-8 px-3 rounded-lg bg-[#111113] border border-white/[0.08] text-white/70 text-xs font-bold uppercase tracking-wider hover:text-white hover:bg-white/[0.04] transition-colors inline-flex items-center gap-1.5"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Configure
+              </button>
+            )}
+            {(isAdmin || guild.members.some((m) => m.id === myUserId)) && (
+              <button
+                onClick={leaveGuild}
+                className="h-8 px-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold uppercase tracking-wider hover:bg-red-500/20 transition-colors inline-flex items-center gap-1.5"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                {isAdmin ? "Disband" : "Resign"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Hero Header */}
+        <motion.div variants={staggerItem} className="bg-[#111113] border border-white/[0.06] rounded-2xl p-6 md:p-8">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+            {/* Big Avatar */}
+            <div className="flex-shrink-0">
               {guild.iconUrl ? (
-                <div className="h-24 w-24 md:h-32 md:w-32 rounded-[var(--radius-standard)] overflow-hidden border-2 border-white/[0.08] bg-white/[0.03] flex items-center justify-center shadow-glow">
-                  <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain p-2" />
+                <div className="h-28 w-28 md:h-36 md:w-36 rounded-2xl overflow-hidden border border-white/[0.08] bg-[#18181b] flex items-center justify-center p-3 relative group">
+                  <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain relative z-10" />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-violet-500/10 to-cyan-500/10" />
                 </div>
               ) : (
-                <div className="h-24 w-24 md:h-32 md:w-32 rounded-[var(--radius-standard)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border-2 border-accent/30 flex items-center justify-center shadow-glow">
-                  <span className="text-4xl md:text-5xl font-bold text-accent">{guild.name.charAt(0).toUpperCase()}</span>
+                <div className="h-28 w-28 md:h-36 md:w-36 rounded-2xl bg-[#18181b] border border-white/[0.08] flex items-center justify-center shadow-inner relative group">
+                  <span className="text-5xl font-bold text-white/80 group-hover:text-white transition-colors">{guild.name.charAt(0).toUpperCase()}</span>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-violet-500/10 to-cyan-500/10 rounded-2xl" />
                 </div>
               )}
             </div>
 
             {/* Guild Info */}
             <div className="flex-1 text-center md:text-left min-w-0">
-              <h1 className="text-display gradient-text">{guild.name}</h1>
-              {guild.description && <p className="text-sm text-fg-muted mt-1">{guild.description}</p>}
+              <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-2">{guild.name}</h1>
+              {guild.description && <p className="text-sm text-white/60 leading-relaxed max-w-xl mx-auto md:mx-0">{guild.description}</p>}
               
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-3">
-                {/* Admin */}
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-6">
                 {guild.admin && (
                   <Link href={guild.admin.githubHandle ? `/${guild.admin.githubHandle}` : "#"}>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-xs text-fg-dim hover:border-white/[0.12] transition-colors">
-                      <Crown className="h-3 w-3 text-amber-400" />
-                      <span>Admin: {guild.admin.name || guild.admin.githubHandle || "Unknown"}</span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#18181b] border border-amber-500/20 text-xs font-semibold tracking-wide hover:border-amber-500/50 transition-colors">
+                      <Crown className="h-3.5 w-3.5 text-amber-500" />
+                      <span className="text-white/80">Admin: {guild.admin.name || guild.admin.githubHandle || "Unknown"}</span>
                     </span>
                   </Link>
                 )}
-                {/* Total XP */}
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/10 border border-accent/20 text-xs text-accent font-medium">
-                  <Trophy className="h-3 w-3" />
-                  {guild.members.reduce((s, m) => s + m.xp, 0).toLocaleString()} XP
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-xs font-bold tracking-wide text-violet-400">
+                  <Trophy className="h-3.5 w-3.5" />
+                  {totalGuildXP.toLocaleString()} XP
                 </span>
-                {/* Members */}
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-xs text-fg-dim">
-                  <Users className="h-3 w-3" />
-                  {guild.members.length} members
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#18181b] border border-white/[0.06] text-xs font-semibold tracking-wide text-white/60">
+                  <Users className="h-3.5 w-3.5 text-cyan-400" />
+                  {guild.members.length} Members
                 </span>
               </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href="/guilds" className="inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim hover:text-white hover:bg-white/[0.04] transition-colors">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-              {isAdmin && (
-                <>
-                  <button
-                    onClick={() => {
-                      if (!editing && guild) {
-                        setEditForm({
-                          name: guild.name,
-                          description: guild.description || "",
-                          iconUrl: guild.iconUrl || "",
-                        });
-                      }
-                      setEditing(!editing);
-                    }}
-                    className="h-9 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:bg-white/[0.06] transition-colors inline-flex items-center gap-1.5"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={leaveGuild}
-                    className="h-9 px-3 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors inline-flex items-center gap-1.5"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    Delete
-                  </button>
-                </>
-              )}
-              {!isAdmin && guild.members.some((m) => m.id === myUserId) && (
-                <button
-                  onClick={leaveGuild}
-                  className="h-9 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:bg-white/[0.06] transition-colors inline-flex items-center gap-1.5"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  Leave
-                </button>
-              )}
             </div>
           </div>
         </motion.div>
 
         {/* Edit Form */}
-        {editing && isAdmin && (
-          <motion.div variants={staggerItem} className="glass-card p-6 space-y-4">
-            <h2 className="text-heading text-white">Edit Guild</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-label text-fg-muted mb-1 block">Guild Name</label>
-                <input
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full h-10 px-3 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50"
-                />
-              </div>
-              <div>
-                <label className="text-label text-fg-muted mb-1 block">Description</label>
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50 resize-none"
-                />
-              </div>
-              <div>
-                <label className="text-label text-fg-muted mb-1 block">Guild Icon</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".svg,image/svg+xml"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                {editForm.iconUrl ? (
-                  <div className="flex items-center gap-3 p-3 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06]">
-                    <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                      <img src={editForm.iconUrl} alt="Preview" className="h-full w-full object-contain" />
+        <AnimatePresence>
+          {editing && isAdmin && (
+            <motion.div
+              variants={staggerItem}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-6 mb-8 mt-2 shadow-xl">
+                <h2 className="text-lg font-bold text-white mb-4">Guild Configuration</h2>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] tracking-widest uppercase font-bold text-white/40 mb-1.5 block">Guild Name</label>
+                      <input
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="w-full h-10 px-3 rounded-lg bg-[#18181b] border border-white/[0.06] text-white text-[13px] font-medium focus:outline-none focus:border-violet-500/50 transition-colors"
+                      />
                     </div>
-                    <span className="text-sm text-fg-dim flex-1 truncate">
-                      Icon uploaded
-                    </span>
+                  </div>
+                  <div>
+                    <label className="text-[10px] tracking-widest uppercase font-bold text-white/40 mb-1.5 block">Mission Statement / Bio</label>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2 rounded-lg bg-[#18181b] border border-white/[0.06] text-white text-[13px] font-medium focus:outline-none focus:border-violet-500/50 transition-colors resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] tracking-widest uppercase font-bold text-white/40 mb-1.5 block">Guild Icon (SVG)</label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".svg,image/svg+xml"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    {editForm.iconUrl ? (
+                      <div className="flex items-center gap-3 p-2.5 rounded-lg bg-[#18181b] border border-white/[0.06]">
+                        <div className="h-10 w-10 rounded overflow-hidden border border-white/[0.08] bg-[#111113] flex items-center justify-center p-1">
+                          <img src={editForm.iconUrl} alt="Preview" className="h-full w-full object-contain" />
+                        </div>
+                        <span className="text-xs text-white/60 flex-1 truncate">
+                          Icon uploaded successfully
+                        </span>
+                        <button
+                          onClick={clearIcon}
+                          className="h-7 w-7 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors flex items-center justify-center shrink-0"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : uploading ? (
+                      <div className="w-full h-10 rounded-lg bg-[#18181b] border border-white/[0.06] text-white/40 inline-flex items-center justify-center gap-2 text-xs font-semibold">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        UPLOADING...
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full md:w-auto h-10 px-6 rounded-lg bg-[#18181b] border border-white/[0.06] text-white/40 hover:text-white hover:border-white/[0.12] transition-colors inline-flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        Upload SVG Vector
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pt-4 border-t border-white/[0.04]">
                     <button
-                      onClick={clearIcon}
-                      className="h-7 w-7 rounded-[var(--radius-compact)] bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center justify-center"
+                      onClick={saveGuildEdit}
+                      className="h-9 px-5 rounded-lg bg-white text-black text-xs font-bold uppercase tracking-wider hover:bg-white/90 transition-colors"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      Save Configuration
+                    </button>
+                    <button
+                      onClick={() => setEditing(false)}
+                      className="h-9 px-5 rounded-lg border border-white/[0.08] text-white/60 text-xs font-bold uppercase tracking-wider hover:bg-white/[0.04] hover:text-white transition-colors"
+                    >
+                      Cancel
                     </button>
                   </div>
-                ) : uploading ? (
-                  <div className="w-full h-10 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06] border-dashed text-fg-muted inline-flex items-center justify-center gap-2 text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Uploading...
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full h-10 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06] border-dashed text-fg-muted hover:text-fg-dim hover:border-white/[0.12] transition-colors inline-flex items-center justify-center gap-2 text-sm"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Upload SVG
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={saveGuildEdit}
-                  className="h-9 px-4 rounded-[var(--radius-compact)] bg-accent text-white text-sm font-semibold"
-                >
-                  Save Changes
-                </button>
-                <button
-                  onClick={() => setEditing(false)}
-                  className="h-9 px-4 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Stats */}
-        <motion.div variants={staggerItem} className="grid grid-cols-3 gap-3">
-          <div className="glass-card p-4 text-center">
-            <Users className="h-5 w-5 text-accent mx-auto mb-1" />
-            <div className="text-stat text-white">{guild.members.length}</div>
-            <div className="text-label text-fg-muted">Members</div>
-          </div>
-          <div className="glass-card p-4 text-center">
-            <Trophy className="h-5 w-5 text-amber-400 mx-auto mb-1" />
-            <div className="text-stat text-white">{guild.members.reduce((s, m) => s + m.xp, 0).toLocaleString()}</div>
-            <div className="text-label text-fg-muted">Total XP</div>
-          </div>
-          <div className="glass-card p-4 text-center">
-            <Crown className="h-5 w-5 text-yellow-400 mx-auto mb-1" />
-            <div className="text-stat text-white">{sortedMembers[0]?.xp.toLocaleString() || 0}</div>
-            <div className="text-label text-fg-muted">Top XP</div>
-          </div>
-        </motion.div>
-
-        {/* Leaderboard */}
-        <motion.div variants={staggerItem} className="glass-card p-6">
-          <h2 className="text-heading text-white mb-4">Guild Leaderboard</h2>
-          <div className="space-y-2">
-            {sortedMembers.map((member, i) => (
-              <Link key={member.id} href={member.githubHandle ? `/${member.githubHandle}` : "#"}>
-                <div className="flex items-center gap-3 p-3 rounded-[var(--radius-standard)] bg-white/[0.02] border border-white/[0.04] hover:border-accent/20 transition-colors">
-                  <span className="text-xs font-mono font-bold text-fg-muted w-6">{i + 1}</span>
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={member.imageUrl || undefined} />
-                    <AvatarFallback className="bg-gradient-to-br from-accent to-cyan-500 text-white text-xs font-bold">
-                      {(member.name || member.email).charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{member.name || member.email.split("@")[0]}</p>
-                    {member.title && <p className="text-xs text-amber-400">{member.title}</p>}
-                  </div>
-                  <div className="text-sm font-bold font-mono text-white">{member.xp.toLocaleString()} <span className="text-accent text-xs">XP</span></div>
                 </div>
-              </Link>
-            ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Member Roster Data (Leaderboard) */}
+        <motion.div variants={staggerItem} className="bg-[#111113] border border-white/[0.06] rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Users className="h-5 w-5 text-cyan-400" />
+            <h2 className="text-base font-bold text-white tracking-wide">Guild Roster & Rank</h2>
+          </div>
+          <div className="space-y-2">
+            {sortedMembers.map((member, i) => {
+              const isMe = member.id === myUserId;
+              return (
+                <Link key={member.id} href={member.githubHandle ? `/${member.githubHandle}` : "#"}>
+                  <div className={`group flex items-center gap-4 p-3 rounded-xl border ${isMe ? 'bg-[#18181b] border-violet-500/30' : 'bg-[#18181b] border-white/[0.04]'} hover:border-white/[0.12] transition-all duration-200`}>
+                    <span className="text-[13px] font-mono font-bold text-white/30 w-6 text-center">{i + 1}</span>
+                    
+                    <div className="h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden border border-white/[0.08] bg-[#111113]">
+                      {member.imageUrl ? (
+                        <img src={member.imageUrl} alt={member.name || ""} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center font-bold text-white/50 text-sm">
+                          {(member.name || member.email).charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <p className="text-[14px] font-bold text-white/90 group-hover:text-white transition-colors truncate">
+                        {member.name || member.email.split("@")[0]}
+                        {isMe && <span className="ml-2 text-[10px] uppercase tracking-widest text-violet-400 font-bold px-1.5 py-0.5 rounded border border-violet-500/30 bg-violet-500/10">You</span>}
+                      </p>
+                      {member.title && <p className="text-[11px] text-amber-500/80 font-medium truncate mt-0.5">{member.title}</p>}
+                    </div>
+                    
+                    <div className="text-right flex-shrink-0 pr-2">
+                      <div className="text-base font-bold font-mono tabular-nums text-white/90">{member.xp.toLocaleString()}</div>
+                      <div className="text-[9px] uppercase tracking-widest font-bold text-violet-400/80 mt-0.5">Total XP</div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </motion.div>
+
       </div>
     </motion.main>
   );
