@@ -84,7 +84,7 @@ export function GuildLeaderboard() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 w-full rounded-[var(--radius-standard)]" />
+          <Skeleton key={i} className="h-20 w-full rounded-xl bg-[#111113] border border-white/[0.04]" />
         ))}
       </div>
     );
@@ -92,9 +92,9 @@ export function GuildLeaderboard() {
 
   if (guilds.length === 0) {
     return (
-      <div className="text-center py-16 text-fg-muted">
+      <div className="text-center py-16 text-white/40">
         <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>No guilds yet. Be the first to create one!</p>
+        <p className="text-sm font-semibold tracking-wide">No guilds yet. Be the first to create one!</p>
       </div>
     );
   }
@@ -107,22 +107,22 @@ export function GuildLeaderboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.03 }}
-          className="flex items-center gap-4 p-4 rounded-[var(--radius-standard)] bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.10] hover:bg-white/[0.03] transition-all"
+          className="flex items-center gap-4 p-4 rounded-xl bg-[#111113] border border-white/[0.04] hover:border-white/[0.08] hover:bg-[#18181b] transition-all duration-200"
         >
           {/* Rank */}
-          <span className="text-xs font-mono font-bold text-fg-muted w-6 text-center">
+          <span className="text-[13px] font-mono font-bold text-white/40 w-6 text-center">
             {i + 1}
           </span>
 
           {/* Big Guild Icon */}
           <div className="flex-shrink-0">
             {guild.iconUrl ? (
-              <div className="h-14 w-14 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
+              <div className="h-12 w-12 rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.02] flex items-center justify-center">
                 <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain p-1" />
               </div>
             ) : (
-              <div className="h-14 w-14 rounded-[var(--radius-compact)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border border-accent/30 flex items-center justify-center">
-                <span className="text-xl font-bold text-accent">{guild.name.charAt(0).toUpperCase()}</span>
+              <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-violet-500/10 to-cyan-500/10 border border-violet-500/20 flex items-center justify-center">
+                <span className="text-lg font-bold text-violet-400">{guild.name.charAt(0).toUpperCase()}</span>
               </div>
             )}
           </div>
@@ -130,40 +130,40 @@ export function GuildLeaderboard() {
           {/* Guild Info */}
           <div className="flex-1 min-w-0">
             <Link href={`/guilds/${guild.slug}`}>
-              <h3 className="text-sm font-bold text-white hover:text-accent transition-colors truncate">
+              <h3 className="text-[15px] font-bold text-white/90 hover:text-white transition-colors truncate">
                 {guild.name}
               </h3>
             </Link>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
               {guild.admin && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-fg-dim">
-                  <Crown className="h-3 w-3 text-amber-400" />
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/50 tracking-wider uppercase">
+                  <Crown className="h-3 w-3 text-amber-500" />
                   {guild.admin.name || guild.admin.githubHandle || "Unknown"}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 text-[11px] text-fg-dim">
-                <Users className="h-3 w-3" />
-                {guild.memberCount}
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/50 tracking-wider uppercase">
+                <Users className="h-3 w-3 text-cyan-500/70" />
+                {guild.memberCount} MBRS
               </span>
             </div>
           </div>
 
           {/* XP */}
-          <div className="text-right flex-shrink-0">
-            <div className="text-sm font-bold font-mono text-white">
+          <div className="text-right flex-shrink-0 pr-2">
+            <div className="text-base font-bold font-mono text-white/90 tabular-nums">
               {guild.totalXP.toLocaleString()}
             </div>
-            <div className="text-[10px] text-accent font-medium">XP</div>
+            <div className="text-[9px] uppercase tracking-widest text-violet-400/80 font-bold mt-0.5">Guild XP</div>
           </div>
 
           {/* Challenge button */}
           {myGuildId && myGuildId !== guild.id && (
             <button
               onClick={() => challengeGuild(guild.id)}
-              className="flex-shrink-0 h-8 px-2.5 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/30 text-accent text-xs font-semibold hover:bg-accent/20 transition-colors inline-flex items-center gap-1"
+              className="flex-shrink-0 h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/70 text-[11px] font-bold tracking-wider uppercase hover:bg-white/10 hover:text-white transition-all inline-flex items-center gap-1.5"
               title="Challenge this guild to a duel"
             >
-              <Swords className="h-3 w-3" />
+              <Swords className="h-3.5 w-3.5 text-pink-400" />
               <span className="hidden sm:inline">Duel</span>
             </button>
           )}
