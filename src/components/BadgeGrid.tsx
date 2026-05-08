@@ -19,10 +19,10 @@ const iconMap: Record<string, any> = {
 };
 
 const rarityStyles: Record<string, { border: string; glow: string; text: string; bg: string; label: string }> = {
-  common:    { border: "border-white/[0.06]",    glow: "",                                                                  text: "text-white/40",  bg: "bg-[#111113]",                                                        label: "bg-[#18181b] text-white/30 border-white/[0.06]" },
-  rare:      { border: "border-cyan-500/20",     glow: "hover:border-cyan-500/30",                                           text: "text-cyan-400",  bg: "bg-[#111113]",                                                        label: "bg-cyan-500/[0.08] text-cyan-500/80 border-cyan-500/20" },
-  epic:      { border: "border-violet-500/25",   glow: "hover:border-violet-500/40",                                         text: "text-violet-400",bg: "bg-[#111113]",                                                        label: "bg-violet-500/[0.08] text-violet-400/80 border-violet-500/20" },
-  legendary: { border: "border-amber-500/30",    glow: "hover:border-amber-500/50 hover:shadow-[0_0_20px_-5px_rgba(245,158,11,0.15)]", text: "text-amber-400",  bg: "bg-[#111113]",                              label: "bg-amber-500/[0.08] text-amber-400/80 border-amber-500/20" },
+  common:    { border: "border-white/[0.06]",    glow: "hover:border-white/[0.12]",                           text: "text-white/40",   bg: "bg-[#111113]", label: "bg-[#18181b] text-white/30 border-white/[0.06]" },
+  rare:      { border: "border-cyan-500/15",     glow: "hover:border-cyan-500/25",                            text: "text-cyan-400",   bg: "bg-[#111113]", label: "bg-cyan-500/[0.06] text-cyan-400/70 border-cyan-500/15" },
+  epic:      { border: "border-violet-500/20",   glow: "hover:border-violet-500/35",                          text: "text-violet-400", bg: "bg-[#111113]", label: "bg-violet-500/[0.06] text-violet-400/70 border-violet-500/15" },
+  legendary: { border: "border-amber-500/25",    glow: "hover:border-amber-500/40 hover:shadow-[0_0_15px_-5px_rgba(245,158,11,0.12)]", text: "text-amber-400",  bg: "bg-[#111113]", label: "bg-amber-500/[0.06] text-amber-400/70 border-amber-500/15" },
 };
 
 const weeklySvgMap: Record<string, { src: string; shadow: string }> = {

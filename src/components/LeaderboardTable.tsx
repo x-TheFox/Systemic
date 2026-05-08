@@ -40,50 +40,42 @@ const podiumConfig: Record<number, {
   title: string;
   subtitle: string;
   color: string;
-  ring: string;
-  shadow: string;
   border: string;
   nameColor: string;
-  bgGradient: string;
+  bgColor: string;
 }> = {
   1: {
     src: "/badges/mvp.svg",
     title: "THE HONORED ONE",
     subtitle: "1ST PLACE",
     color: "#f59e0b",
-    ring: "ring-2 ring-yellow-500/80",
-    shadow: "0 0 40px rgba(245,158,11,0.5), 0 0 80px rgba(245,158,11,0.2)",
-    border: "border-yellow-500/30",
-    nameColor: "text-yellow-400",
-    bgGradient: "from-yellow-500/10 to-yellow-500/5",
+    border: "border-amber-500/20",
+    nameColor: "text-amber-400",
+    bgColor: "bg-amber-500/[0.04]",
   },
   2: {
     src: "/badges/2nd.svg",
     title: "SILVER RUNNER",
     subtitle: "2ND PLACE",
     color: "#a855f7",
-    ring: "ring-2 ring-purple-500/80",
-    shadow: "0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.15)",
-    border: "border-purple-500/30",
+    border: "border-purple-500/20",
     nameColor: "text-purple-400",
-    bgGradient: "from-purple-500/10 to-purple-500/5",
+    bgColor: "bg-purple-500/[0.04]",
   },
   3: {
     src: "/badges/3rd.svg",
     title: "BRONZE CHALLENGER",
     subtitle: "3RD PLACE",
     color: "#3b82f6",
-    ring: "ring-2 ring-blue-500/80",
-    shadow: "0 0 25px rgba(59,130,246,0.35), 0 0 50px rgba(59,130,246,0.1)",
-    border: "border-blue-500/30",
+    border: "border-blue-500/20",
     nameColor: "text-blue-400",
-    bgGradient: "from-blue-500/10 to-blue-500/5",
+    bgColor: "bg-blue-500/[0.04]",
   },
 };
 
-const bottomBadgeConfig: Record<string, { src: string; label: string; color: string; border: string; shadow: string }> = {
-  "svg:last1": { src: "/badges/last1.svg", label: "THE LURKER", color: "#6b7280", border: "border-gray-500/30", shadow: "0 0 15px rgba(107,114,128,0.25)" },
-  "svg:last2": { src: "/badges/last2.svg", label: "THE PENULTIMATE", color: "#6b7280", border: "border-gray-500/30", shadow: "0 0 15px rgba(107,114,128,0.25)" },
+const bottomBadgeConfig: Record<string, { src: string; label: string; color: string; border: string }> = {
+  "svg:last1": { src: "/badges/last1.svg", label: "THE LURKER", color: "#6b7280", border: "border-white/[0.06]" },
+  "svg:last2": { src: "/badges/last2.svg", label: "THE PENULTIMATE", color: "#6b7280", border: "border-white/[0.06]" },
 };
 
 export function LeaderboardTable() {
@@ -110,7 +102,7 @@ export function LeaderboardTable() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 w-full rounded-[var(--radius-standard)]" />
+          <Skeleton key={i} className="h-[68px] w-full bg-[#111113] rounded-xl border border-white/[0.06]" />
         ))}
       </div>
     );
@@ -118,7 +110,7 @@ export function LeaderboardTable() {
 
   if (users.length === 0) {
     return (
-      <div className="text-center py-12 text-fg-muted">
+      <div className="text-center py-12 text-white/40 text-sm">
         No players yet. Be the first to sync!
       </div>
     );
@@ -189,57 +181,56 @@ export function LeaderboardTable() {
             const content = (
               <motion.div
                 variants={rankItem}
-                className="group flex items-center gap-3 p-3 rounded-[var(--radius-standard)] bg-surface border border-white/[0.04] transition-all duration-200 hover:border-accent/20 hover:shadow-glow"
+                className="group flex items-center gap-3 p-3 rounded-xl bg-[#111113] hover:bg-[#18181b] border border-white/[0.04] transition-all duration-200 hover:border-white/[0.08]"
               >
                 {/* Rank */}
                 <div className="flex flex-col items-center justify-center w-8 shrink-0">
-                  <span className="text-xs font-mono font-bold text-fg-muted">{rank}</span>
+                  <span className="text-xs font-mono font-semibold text-white/30">{rank}</span>
                   {rankChange && (
-                    <span className={`flex items-center text-[9px] font-bold ${rankChange.direction === "up" ? "text-success" : "text-destructive"}`}>
+                    <span className={`flex items-center text-[9px] font-bold ${rankChange.direction === "up" ? "text-green-400" : "text-red-400"}`}>
                       {rankChange.direction === "up" ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                       {rankChange.value}
                     </span>
                   )}
                 </div>
 
-                <Avatar className="h-8 w-8 border border-white/10 flex-shrink-0">
+                <Avatar className="h-8 w-8 border border-white/[0.08] flex-shrink-0">
                   <AvatarImage src={user.imageUrl || undefined} />
-                  <AvatarFallback className="bg-gradient-to-br from-accent to-cyan-500 text-white text-xs font-bold">
+                  <AvatarFallback className="bg-[#18181b] text-white/70 text-xs font-semibold">
                     {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-white text-sm font-medium truncate">{user.name || user.email.split("@")[0]}</span>
+                    <span className="text-white/90 text-sm font-semibold truncate">{user.name || user.email.split("@")[0]}</span>
                     {user.title && (
-                      <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-500/30 text-amber-300 bg-amber-500/10 font-semibold">
+                      <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md border border-amber-500/20 text-amber-400 opacity-80 bg-amber-500/5 font-semibold">
                         {user.title}
                       </span>
                     )}
                     {user.skillTreeState?.currentGrind && !user.title && (
-                      <span className="text-[9px] border border-accent/20 text-accent bg-accent/10 px-1.5 py-0.5 rounded-full">
+                      <span className="text-[9px] border border-violet-500/15 text-violet-300 opacity-80 bg-violet-500/5 px-1.5 py-0.5 rounded-md">
                         {user.skillTreeState.currentGrind}
                       </span>
                     )}
                   </div>
-                  <div className="mt-1.5 h-1 w-full bg-white/[0.04] rounded-full overflow-hidden">
+                  <div className="mt-1.5 h-1 w-full bg-[#18181b] rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       whileInView={{ width: `${xpPct}%` }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-                      className="h-full rounded-full bg-gradient-to-r from-accent to-cyan-500"
-                      style={{ boxShadow: "0 0 8px hsl(265 85% 60% / 0.3)" }}
+                      className="h-full rounded-full bg-violet-400/50"
                     />
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-white font-bold text-sm font-mono">{user.xp.toLocaleString()} <span className="text-accent text-[10px]">XP</span></div>
-                  <div className="text-fg-muted text-[9px]">{user.totalCommits}c · {user.totalPRs}p · {user.leetcodeHard}H</div>
+                  <div className="text-white/90 font-semibold text-sm tabular-nums tracking-tight">{user.xp.toLocaleString()} <span className="text-white/30 text-[10px]">XP</span></div>
+                  <div className="text-white/30 text-[9px] tracking-wider">{user.totalCommits}c · {user.totalPRs}p · {user.leetcodeHard}H</div>
                 </div>
-                {isClickable && <ExternalLink className="h-3 w-3 text-fg-muted flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                {isClickable && <ExternalLink className="h-3.5 w-3.5 text-white/20 flex-shrink-0 group-hover:text-white/60 transition-colors" />}
               </motion.div>
             );
 
@@ -260,10 +251,8 @@ export function LeaderboardTable() {
           transition={{ duration: 0.6 }}
           className="space-y-4"
         >
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/[0.08]" />
-            <span className="text-label text-fg-muted">The Shadows Below</span>
-            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/[0.08]" />
+          <div className="flex items-center justify-center gap-3 py-4">
+            <span className="text-[10px] uppercase tracking-widest text-white/30 font-semibold text-center w-full">The Shadows</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {bottom2.map((user) => {
@@ -272,37 +261,34 @@ export function LeaderboardTable() {
               const isClickable = !!user.githubHandle;
 
               const content = (
-                <div className="relative flex flex-col items-center p-6 pb-8 rounded-[var(--radius-container)] bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.06] transition-all hover:scale-[1.01] cursor-pointer">
+                <div className="relative flex flex-col items-center p-6 bg-[#18181b] border border-white/[0.04] hover:border-white/[0.08] rounded-2xl transition-all duration-200 hover:-translate-y-0.5 group">
                   {badgeInfo && (
                     <>
-                      <div
-                        className={`h-28 w-28 rounded-xl overflow-hidden mb-3 ${badgeInfo.border}`}
-                        style={{ boxShadow: badgeInfo.shadow }}
-                      >
-                        <img src={badgeInfo.src} alt={badgeInfo.label} className="h-full w-full object-contain" />
+                      <div className={`h-24 w-24 p-2 rounded-xl mb-3 bg-[#111113] border ${badgeInfo.border}`}>
+                        <img src={badgeInfo.src} alt={badgeInfo.label} className="h-full w-full object-contain mix-blend-plus-lighter opacity-50 group-hover:opacity-80 transition-opacity" />
                       </div>
-                      <div className="text-[10px] font-black tracking-[0.2em] text-gray-400/70 mb-3">
+                      <div className="text-[9px] font-semibold tracking-widest text-white/30 mb-4 uppercase">
                         {badgeInfo.label}
                       </div>
                     </>
                   )}
-                  <Avatar className="h-10 w-10 border border-white/10 mb-2">
+                  <Avatar className="h-9 w-9 border border-white/[0.06] mb-3">
                     <AvatarImage src={user.imageUrl || undefined} />
-                    <AvatarFallback className="bg-gradient-to-br from-gray-600 to-gray-700 text-white text-xs font-bold">
+                    <AvatarFallback className="bg-[#111113] text-white/50 text-xs font-semibold">
                       {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="text-center">
-                    <div className="text-white/70 text-sm font-medium truncate max-w-[160px]">
+                  <div className="text-center flex flex-col gap-1 items-center">
+                    <div className="text-white/70 text-sm font-semibold truncate max-w-[160px]">
                       {user.name || user.email.split("@")[0]}
                     </div>
                     {user.title && (
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] border border-amber-500/20 text-amber-300/50 bg-amber-500/10">
+                      <span className="inline-block px-2 py-0.5 rounded-md text-[9px] border border-amber-500/10 text-amber-400/60 bg-amber-500/5">
                         {user.title}
                       </span>
                     )}
-                    <div className="text-white/50 font-bold text-xl mt-1 font-mono">
-                      {user.xp.toLocaleString()} <span className="text-accent/50 text-[10px]">XP</span>
+                    <div className="text-white/90 font-semibold text-lg mt-1 tabular-nums tracking-tight">
+                      {user.xp.toLocaleString()} <span className="text-white/30 text-[10px]">XP</span>
                     </div>
                   </div>
                 </div>
@@ -329,68 +315,57 @@ function PodiumCard({ rank, user, maxXP }: { rank: number; user: LeaderboardUser
   const content = (
     <motion.div
       variants={podiumItem}
-      className={`relative flex flex-col items-center p-6 pb-8 rounded-[var(--radius-container)] bg-gradient-to-b ${cfg.bgGradient} border ${cfg.border} backdrop-blur-sm transition-all hover:scale-[1.02] cursor-pointer`}
-      style={{ boxShadow: cfg.shadow }}
+      className={`relative overflow-hidden flex flex-col items-center p-6 ${cfg.bgColor} border ${cfg.border} bg-[#18181b] rounded-2xl transition-all duration-300 hover:-translate-y-1 group`}
     >
-      {rank === 1 && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl drop-shadow-lg">
-          👑
-        </div>
-      )}
+      {/* Top highlight bar */}
+      <div className={`absolute top-0 left-0 right-0 h-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 flex justify-center`}>
+         <div className="h-full w-full opacity-60" style={{ backgroundColor: cfg.color }} />
+      </div>
 
-      <div className={`h-32 w-32 rounded-[var(--radius-standard)] overflow-hidden ${cfg.ring} mb-3`} style={{ boxShadow: cfg.shadow }}>
+      <div className={`w-28 h-28 p-2 rounded-xl mb-4 bg-[#111113] border border-white/[0.04]`}>
         <img src={cfg.src} alt={cfg.title} className="h-full w-full object-contain" />
       </div>
 
-      <div className="text-center mb-2">
-        <div className={`text-xs font-black tracking-[0.2em] ${cfg.nameColor} opacity-80`}>
+      <div className="text-center mb-3">
+        <div className={`text-[10px] font-bold tracking-widest ${cfg.nameColor} uppercase opacity-90`}>
           {cfg.title}
         </div>
-        <div className="text-[10px] text-fg-muted tracking-wider">
+        <div className="text-[9px] font-medium text-white/30 tracking-widest uppercase mt-0.5">
           {cfg.subtitle}
         </div>
       </div>
 
-      <Avatar className="h-11 w-11 border-2 border-white/15 mb-2">
+      <Avatar className="h-10 w-10 border border-white/[0.08] mb-3">
         <AvatarImage src={user.imageUrl || undefined} />
-        <AvatarFallback className="bg-gradient-to-br from-accent to-cyan-500 text-white text-sm font-bold">
+        <AvatarFallback className="bg-[#111113] text-white/70 text-xs font-semibold">
           {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
         </AvatarFallback>
       </Avatar>
 
-      <div className="text-center">
-        <div className="text-white font-bold text-base truncate max-w-[180px]">
+      <div className="text-center flex flex-col items-center">
+        <div className="text-white/90 font-semibold text-sm truncate max-w-[150px]">
           {user.name || user.email.split("@")[0]}
         </div>
         {user.title && (
-          <span className="inline-block mt-1 px-3 py-0.5 rounded-full text-[11px] font-semibold bg-gradient-to-r from-amber-500/20 to-amber-500/5 border border-amber-500/30 text-amber-300">
+          <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium border border-amber-500/15 text-amber-400/80 bg-amber-500/5">
             {user.title}
           </span>
         )}
         {!user.title && user.skillTreeState?.currentGrind && (
-          <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] border border-accent/20 text-accent bg-accent/10">
+          <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md text-[9px] border border-violet-500/10 text-violet-300/70 bg-violet-500/[0.02]">
             {user.skillTreeState.currentGrind}
           </span>
         )}
-        <div className="text-white font-bold text-2xl mt-2 font-mono">
-          {user.xp.toLocaleString()} <span className="text-accent text-sm font-medium">XP</span>
+        <div className="text-white font-semibold text-2xl mt-3 tabular-nums tracking-tight">
+          {user.xp.toLocaleString()} <span className="text-white/30 text-[11px] font-medium">XP</span>
         </div>
-        <div className="text-fg-muted text-[11px] mt-0.5">
-          {user.totalCommits} commits · {user.totalPRs} PRs · {user.leetcodeHard}H
+        <div className="text-white/30 text-[10px] mt-1 font-mono">
+          {user.totalCommits}c · {user.totalPRs}p · {user.leetcodeHard}H
         </div>
       </div>
-
-      {/* XP bar under podium card */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/[0.04] rounded-b-[var(--radius-container)] overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          whileInView={{ width: `${xpPct}%` }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
-          className="h-full"
-          style={{ background: cfg.color, boxShadow: `0 0 10px ${cfg.color}60` }}
-        />
-      </div>
+      
+      {/* Subtle background progression line inside component rather than heavy outer glow */}
+      <div className="absolute bottom-0 left-0 h-0.5 rounded-r-md opacity-30 group-hover:opacity-60 transition-opacity" style={{ width: `${xpPct}%`, backgroundColor: cfg.color }} />
     </motion.div>
   );
 
