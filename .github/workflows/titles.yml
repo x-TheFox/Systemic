@@ -14,30 +14,54 @@ jobs:
         run: |
           set -euo pipefail
 
-          BASE_URL="${{ secrets.VERCEL_URL }}"
-          AUTH="Bearer ${{ secrets.CRON_SECRET }}"
+          run_task() (
+            set -euo pipefail
 
-          if [ -z "$BASE_URL" ]; then
-            echo "ERROR: VERCEL_URL secret is not set"
-            exit 1
-          fi
+            BASE_URL="${{ secrets.VERCEL_URL }}"
+            AUTH="Bearer ${{ secrets.CRON_SECRET }}"
 
-          case "$BASE_URL" in
-            http://*|https://*) ;;
-            *) BASE_URL="https://$BASE_URL" ;;
-          esac
+            if [ -z "$BASE_URL" ]; then
+              echo "ERROR: VERCEL_URL secret is not set"
+              exit 1
+            fi
 
-          echo "=== Base URL: $BASE_URL ==="
-          echo "=== Generating titles ==="
+            case "$BASE_URL" in
+              http://*|https://*) ;;
+              *) BASE_URL="https://$BASE_URL" ;;
+            esac
 
-          curl -sS --fail --max-time 60 --connect-timeout 10 \
-            -X POST "${BASE_URL}/api/title" \
-            -H "Authorization: ${AUTH}" \
-            -H "Content-Type: application/json" \
-            -d '{"userId":"all"}'
+            echo "=== Base URL: $BASE_URL ==="
+            echo "=== Generating titles ==="
 
-          echo ""
-          echo "=== Done ==="
+            curl -sS --fail --max-time 60 --connect-timeout 10 \
+              -X POST "${BASE_URL}/api/title" \
+              -H "Authorization: ${AUTH}" \
+              -H "Content-Type: application/json" \
+              -d '{"userId":"all"}'
+
+            echo ""
+            echo "=== Done ==="
+          )
+
+          ATTEMPT=1
+          MAX_ATTEMPTS=2
+
+          while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
+            if run_task; then
+              break
+            fi
+
+            if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+              DELAY_MINUTES=$((RANDOM % 16 + 5))
+              echo "Task failed. Re-running in ${DELAY_MINUTES} minute(s)..."
+              sleep $((DELAY_MINUTES * 60))
+            else
+              echo "Task failed after ${MAX_ATTEMPTS} attempt(s)."
+              exit 1
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+          done
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
