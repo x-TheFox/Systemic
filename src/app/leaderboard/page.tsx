@@ -141,8 +141,8 @@ export default function LeaderboardPage() {
             <h2 className="text-sm font-semibold text-white tracking-wide">Telemetry Feed</h2>
           </motion.div>
           
-          <motion.div variants={staggerItem} className="bg-[#111113] border border-white/[0.06] rounded-2xl p-4 sm:p-6 flex-1 min-h-[400px]">
-            <PulseFeed collapsed previewCount={3} />
+          <motion.div variants={staggerItem} className="bg-[#111113] border border-white/[0.06] rounded-2xl p-4 sm:p-6">
+            <PulseFeed collapsed />
           </motion.div>
         </div>
       </div>

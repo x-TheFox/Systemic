@@ -241,13 +241,13 @@ export default function Home() {
         {/* Right column - 5/12 */}
         <div className="lg:col-span-5 space-y-6 flex flex-col">
           {/* Activity Feed */}
-          <motion.div variants={staggerItem} className="flex flex-col gap-5 flex-1">
+          <motion.div variants={staggerItem} className="flex flex-col gap-5">
             <div className="flex items-center gap-2.5">
               <Activity className="w-4 h-4 text-cyan-400" />
               <h2 className="text-sm font-semibold text-white tracking-wide">Network Activity</h2>
             </div>
-            <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5 md:p-6 flex-1 min-h-[350px]">
-              <PulseFeed collapsed previewCount={3} />
+            <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5 md:p-6">
+              <PulseFeed collapsed />
             </div>
           </motion.div>
 
@@ -412,4 +412,3 @@ function MetricCard({ title, value, icon, color, isPrimary }: { title: string; v
     </motion.div>
   );
 }
-

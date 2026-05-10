@@ -5,8 +5,9 @@ import Pusher from "pusher-js";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, Trophy, Unlock, Zap, Star, Clock, X, ChevronRight } from "lucide-react";
-import { pulseIn, springBouncy } from "@/lib/motion";
+import { Activity, Trophy, Unlock, Zap, Star, Clock, ChevronRight } from "lucide-react";
+import { pulseIn } from "@/lib/motion";
+import Link from "next/link";
 
 interface PulseEvent {
   id: string;
@@ -60,12 +61,12 @@ interface PulseFeedProps {
   previewCount?: number;
 }
 
-export function PulseFeed({ collapsed = false, previewCount = 3 }: PulseFeedProps) {
+export function PulseFeed({ collapsed = false, previewCount }: PulseFeedProps) {
   const [events, setEvents] = useState<PulseEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [userScrolled, setUserScrolled] = useState(false);
-  const [showFullModal, setShowFullModal] = useState(false);
+  const resolvedPreviewCount = previewCount ?? Math.min(Math.max(events.length, 1), 5);
 
   useEffect(() => {
     async function loadHistory() {
@@ -130,7 +131,7 @@ export function PulseFeed({ collapsed = false, previewCount = 3 }: PulseFeedProp
   if (loading) {
     return (
       <div className="space-y-2">
-        {Array.from({ length: collapsed ? previewCount : 5 }).map((_, i) => (
+        {Array.from({ length: collapsed ? (previewCount ?? 4) : 5 }).map((_, i) => (
           <Skeleton key={i} className="h-14 w-full rounded-xl bg-[#18181b] border border-white/[0.04]" />
         ))}
       </div>
@@ -139,92 +140,51 @@ export function PulseFeed({ collapsed = false, previewCount = 3 }: PulseFeedProp
 
   // Collapsed/preview mode
   if (collapsed) {
-    const previewEvents = events.slice(0, previewCount);
+    const previewEvents = events.slice(0, resolvedPreviewCount);
     return (
-      <>
-        <div className="space-y-2">
-          {previewEvents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-white/30">
-              <Activity className="h-6 w-6 mb-2 opacity-20" />
-              <p className="text-xs font-medium">No recent activity</p>
-            </div>
-          ) : (
-            previewEvents.map((e, i) => {
-              const config = eventConfig[e.type] || eventConfig["new-activity"];
-              return (
-                <div
-                  key={e.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl bg-[#111113] border-y border-r border-white/[0.04] border-l-2 ${config.border} transition-colors hover:bg-[#18181b]`}
-                >
-                  <div className="mt-0.5 shrink-0 p-1.5 rounded-lg bg-[#18181b] border border-white/[0.06]">
-                    {config.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-md text-white/40 border border-white/[0.06] bg-[#18181b]">
-                        {e.type.replace("-", " ")}
-                      </span>
-                      {e.xp ? <span className="text-white/80 text-[11px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/[0.04]">+{e.xp} XP</span> : null}
-                    </div>
-                    <p className="text-[12px] font-medium text-white/70 leading-snug truncate">{e.message}</p>
-                    <p className="text-[10px] text-white/30 mt-1 flex items-center gap-1 font-semibold tracking-wide">
-                      <Clock className="h-3 w-3 opacity-60" />
-                      {relativeTime(e.timestamp)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          )}
-          <button
-            onClick={() => setShowFullModal(true)}
-            className="w-full mt-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/[0.06] bg-[#111113] hover:bg-[#18181b] hover:border-white/[0.12] text-[11px] font-semibold text-white/50 hover:text-white/80 transition-all duration-200"
-          >
-            <Activity className="h-3.5 w-3.5" />
-            View Full Pulse Feed
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        <AnimatePresence>
-          {showFullModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowFullModal(false)}>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0 bg-black/70 backdrop-blur-xl"
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 12 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 12 }}
-                transition={springBouncy}
-                className="relative w-full max-w-lg max-h-[80vh] flex flex-col rounded-2xl border border-white/[0.08] bg-[#0d0d10] shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
+      <div className="space-y-2">
+        {previewEvents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-white/30">
+            <Activity className="h-6 w-6 mb-2 opacity-20" />
+            <p className="text-xs font-medium">No recent activity</p>
+          </div>
+        ) : (
+          previewEvents.map((e) => {
+            const config = eventConfig[e.type] || eventConfig["new-activity"];
+            return (
+              <div
+                key={e.id}
+                className={`flex items-start gap-3 p-3 rounded-xl bg-[#111113] border-y border-r border-white/[0.04] border-l-2 ${config.border} transition-colors hover:bg-[#18181b]`}
               >
-                <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
-                  <div className="flex items-center gap-2.5">
-                    <Activity className="h-4 w-4 text-cyan-400" />
-                    <h2 className="text-sm font-semibold text-white tracking-wide">Network Pulse Feed</h2>
+                <div className="mt-0.5 shrink-0 p-1.5 rounded-lg bg-[#18181b] border border-white/[0.06]">
+                  {config.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-md text-white/40 border border-white/[0.06] bg-[#18181b]">
+                      {e.type.replace("-", " ")}
+                    </span>
+                    {e.xp ? <span className="text-white/80 text-[11px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/[0.04]">+{e.xp} XP</span> : null}
                   </div>
-                  <button
-                    onClick={() => setShowFullModal(false)}
-                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors"
-                    aria-label="Close"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <p className="text-[12px] font-medium text-white/70 leading-snug truncate">{e.message}</p>
+                  <p className="text-[10px] text-white/30 mt-1 flex items-center gap-1 font-semibold tracking-wide">
+                    <Clock className="h-3 w-3 opacity-60" />
+                    {relativeTime(e.timestamp)}
+                  </p>
                 </div>
-                <div className="flex-1 overflow-hidden p-4">
-                  <PulseFeed />
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-      </>
+              </div>
+            );
+          })
+        )}
+        <Link
+          href="/pulse"
+          className="w-full mt-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/[0.06] bg-[#111113] hover:bg-[#18181b] hover:border-white/[0.12] text-[11px] font-semibold text-white/50 hover:text-white/80 transition-all duration-200"
+        >
+          <Activity className="h-3.5 w-3.5" />
+          View Full Pulse Feed
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
     );
   }
 
