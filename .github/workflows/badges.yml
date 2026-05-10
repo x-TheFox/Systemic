@@ -11,32 +11,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Process Pending Badge Queue
-        run: |
-          set -euo pipefail
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 120
+          max_attempts: 2
+          command: |
+            set -euo pipefail
 
-          BASE_URL="${{ secrets.VERCEL_URL }}"
-          AUTH="Bearer ${{ secrets.CRON_SECRET }}"
+            BASE_URL="${VERCEL_URL}"
+            AUTH="Bearer ${CRON_SECRET}"
 
-          if [ -z "$BASE_URL" ]; then
-            echo "ERROR: VERCEL_URL secret is not set"
-            exit 1
-          fi
+            if [ -z "$BASE_URL" ]; then
+              echo "ERROR: VERCEL_URL secret is not set"
+              exit 1
+            fi
 
-          case "$BASE_URL" in
-            http://*|https://*) ;;
-            *) BASE_URL="https://$BASE_URL" ;;
-          esac
+            case "$BASE_URL" in
+              http://*|https://*) ;;
+              *) BASE_URL="https://$BASE_URL" ;;
+            esac
 
-          echo "=== Base URL: $BASE_URL ==="
-          echo "=== Processing badge queue ==="
+            echo "=== Base URL: $BASE_URL ==="
+            echo "=== Processing badge queue ==="
 
-          curl -sS --fail --max-time 60 --connect-timeout 10 \
-            -X POST "${BASE_URL}/api/badges/process-queue" \
-            -H "Authorization: ${AUTH}" \
-            -H "Content-Type: application/json"
+            curl -sS --fail --max-time 60 --connect-timeout 10 \
+              -X POST "${BASE_URL}/api/badges/process-queue" \
+              -H "Authorization: ${AUTH}" \
+              -H "Content-Type: application/json"
 
-          echo ""
-          echo "=== Done ==="
+            echo ""
+            echo "=== Done ==="
+          on_retry_command: |
+            DELAY_MINUTES=$((RANDOM % 16 + 5))
+            echo "Task failed. Re-running in ${DELAY_MINUTES} minute(s)..."
+            sleep $((DELAY_MINUTES * 60))
+          retry_wait_seconds: 0
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

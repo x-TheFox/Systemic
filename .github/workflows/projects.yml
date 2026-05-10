@@ -10,104 +10,113 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Process All Pending Projects (One-by-One)
-        run: |
-          set -euo pipefail
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 120
+          max_attempts: 2
+          command: |
+            set -euo pipefail
 
-          BASE_URL="${{ secrets.VERCEL_URL }}"
-          AUTH="Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+            BASE_URL="${VERCEL_URL}"
+            AUTH="Authorization: Bearer ${CRON_SECRET}"
 
-          if [ -z "$BASE_URL" ]; then
-            echo "ERROR: VERCEL_URL secret is not set"
-            exit 1
-          fi
-
-          case "$BASE_URL" in
-            http://*|https://*) ;;
-            *) BASE_URL="https://$BASE_URL" ;;
-          esac
-
-          echo "=== Base URL: $BASE_URL ==="
-          echo "=== Step 1: Check pending count ==="
-
-          HTTP_CODE=$(curl -sS --max-time 30 --connect-timeout 10 -o /tmp/pending.json -w "%{http_code}" \
-            -X GET "$BASE_URL/api/projects/process-queue" \
-            -H "$AUTH") || {
-              echo "ERROR: Failed to fetch pending count"
+            if [ -z "$BASE_URL" ]; then
+              echo "ERROR: VERCEL_URL secret is not set"
               exit 1
-            }
+            fi
 
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERROR: GET /api/projects/process-queue returned HTTP $HTTP_CODE"
-            cat /tmp/pending.json | head -c 500
-            exit 1
-          fi
+            case "$BASE_URL" in
+              http://*|https://*) ;;
+              *) BASE_URL="https://$BASE_URL" ;;
+            esac
 
-          PENDING=$(cat /tmp/pending.json | grep -o '"pending":[0-9]*' | cut -d: -f2 || echo "0")
-          echo "Pending projects: $PENDING"
+            echo "=== Base URL: $BASE_URL ==="
+            echo "=== Step 1: Check pending count ==="
 
-          if [ "$PENDING" -eq 0 ]; then
-            echo "Nothing to process. Exiting."
-            exit 0
-          fi
-
-          echo "=== Step 2: Processing $PENDING project(s) one at a time ==="
-          LOOP=0
-          MAX_LOOPS=200
-
-          while [ "$PENDING" -gt 0 ] && [ "$LOOP" -lt "$MAX_LOOPS" ]; do
-            LOOP=$((LOOP + 1))
-            echo "--- Call $LOOP: processing 1 project ---"
-
-            HTTP_CODE=$(curl -sS --max-time 90 --connect-timeout 15 -o /tmp/result.json -w "%{http_code}" \
-              -X POST "$BASE_URL/api/projects/process-queue?count=1" \
-              -H "$AUTH" \
-              -H "Content-Type: application/json") || {
-                echo "ERROR: POST request failed"
+            HTTP_CODE=$(curl -sS --max-time 30 --connect-timeout 10 -o /tmp/pending.json -w "%{http_code}" \
+              -X GET "$BASE_URL/api/projects/process-queue" \
+              -H "$AUTH") || {
+                echo "ERROR: Failed to fetch pending count"
                 exit 1
               }
 
             if [ "$HTTP_CODE" != "200" ]; then
-              echo "ERROR: POST returned HTTP $HTTP_CODE"
-              cat /tmp/result.json | head -c 500
+              echo "ERROR: GET /api/projects/process-queue returned HTTP $HTTP_CODE"
+              cat /tmp/pending.json | head -c 500
               exit 1
             fi
 
-            cat /tmp/result.json
+            PENDING=$(cat /tmp/pending.json | grep -o '"pending":[0-9]*' | cut -d: -f2 || echo "0")
+            echo "Pending projects: $PENDING"
+
+            if [ "$PENDING" -eq 0 ]; then
+              echo "Nothing to process. Exiting."
+              exit 0
+            fi
+
+            echo "=== Step 2: Processing $PENDING project(s) one at a time ==="
+            LOOP=0
+            MAX_LOOPS=200
+
+            while [ "$PENDING" -gt 0 ] && [ "$LOOP" -lt "$MAX_LOOPS" ]; do
+              LOOP=$((LOOP + 1))
+              echo "--- Call $LOOP: processing 1 project ---"
+
+              HTTP_CODE=$(curl -sS --max-time 90 --connect-timeout 15 -o /tmp/result.json -w "%{http_code}" \
+                -X POST "$BASE_URL/api/projects/process-queue?count=1" \
+                -H "$AUTH" \
+                -H "Content-Type: application/json") || {
+                  echo "ERROR: POST request failed"
+                  exit 1
+                }
+
+              if [ "$HTTP_CODE" != "200" ]; then
+                echo "ERROR: POST returned HTTP $HTTP_CODE"
+                cat /tmp/result.json | head -c 500
+                exit 1
+              fi
+
+              cat /tmp/result.json
+              echo ""
+
+              PROCESSED=$(cat /tmp/result.json | grep -o '"processed":[0-9]*' | cut -d: -f2 || echo "0")
+              REMAINING=$(cat /tmp/result.json | grep -o '"remaining":[0-9]*' | cut -d: -f2 || echo "0")
+
+              echo "  -> processed: $PROCESSED, remaining: $REMAINING"
+
+              if [ "$REMAINING" -eq 0 ]; then
+                echo "All projects processed!"
+                break
+              fi
+
+              PENDING=$REMAINING
+              sleep 3
+            done
+
+            echo "=== Step 3: Finalizing (pin best projects + badge queue) ==="
+            HTTP_CODE=$(curl -sS --max-time 60 --connect-timeout 10 -o /tmp/finalize.json -w "%{http_code}" \
+              -X POST "$BASE_URL/api/projects/process-queue?finalize=true" \
+              -H "$AUTH" \
+              -H "Content-Type: application/json") || {
+                echo "ERROR: Finalize request failed"
+                exit 1
+              }
+
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "ERROR: Finalize returned HTTP $HTTP_CODE"
+              cat /tmp/finalize.json | head -c 500
+              exit 1
+            fi
+
+            cat /tmp/finalize.json
             echo ""
 
-            PROCESSED=$(cat /tmp/result.json | grep -o '"processed":[0-9]*' | cut -d: -f2 || echo "0")
-            REMAINING=$(cat /tmp/result.json | grep -o '"remaining":[0-9]*' | cut -d: -f2 || echo "0")
-
-            echo "  -> processed: $PROCESSED, remaining: $REMAINING"
-
-            if [ "$REMAINING" -eq 0 ]; then
-              echo "All projects processed!"
-              break
-            fi
-
-            PENDING=$REMAINING
-            sleep 3
-          done
-
-          echo "=== Step 3: Finalizing (pin best projects + badge queue) ==="
-          HTTP_CODE=$(curl -sS --max-time 60 --connect-timeout 10 -o /tmp/finalize.json -w "%{http_code}" \
-            -X POST "$BASE_URL/api/projects/process-queue?finalize=true" \
-            -H "$AUTH" \
-            -H "Content-Type: application/json") || {
-              echo "ERROR: Finalize request failed"
-              exit 1
-            }
-
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERROR: Finalize returned HTTP $HTTP_CODE"
-            cat /tmp/finalize.json | head -c 500
-            exit 1
-          fi
-
-          cat /tmp/finalize.json
-          echo ""
-
-          echo "=== Done ==="
+            echo "=== Done ==="
+          on_retry_command: |
+            DELAY_MINUTES=$((RANDOM % 16 + 5))
+            echo "Task failed. Re-running in ${DELAY_MINUTES} minute(s)..."
+            sleep $((DELAY_MINUTES * 60))
+          retry_wait_seconds: 0
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
