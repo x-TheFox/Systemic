@@ -11,14 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sync all users (one per request)
-        run: |
-          set -euo pipefail
-
-          run_task() (
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 120
+          max_attempts: 2
+          command: |
             set -euo pipefail
 
-            BASE_URL="${{ secrets.VERCEL_URL }}"
-            AUTH="Bearer ${{ secrets.CRON_SECRET }}"
+            BASE_URL="${VERCEL_URL}"
+            AUTH="Bearer ${CRON_SECRET}"
 
             # Validate env
             if [ -z "$BASE_URL" ]; then
@@ -83,27 +84,11 @@ jobs:
             done < /tmp/user_ids.txt
 
             echo "=== Sync complete: $SYNCED succeeded, $FAILED failed ==="
-          )
-
-          ATTEMPT=1
-          MAX_ATTEMPTS=2
-
-          while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
-            if run_task; then
-              break
-            fi
-
-            if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
-              DELAY_MINUTES=$((RANDOM % 16 + 5))
-              echo "Task failed. Re-running in ${DELAY_MINUTES} minute(s)..."
-              sleep $((DELAY_MINUTES * 60))
-            else
-              echo "Task failed after ${MAX_ATTEMPTS} attempt(s)."
-              exit 1
-            fi
-
-            ATTEMPT=$((ATTEMPT + 1))
-          done
+          on_retry_command: |
+            DELAY_MINUTES=$((RANDOM % 16 + 5))
+            echo "Task failed. Re-running in ${DELAY_MINUTES} minute(s)..."
+            sleep $((DELAY_MINUTES * 60))
+          retry_wait_seconds: 0
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
