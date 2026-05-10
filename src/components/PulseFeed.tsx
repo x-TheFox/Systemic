@@ -5,8 +5,9 @@ import Pusher from "pusher-js";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, Trophy, Unlock, Zap, Star, Clock } from "lucide-react";
+import { Activity, Trophy, Unlock, Zap, Star, Clock, ChevronRight } from "lucide-react";
 import { pulseIn } from "@/lib/motion";
+import Link from "next/link";
 
 interface PulseEvent {
   id: string;
@@ -55,11 +56,17 @@ function relativeTime(date: string) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-export function PulseFeed() {
+interface PulseFeedProps {
+  collapsed?: boolean;
+  previewCount?: number;
+}
+
+export function PulseFeed({ collapsed = false, previewCount }: PulseFeedProps) {
   const [events, setEvents] = useState<PulseEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [userScrolled, setUserScrolled] = useState(false);
+  const resolvedPreviewCount = previewCount ?? Math.min(Math.max(events.length, 1), 5);
 
   useEffect(() => {
     async function loadHistory() {
@@ -78,6 +85,7 @@ export function PulseFeed() {
   }, []);
 
   useEffect(() => {
+    if (collapsed) return;
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
     if (!key) return;
 
@@ -105,7 +113,7 @@ export function PulseFeed() {
       channel.unbind_all();
       channel.unsubscribe();
     };
-  }, []);
+  }, [collapsed]);
 
   // Auto-scroll to top on new events unless user has manually scrolled down
   useEffect(() => {
@@ -123,9 +131,59 @@ export function PulseFeed() {
   if (loading) {
     return (
       <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
+        {Array.from({ length: collapsed ? (previewCount ?? 4) : 5 }).map((_, i) => (
           <Skeleton key={i} className="h-14 w-full rounded-xl bg-[#18181b] border border-white/[0.04]" />
         ))}
+      </div>
+    );
+  }
+
+  // Collapsed/preview mode
+  if (collapsed) {
+    const previewEvents = events.slice(0, resolvedPreviewCount);
+    return (
+      <div className="space-y-2">
+        {previewEvents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-white/30">
+            <Activity className="h-6 w-6 mb-2 opacity-20" />
+            <p className="text-xs font-medium">No recent activity</p>
+          </div>
+        ) : (
+          previewEvents.map((e) => {
+            const config = eventConfig[e.type] || eventConfig["new-activity"];
+            return (
+              <div
+                key={e.id}
+                className={`flex items-start gap-3 p-3 rounded-xl bg-[#111113] border-y border-r border-white/[0.04] border-l-2 ${config.border} transition-colors hover:bg-[#18181b]`}
+              >
+                <div className="mt-0.5 shrink-0 p-1.5 rounded-lg bg-[#18181b] border border-white/[0.06]">
+                  {config.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-md text-white/40 border border-white/[0.06] bg-[#18181b]">
+                      {e.type.replace("-", " ")}
+                    </span>
+                    {e.xp ? <span className="text-white/80 text-[11px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/[0.04]">+{e.xp} XP</span> : null}
+                  </div>
+                  <p className="text-[12px] font-medium text-white/70 leading-snug truncate">{e.message}</p>
+                  <p className="text-[10px] text-white/30 mt-1 flex items-center gap-1 font-semibold tracking-wide">
+                    <Clock className="h-3 w-3 opacity-60" />
+                    {relativeTime(e.timestamp)}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <Link
+          href="/pulse"
+          className="w-full mt-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/[0.06] bg-[#111113] hover:bg-[#18181b] hover:border-white/[0.12] text-[11px] font-semibold text-white/50 hover:text-white/80 transition-all duration-200"
+        >
+          <Activity className="h-3.5 w-3.5" />
+          View Full Pulse Feed
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
     );
   }

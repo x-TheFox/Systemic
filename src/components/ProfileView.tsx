@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
   ArrowLeft, Code2, Trophy, Zap, RefreshCw,
@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { BadgeGrid, BadgeCard } from "@/components/BadgeGrid";
 import { StreakHeatmap } from "@/components/StreakHeatmap";
-import { pageEntrance, staggerItem, statReveal } from "@/lib/motion";
+import { pageEntrance, staggerItem, statReveal, springBouncy } from "@/lib/motion";
 import { XPBreakdownModal } from "@/components/XPBreakdownModal";
 
 const platformIcons: Record<string, React.ReactNode> = {
@@ -72,6 +72,7 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   const [compareInput, setCompareInput] = useState("");
   const [showCompare, setShowCompare] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showBadgesModal, setShowBadgesModal] = useState(false);
 
   const [analysis, setAnalysis] = useState<any>(null);
   const [loadingAI, setLoadingAI] = useState(false);
@@ -122,10 +123,7 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   async function triggerSync() {
     toast.info("Sync triggered in the background. Check back in a minute!");
     try {
-      const res = await fetch("/api/sync", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ""}` },
-      });
+      const res = await fetch("/api/sync-self", { method: "POST" });
       if (!res.ok) throw new Error("Sync failed");
       toast.success("Sync complete! Refresh to see changes.");
     } catch {
@@ -136,14 +134,7 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
   async function triggerDeepDive() {
     toast.info("Deep dive started. Analyzing your entire GitHub history...");
     try {
-      const res = await fetch("/api/deepdive", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ""}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId: profile?.id }),
-      });
+      const res = await fetch("/api/deepdive-self", { method: "POST" });
       if (!res.ok) throw new Error("Deep dive failed");
       const data = await res.json();
       toast.success(`Deep dive complete! Archetype: ${data.archetype}`);
@@ -472,11 +463,33 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
             {/* BADGES */}
             {profile.badges && profile.badges.length > 0 && (
               <div className="flex flex-col gap-5">
-                <div className="flex items-center gap-2.5">
-                  <Shield className="w-4 h-4 text-amber-400" />
-                  <h2 className="text-sm font-semibold text-white tracking-wide">Achievements</h2>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Shield className="w-4 h-4 text-amber-400" />
+                    <h2 className="text-sm font-semibold text-white tracking-wide">Achievements</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowBadgesModal(true)}
+                    className="text-[11px] font-medium text-white/40 hover:text-white/80 transition-colors flex items-center gap-1"
+                  >
+                    View All ({profile.badges.length}) <ChevronRight className="h-3 w-3" />
+                  </button>
                 </div>
-                <BadgeGrid badges={profile.badges} />
+                {/* Preview: first 3 badges */}
+                <div className="space-y-2">
+                  {profile.badges.slice(0, 3).map((badge: any) => (
+                    <BadgeCard key={badge.id} badge={badge} />
+                  ))}
+                  {profile.badges.length > 3 && (
+                    <button
+                      onClick={() => setShowBadgesModal(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/[0.06] bg-[#111113] hover:bg-[#18181b] hover:border-white/[0.12] text-[11px] font-semibold text-white/50 hover:text-white/80 transition-all duration-200"
+                    >
+                      <Trophy className="h-3.5 w-3.5" />
+                      +{profile.badges.length - 3} more badges
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -548,6 +561,49 @@ export function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
         userId={profile.id}
         userName={profile.name || profile.githubHandle || "Anonymous"}
       />
+
+      {/* Badges Modal */}
+      <AnimatePresence>
+        {showBadgesModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowBadgesModal(false)}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-black/70 backdrop-blur-xl"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={springBouncy}
+              className="relative w-full max-w-2xl max-h-[80vh] flex flex-col rounded-2xl border border-white/[0.08] bg-[#0d0d10] shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06] shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <Shield className="h-4 w-4 text-amber-400" />
+                  <h2 className="text-sm font-semibold text-white tracking-wide">
+                    Achievements
+                    <span className="ml-2 text-[11px] font-normal text-white/40">({profile.badges.length})</span>
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setShowBadgesModal(false)}
+                  className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <BadgeGrid badges={profile.badges} />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.main>
   );
 }

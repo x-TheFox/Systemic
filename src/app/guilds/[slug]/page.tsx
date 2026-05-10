@@ -3,9 +3,10 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Users, Trophy, Crown, ArrowLeft, LogOut, Pencil, Upload, X, Loader2 } from "lucide-react";
-import { pageEntrance, staggerItem } from "@/lib/motion";
+import { Shield, Users, Trophy, Crown, ArrowLeft, LogOut, Pencil, Upload, X, Loader2, BarChart3, Search } from "lucide-react";
+import { pageEntrance, staggerItem, springBouncy } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { toast } from "sonner";
 
