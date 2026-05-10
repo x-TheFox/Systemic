@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { motion } from "framer-motion";
-import { Users, Plus, Shield, Upload, X, Loader2, Trophy, Crown } from "lucide-react";
-import { pageEntrance, staggerItem } from "@/lib/motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Users, Plus, Shield, Upload, X, Loader2, Trophy, Crown, Activity, ExternalLink } from "lucide-react";
+import { pageEntrance, staggerItem, statReveal } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import Link from "next/link";
+import { PulseFeed } from "@/components/PulseFeed";
 
 interface Guild {
   id: string;
@@ -17,10 +18,14 @@ interface Guild {
   isPublic: boolean;
   adminId: string;
   _count: { members: number };
+  admin?: { name?: string | null; githubHandle?: string | null };
+  totalXP?: number;
+  members?: any[];
 }
 
 export default function GuildsPage() {
   const [guilds, setGuilds] = useState<Guild[]>([]);
+  const [globalXP, setGlobalXP] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", slug: "", description: "", iconUrl: "" });
@@ -38,7 +43,15 @@ export default function GuildsPage() {
         ]);
         if (guildsRes.ok) {
           const data = await guildsRes.json();
-          setGuilds(data.guilds || []);
+          const loadedGuilds = data.guilds || [];
+          setGuilds(loadedGuilds);
+          
+          let xpAccumulator = 0;
+          loadedGuilds.forEach((g: any) => {
+            if (g.totalXP) xpAccumulator += g.totalXP;
+            else if (g.members) xpAccumulator += g.members.reduce((s: number, m: any) => s + m.xp, 0);
+          });
+          setGlobalXP(xpAccumulator);
         }
         if (profileRes.ok) {
           const data = await profileRes.json();
@@ -151,183 +164,298 @@ export default function GuildsPage() {
     }
   }
 
+  const topGuild = guilds.length > 0 ? [...guilds].sort((a: any, b: any) => {
+    const aXP = a.totalXP ?? a.members?.reduce((s: number, m: any) => s + m.xp, 0) ?? 0;
+    const bXP = b.totalXP ?? b.members?.reduce((s: number, m: any) => s + m.xp, 0) ?? 0;
+    return bXP - aXP;
+  })[0] : null;
+
   return (
     <motion.main
       variants={pageEntrance}
       initial="hidden"
       animate="visible"
-      className="min-h-screen p-4 md:p-8"
+      className="mx-auto max-w-[1440px] px-4 sm:px-6 py-8 space-y-10 min-h-screen"
     >
-      <div className="mx-auto max-w-4xl space-y-6">
-        <motion.div variants={staggerItem} className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Shield className="h-6 w-6 text-accent" />
-            <h1 className="text-display gradient-text">Guilds</h1>
+      {/* ============================================================== */}
+      {/* 1. HERO / GLOBAL GUILDS HEADER */}
+      {/* ============================================================== */}
+      <motion.div variants={staggerItem} className="flex flex-col gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 text-white/40 mb-1">
+              <Shield className="h-4 w-4" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest">Co-op Engineering</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">Guild Ecosystem</h1>
           </div>
+          
           <button
             onClick={() => setShowCreate(!showCreate)}
-            className="h-9 px-4 rounded-[var(--radius-compact)] bg-accent text-white text-sm font-semibold shadow-glow hover:shadow-[0_0_24px_hsl(265_85%_60%/_0.4)] transition-shadow inline-flex items-center gap-2"
+            className="h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-bold tracking-wide hover:bg-violet-500 transition-colors inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Create Guild
+            Establish Guild
           </button>
-        </motion.div>
+        </div>
 
-        {showCreate && (
-          <motion.div variants={staggerItem} className="glass-card p-6 space-y-4">
-            <h2 className="text-heading text-white">Create Guild</h2>
-            <div className="space-y-3">
-              <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Guild Name"
-                className="w-full h-10 px-3 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50"
-              />
-              <input
-                value={form.slug}
-                onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                placeholder="guild-slug"
-                className="w-full h-10 px-3 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50"
-              />
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Description (optional)"
-                rows={2}
-                className="w-full px-3 py-2 rounded-[var(--radius-compact)] bg-surface border border-white/[0.08] text-white text-sm focus:outline-none focus:border-accent/50 resize-none"
-              />
-              {/* SVG Upload */}
-              <div>
-                <label className="text-label text-fg-muted mb-1 block">Guild Icon</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".svg,image/svg+xml"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                {form.iconUrl ? (
-                  <div className="flex items-center gap-3 p-3 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06]">
-                    <div className="h-10 w-10 rounded-[var(--radius-compact)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                      <img src={form.iconUrl} alt="Preview" className="h-full w-full object-contain" />
-                    </div>
-                    <span className="text-sm text-fg-dim flex-1 truncate">
-                      Icon uploaded
-                    </span>
-                    <button
-                      onClick={clearIcon}
-                      className="h-7 w-7 rounded-[var(--radius-compact)] bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center justify-center"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ) : uploading ? (
-                  <div className="w-full h-10 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06] border-dashed text-fg-muted inline-flex items-center justify-center gap-2 text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Uploading...
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full h-10 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06] border-dashed text-fg-muted hover:text-fg-dim hover:border-white/[0.12] transition-colors inline-flex items-center justify-center gap-2 text-sm"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Upload SVG
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button onClick={createGuild} className="h-9 px-4 rounded-[var(--radius-compact)] bg-accent text-white text-sm font-semibold">
-                  Create
-                </button>
-                <button onClick={() => setShowCreate(false)} className="h-9 px-4 rounded-[var(--radius-compact)] border border-white/[0.08] text-fg-dim text-sm">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </motion.div>
+        {/* Global Stats Row */}
+        {loading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl bg-[#111113] border border-white/[0.04]" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Active Guilds" value={guilds.length.toString()} icon={<Shield className="h-4 w-4 text-violet-400" />} />
+            <StatCard label="Total Community XP" value={globalXP.toLocaleString()} icon={<Activity className="h-4 w-4 text-cyan-400" />} />
+            <StatCard label="Leading Guild" value={topGuild?.name || "-"} icon={<Crown className="h-4 w-4 text-amber-400" />} />
+            <StatCard label="Your Guild Status" value={myGuildId ? guilds.find(g => g.id === myGuildId)?.name || "Active" : "Independent"} icon={<Users className="h-4 w-4 text-pink-400" />} />
+          </div>
         )}
+      </motion.div>
 
-        <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {loading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-32 rounded-[var(--radius-standard)]" />
-            ))
-          ) : guilds.length === 0 ? (
-            <div className="col-span-full text-center py-16 text-fg-muted">
-              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No guilds yet. Be the first to create one!</p>
-            </div>
-          )           : (
-            guilds.map((guild: any) => (
-              <div key={guild.id} className="glass-card p-5 hover:border-accent/20 transition-colors">
-                <div className="flex items-start gap-4 mb-3">
-                  {/* Big Guild Icon */}
-                  <div className="flex-shrink-0">
-                    {guild.iconUrl ? (
-                      <div className="h-16 w-16 rounded-[var(--radius-standard)] overflow-hidden border border-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-                        <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain p-1" />
+      {/* ============================================================== */}
+      {/* GUILDS GRID & RIGHT RAIL */}
+      {/* ============================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* LEFT COLUMN: Creation & Featured Guilds (8 cols) */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          <AnimatePresence>
+            {showCreate && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                animate={{ opacity: 1, height: "auto", scale: 1 }}
+                exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-[#111113] border border-white/[0.08] rounded-xl p-5 sm:p-6 mb-2">
+                  <h2 className="text-[15px] font-bold text-white mb-4">Establish New Guild</h2>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] tracking-widest uppercase font-bold text-white/40 mb-1.5 block">Guild Name</label>
+                        <input
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                          className="w-full h-10 px-3 rounded-lg bg-[#18181b] border border-white/[0.06] text-white text-[13px] font-medium focus:outline-none focus:border-violet-500/50 transition-colors"
+                          placeholder="e.g. Frontend Masters"
+                        />
                       </div>
-                    ) : (
-                      <div className="h-16 w-16 rounded-[var(--radius-standard)] bg-gradient-to-br from-accent/20 to-cyan-500/20 border border-accent/30 flex items-center justify-center">
-                        <span className="text-2xl font-bold text-accent">{guild.name.charAt(0).toUpperCase()}</span>
+                      <div>
+                        <label className="text-[10px] tracking-widest uppercase font-bold text-white/40 mb-1.5 block">Guild Slug</label>
+                        <input
+                          value={form.slug}
+                          onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                          className="w-full h-10 px-3 rounded-lg bg-[#18181b] border border-white/[0.06] text-white text-[13px] font-medium focus:outline-none focus:border-violet-500/50 transition-colors"
+                          placeholder="frontend-masters"
+                        />
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <h3 className="text-lg font-bold text-white truncate">{guild.name}</h3>
                     </div>
-                    {guild.description && <p className="text-sm text-fg-muted truncate">{guild.description}</p>}
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="inline-flex items-center gap-1 text-[11px] text-accent font-medium">
-                        <Trophy className="h-3 w-3" />
-                        {(guild.totalXP || 0).toLocaleString()} XP
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-[11px] text-fg-dim">
-                        <Users className="h-3 w-3" />
-                        {guild._count?.members || guild.members?.length || 0}
-                      </span>
-                      {guild.admin && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-fg-dim">
-                          <Crown className="h-3 w-3 text-amber-400" />
-                          {guild.admin.name || guild.admin.githubHandle || "Unknown"}
-                        </span>
+                    <div>
+                      <label className="text-[10px] tracking-widest uppercase font-bold text-white/40 mb-1.5 block">Mission Statement / Bio</label>
+                      <textarea
+                        value={form.description}
+                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 rounded-lg bg-[#18181b] border border-white/[0.06] text-white text-[13px] font-medium focus:outline-none focus:border-violet-500/50 transition-colors resize-none"
+                        placeholder="What is your guild's primary focus?"
+                      />
+                    </div>
+                    {/* SVG Upload */}
+                    <div>
+                      <label className="text-[10px] tracking-widest uppercase font-bold text-white/40 mb-1.5 block">Guild Icon (SVG)</label>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".svg,image/svg+xml"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      {form.iconUrl ? (
+                        <div className="flex items-center gap-3 p-2.5 rounded-lg bg-[#18181b] border border-white/[0.06]">
+                          <div className="h-10 w-10 rounded overflow-hidden border border-white/[0.08] bg-[#111113] flex items-center justify-center p-1">
+                            <img src={form.iconUrl} alt="Preview" className="h-full w-full object-contain" />
+                          </div>
+                          <span className="text-xs text-white/60 flex-1 truncate">
+                            Icon uploaded successfully
+                          </span>
+                          <button
+                            onClick={clearIcon}
+                            className="h-7 w-7 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors flex items-center justify-center shrink-0"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : uploading ? (
+                        <div className="w-full h-10 rounded-lg bg-[#18181b] border border-white/[0.06] text-white/40 inline-flex items-center justify-center gap-2 text-xs font-semibold">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          UPLOADING...
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full h-10 rounded-lg bg-[#18181b] border border-white/[0.06] text-white/40 hover:text-white hover:border-white/[0.12] transition-colors inline-flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          Upload SVG Vector
+                        </button>
                       )}
                     </div>
+                    <div className="flex gap-2 pt-2 border-t border-white/[0.04]">
+                      <button onClick={createGuild} className="h-9 px-5 rounded-lg bg-white text-black text-xs font-bold uppercase tracking-wider hover:bg-white/90 transition-colors">
+                        Deploy Guild
+                      </button>
+                      <button onClick={() => setShowCreate(false)} className="h-9 px-5 rounded-lg border border-white/[0.08] text-white/60 text-xs font-bold uppercase tracking-wider hover:bg-white/[0.04] hover:text-white transition-colors">
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Link href={`/guilds/${guild.slug}`}>
-                    <span className="h-8 px-3 rounded-[var(--radius-compact)] bg-white/[0.04] border border-white/[0.08] text-fg-dim text-xs font-semibold hover:text-white hover:border-white/[0.15] transition-colors inline-flex items-center">
-                      View
-                    </span>
-                  </Link>
-                  {myGuildId === guild.id ? (
-                    <button
-                      onClick={() => leaveGuild(guild.id)}
-                      className="h-8 px-3 rounded-[var(--radius-compact)] bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors"
-                    >
-                      Leave
-                    </button>
-                  ) : myGuildId ? (
-                    <span className="h-8 px-3 rounded-[var(--radius-compact)] bg-white/[0.02] border border-white/[0.06] text-fg-muted text-xs font-semibold inline-flex items-center">
-                      In another guild
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => joinGuild(guild.slug)}
-                      className="h-8 px-3 rounded-[var(--radius-compact)] bg-accent/10 border border-accent/30 text-accent text-xs font-semibold hover:bg-accent/20 transition-colors"
-                    >
-                      Join
-                    </button>
-                  )}
-                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex items-center gap-2.5 pb-2 border-b border-white/[0.06] mt-2">
+            <Trophy className="h-4 w-4 text-violet-400" />
+            <h2 className="text-sm font-semibold text-white tracking-wide">Featured Collectives</h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 rounded-xl bg-[#111113] border border-white/[0.04]" />
+              ))
+            ) : guilds.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 text-white/40">
+                <Users className="h-8 w-8 mb-3 opacity-50" />
+                <p className="text-[13px] font-semibold tracking-wide">Ecosystem is empty. Initialize the first guild.</p>
               </div>
-            ))
-          )}
-        </motion.div>
+            ) : (
+              guilds.map((guild: any) => {
+                const guildXP = guild.totalXP ?? guild.members?.reduce((s: number, m: any) => s + m.xp, 0) ?? 0;
+                const memberCount = guild._count?.members || guild.members?.length || 0;
+                const adminName = guild.admin?.name || guild.admin?.githubHandle || "Unknown";
+
+                return (
+                  <div key={guild.id} className="group relative flex flex-col p-5 bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.12] hover:bg-[#18181b] transition-all duration-300">
+                    <div className="flex items-start gap-4 mb-4">
+                      {/* Avatar */}
+                      <div className="flex-shrink-0">
+                        {guild.iconUrl ? (
+                          <div className="h-14 w-14 rounded-lg overflow-hidden border border-white/[0.08] bg-[#18181b] flex items-center justify-center">
+                            <img src={guild.iconUrl} alt={guild.name} className="h-full w-full object-contain p-1.5" />
+                          </div>
+                        ) : (
+                          <div className="h-14 w-14 rounded-lg bg-[#18181b] border border-white/[0.06] flex items-center justify-center shadow-inner">
+                            <span className="text-xl font-bold text-white/80">{guild.name.charAt(0).toUpperCase()}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/guilds/${guild.slug}`} className="block">
+                          <h3 className="text-base font-bold text-white/90 group-hover:text-white transition-colors truncate">{guild.name}</h3>
+                        </Link>
+                        {guild.description && <p className="text-[11px] text-white/50 truncate mt-0.5">{guild.description}</p>}
+                        
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold tracking-widest uppercase border border-amber-500/30 text-amber-500/80 bg-amber-500/5 rounded truncate">
+                            <Crown className="h-2 w-2 mr-1" /> {adminName}
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold tracking-widest uppercase border border-cyan-500/30 text-cyan-400/80 bg-cyan-500/5 rounded">
+                            <Users className="h-2 w-2 mr-1" /> {memberCount}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-auto flex items-end justify-between pt-4 border-t border-white/[0.04]">
+                      <div className="flex flex-col">
+                        <span className="text-lg font-bold tabular-nums text-white/90">{guildXP.toLocaleString()}</span>
+                        <span className="text-[9px] uppercase font-bold tracking-widest text-violet-400">Total XP</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Link href={`/guilds/${guild.slug}`}>
+                          <span className="h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/60 text-[11px] font-bold uppercase tracking-wider hover:text-white hover:bg-white/[0.08] hover:border-white/[0.15] transition-all inline-flex items-center">
+                            Open <ExternalLink className="h-3 w-3 ml-1.5" />
+                          </span>
+                        </Link>
+                        {myGuildId === guild.id ? (
+                          <button
+                            onClick={() => leaveGuild(guild.id)}
+                            className="h-8 px-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-bold uppercase tracking-wider hover:bg-red-500/20 transition-all"
+                          >
+                            Leave
+                          </button>
+                        ) : myGuildId ? (
+                          <span className="h-8 px-3 rounded-lg bg-transparent border border-transparent text-white/30 text-[11px] font-bold uppercase tracking-wider inline-flex items-center select-none pt-1">
+                            Locked
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => joinGuild(guild.slug)}
+                            className="h-8 px-3 rounded-lg bg-violet-500/10 border border-violet-500/30 text-violet-400 text-[11px] font-bold uppercase tracking-wider hover:bg-violet-500/20 transition-all"
+                          >
+                            Join
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* RIGHT RAIL: Network Pulse / Competitions (4 cols) */}
+        {/* ============================================================== */}
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          <div className="flex items-center gap-2.5 pb-2 border-b border-white/[0.06]">
+            <Activity className="h-4 w-4 text-cyan-400" />
+            <h2 className="text-sm font-semibold text-white tracking-wide">Network Telemetry</h2>
+          </div>
+          
+          <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex-1 min-h-[400px]">
+            <PulseFeed />
+          </div>
+
+          <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none transition-opacity group-hover:opacity-10">
+              <Shield className="h-32 w-32" />
+            </div>
+            <h3 className="text-[13px] font-bold text-white mb-2">Guild Wars Active</h3>
+            <p className="text-[11px] text-white/50 leading-relaxed mb-4">
+              Challenge rival engineering collectives to XP duels. Establish dominance within the system architecture and claim the top podium.
+            </p>
+            <Link href="/leaderboard" className="text-[11px] font-bold text-violet-400 uppercase tracking-widest hover:text-violet-300 transition-colors">
+              View Global Standings &rarr;
+            </Link>
+          </div>
+        </div>
       </div>
     </motion.main>
+  );
+}
+
+function StatCard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+  return (
+    <div className="relative group overflow-hidden rounded-xl p-4 sm:p-5 bg-[#111113] border border-white/[0.06] hover:border-white/[0.12] transition-colors duration-200">
+      <div className="absolute top-0 left-0 right-0 h-[1.5px] opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-violet-500/50 to-cyan-500/50" />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+          {icon}
+          <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-white truncate">{label}</span>
+        </div>
+        <div className="text-2xl sm:text-3xl font-semibold tabular-nums tracking-tight text-white/90 group-hover:text-white transition-colors truncate">
+          {value}
+        </div>
+      </div>
+    </div>
   );
 }

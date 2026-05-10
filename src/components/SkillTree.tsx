@@ -21,16 +21,16 @@ import { computeSkillTreeLayout, type SkillNodeData } from "@/hooks/useSkillTree
 import { slideFromRight } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const pathColors: Record<string, { bg: string; border: string; glow: string }> = {
-  "Frontend Wizard": { bg: "#3b82f6", border: "#3b82f6", glow: "0 0 20px #3b82f640" },
-  "Systems Engineer": { bg: "#ef4444", border: "#ef4444", glow: "0 0 20px #ef444440" },
-  "Data Scientist": { bg: "#22c55e", border: "#22c55e", glow: "0 0 20px #22c55e40" },
-  Core: { bg: "#a855f7", border: "#a855f7", glow: "0 0 20px #a855f740" },
-  "Fullstack Legend": { bg: "#f59e0b", border: "#f59e0b", glow: "0 0 20px #f59e0b40" },
-  "DevOps Architect": { bg: "#06b6d4", border: "#06b6d4", glow: "0 0 20px #06b6d440" },
+const pathColors: Record<string, { bg: string; border: string }> = {
+  "Frontend Wizard": { bg: "#3b82f6", border: "#3b82f6" },
+  "Systems Engineer": { bg: "#ef4444", border: "#ef4444" },
+  "Data Scientist": { bg: "#22c55e", border: "#22c55e" },
+  Core: { bg: "#a855f7", border: "#a855f7" },
+  "Fullstack Legend": { bg: "#f59e0b", border: "#f59e0b" },
+  "DevOps Architect": { bg: "#06b6d4", border: "#06b6d4" },
 };
 
-const defaultPathStyle = { bg: "#6b7280", border: "#374151", glow: "none" };
+const defaultPathStyle = { bg: "#6b7280", border: "#374151" };
 
 /* ── Custom React Flow Node ── */
 function SkillNode({ data }: NodeProps) {
@@ -40,43 +40,36 @@ function SkillNode({ data }: NodeProps) {
   const isAvailable = nodeData.status === "available";
   const isMastered = nodeData.status === "mastered";
 
-  const sizeClass = isMastered ? "w-[220px]" : isUnlocked || isAvailable ? "w-[180px]" : "w-[150px]";
-  const opacityClass = nodeData.status === "locked" ? "opacity-40 grayscale-[0.7]" : "opacity-100";
-  const glowStyle = isMastered
-    ? { boxShadow: `0 0 30px ${style.bg}60, 0 0 60px ${style.bg}30` }
-    : isUnlocked
-    ? { boxShadow: `0 0 20px ${style.bg}40` }
-    : {};
+  const sizeClass = isMastered ? "w-[220px]" : "w-[180px]";
+  const opacityClass = nodeData.status === "locked" ? "opacity-50 grayscale" : "opacity-100";
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.7 }}
+      initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-      className={`${sizeClass} ${opacityClass} rounded-[var(--radius-standard)] border px-4 py-3 text-white select-none cursor-pointer`}
+      className={`${sizeClass} ${opacityClass} rounded-xl border px-3 py-2.5 text-white select-none cursor-pointer`}
       style={{
         background: isUnlocked || isMastered || isAvailable
-          ? `linear-gradient(135deg, ${style.bg}30, ${style.bg}10)`
-          : "hsl(var(--surface))",
+          ? `linear-gradient(135deg, ${style.bg}20, ${style.bg}05)`
+          : "#111113",
         borderColor: isAvailable
           ? style.border
           : isUnlocked || isMastered
-          ? `${style.border}80`
-          : "hsl(var(--border))",
-        borderWidth: isAvailable ? "2px" : "1px",
-        ...glowStyle,
+          ? `${style.border}60`
+          : "rgba(255,255,255,0.06)",
+        borderWidth: "1px",
       }}
-      whileHover={{ scale: 1.04, transition: { duration: 0.15 } }}
+      whileHover={{ scale: 1.02, transition: { duration: 0.15 } }}
     >
-      <div className="flex items-center gap-2">
-        {isMastered && <Crown className="h-3.5 w-3.5 text-amber-400 shrink-0" />}
-        {isUnlocked && !isMastered && <Star className="h-3.5 w-3.5 shrink-0" style={{ color: style.bg }} />}
-        {nodeData.status === "locked" && <Lock className="h-3.5 w-3.5 text-fg-muted shrink-0" />}
-        <span className={`text-xs font-semibold truncate ${isUnlocked || isMastered ? "" : "text-fg-dim"}`}>
+      <div className="flex items-center gap-1.5">
+        {isMastered && <Crown className="h-3 w-3 text-amber-400 shrink-0" />}
+        {isUnlocked && !isMastered && <Star className="h-3 w-3 shrink-0" style={{ color: style.bg }} />}
+        {nodeData.status === "locked" && <Lock className="h-3 w-3 text-white/30 shrink-0" />}
+        <span className={`text-[11px] font-semibold truncate tracking-wide ${isUnlocked || isMastered ? "" : "text-white/40"}`}>
           {nodeData.label}
         </span>
       </div>
-      <p className="text-[10px] text-fg-muted mt-1 truncate">{nodeData.path}</p>
+      <p className="text-[9px] text-white/40 mt-1 uppercase tracking-widest truncate">{nodeData.path}</p>
     </motion.div>
   );
 }
@@ -124,8 +117,8 @@ export function SkillTree() {
             type: "smoothstep",
             animated: isMet,
             style: {
-              stroke: isMet ? "#a78bfa" : "rgba(255, 255, 255, 0.35)",
-              strokeWidth: isMet ? 3 : 2,
+              stroke: isMet ? "#8b5cf6" : "rgba(255, 255, 255, 0.15)",
+              strokeWidth: isMet ? 2 : 1.5,
             },
           };
         });
@@ -156,12 +149,12 @@ export function SkillTree() {
   }, []);
 
   if (loading) {
-    return <Skeleton className="w-full h-[500px] rounded-[var(--radius-container)]" />;
+    return <Skeleton className="w-full h-[500px] rounded-xl bg-[#18181b] border border-white/[0.04]" />;
   }
 
   return (
     <div className="flex flex-col lg:flex-row gap-4">
-      <div className="flex-1 h-[600px] rounded-[var(--radius-container)] overflow-hidden border border-white/[0.06] bg-base">
+      <div className="flex-1 h-[600px] rounded-xl overflow-hidden border border-white/[0.06] bg-[#0c0c0e]">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -176,12 +169,12 @@ export function SkillTree() {
           minZoom={0.2}
           maxZoom={1.5}
         >
-          <Controls className="bg-surface border-white/[0.06] [&>button]:bg-surface [&>button]:border-white/[0.06] [&>button]:text-fg-dim" />
+          <Controls className="bg-[#18181b] border-white/[0.06] [&>button]:bg-[#18181b] [&>button]:border-white/[0.06] [&>button]:text-white/50" />
           <MiniMap
             nodeStrokeWidth={3}
             zoomable
             pannable
-            className="bg-surface border-white/[0.06]"
+            className="bg-[#111113] border-white/[0.06]"
             nodeColor={(n) => {
               const style = pathColors[(n.data as any)?.path] || defaultPathStyle;
               return style.bg;
@@ -198,35 +191,35 @@ export function SkillTree() {
             initial="hidden"
             animate="visible"
             exit={{ opacity: 0, x: 20, transition: { duration: 0.2 } }}
-            className="w-full lg:w-80 shrink-0 surface-elevated p-5"
+            className="w-full lg:w-[320px] shrink-0 bg-[#111113] border border-white/[0.06] rounded-xl p-5"
           >
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <h3 className="text-base font-bold text-white">{selectedNode.label}</h3>
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-start justify-between gap-3 mb-1.5">
+              <h3 className="text-[15px] font-bold text-white/90">{selectedNode.label}</h3>
+              <div className="flex items-center gap-1.5 shrink-0">
                 {selectedNode.generatedBy === "ai" && (
-                  <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-accent/30 text-accent bg-accent/10">
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border border-violet-500/30 text-violet-300 bg-violet-500/10">
                     <Sparkles className="h-2.5 w-2.5" /> AI
                   </span>
                 )}
                 <StatusBadge status={selectedNode.status} />
               </div>
             </div>
-            <p className="text-[10px] text-fg-muted mb-4">{selectedNode.path}</p>
+            <p className="text-[10px] text-white/40 uppercase tracking-widest mb-4 font-semibold">{selectedNode.path}</p>
 
-            <p className="text-sm text-fg-dim leading-relaxed mb-4">{selectedNode.description}</p>
+            <p className="text-[13px] text-white/60 leading-relaxed mb-5">{selectedNode.description}</p>
 
-            <div className="flex items-center justify-between text-sm py-3 border-t border-white/[0.05]">
-              <span className="text-fg-muted">Reward</span>
-              <span className="text-accent font-bold font-mono">+{selectedNode.xpReward} XP</span>
+            <div className="flex items-center justify-between text-[13px] py-3.5 border-t border-white/[0.04]">
+              <span className="text-white/40 font-medium">Reward</span>
+              <span className="text-violet-400 font-bold font-mono">+{selectedNode.xpReward} XP</span>
             </div>
 
             {selectedNode.requirements && Object.keys(selectedNode.requirements).length > 0 && (
-              <div className="space-y-1.5 pt-3 border-t border-white/[0.05]">
-                <p className="text-label text-fg-muted">Requirements</p>
+              <div className="space-y-2 pt-3.5 border-t border-white/[0.04]">
+                <p className="text-[10px] uppercase font-bold tracking-widest text-white/40">Requirements</p>
                 {Object.entries(selectedNode.requirements).map(([key, val]) => (
                   <div key={key} className="flex justify-between text-xs">
-                    <span className="text-fg-muted">{key.replace(/_/g, " ")}</span>
-                    <span className="text-fg-dim font-mono">{val as number}</span>
+                    <span className="text-white/60">{key.replace(/_/g, " ")}</span>
+                    <span className="text-white/80 font-mono font-medium">{val as number}</span>
                   </div>
                 ))}
               </div>
@@ -234,9 +227,9 @@ export function SkillTree() {
 
             <button
               onClick={() => setSelectedNode(null)}
-              className="mt-4 w-full py-2 text-xs text-fg-muted hover:text-white transition-colors border border-white/[0.06] rounded-[var(--radius-compact)] hover:bg-white/[0.03]"
+              className="mt-6 w-full py-2.5 text-xs text-white/50 font-semibold uppercase tracking-wider hover:text-white transition-colors border border-white/[0.06] rounded-lg hover:bg-[#18181b]"
             >
-              Close
+              Close Details
             </button>
           </motion.div>
         )}
@@ -247,14 +240,14 @@ export function SkillTree() {
 
 function StatusBadge({ status }: { status: string }) {
   const configs: Record<string, { text: string; className: string; icon?: React.ReactNode }> = {
-    unlocked: { text: "Unlocked", className: "border-success/30 text-success bg-success/10" },
+    unlocked: { text: "Unlocked", className: "border-green-500/30 text-green-400 bg-green-500/10" },
     available: { text: "Available", className: "border-cyan-500/30 text-cyan-400 bg-cyan-500/10" },
-    locked: { text: "Locked", className: "border-white/10 text-fg-muted bg-white/[0.04]", icon: <Lock className="h-2.5 w-2.5 mr-0.5" /> },
+    locked: { text: "Locked", className: "border-white/10 text-white/40 bg-white/[0.02]", icon: <Lock className="h-2.5 w-2.5 mr-0.5" /> },
     mastered: { text: "Mastered", className: "border-amber-500/30 text-amber-400 bg-amber-500/10", icon: <Crown className="h-2.5 w-2.5 mr-0.5" /> },
   };
   const cfg = configs[status] || configs.locked;
   return (
-    <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.className}`}>
+    <span className={`inline-flex items-center text-[9px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded border ${cfg.className}`}>
       {cfg.icon}
       {cfg.text}
     </span>

@@ -17,34 +17,29 @@ interface PulseEvent {
   xp?: number;
 }
 
-const eventConfig: Record<string, { icon: React.ReactNode; gradient: string; border: string; bg: string }> = {
+const eventConfig: Record<string, { icon: React.ReactNode; border: string; bg: string }> = {
   "rank-up": {
-    icon: <Star className="h-3.5 w-3.5" />,
-    gradient: "from-yellow-500/10 to-transparent",
-    border: "border-l-yellow-500",
-    bg: "bg-yellow-500/5",
+    icon: <Star className="h-3.5 w-3.5 text-amber-400" />,
+    border: "border-l-amber-500",
+    bg: "bg-amber-500/5",
   },
   "node-unlocked": {
-    icon: <Unlock className="h-3.5 w-3.5" />,
-    gradient: "from-accent/10 to-transparent",
-    border: "border-l-accent",
-    bg: "bg-accent/5",
+    icon: <Unlock className="h-3.5 w-3.5 text-violet-400" />,
+    border: "border-l-violet-500",
+    bg: "bg-violet-500/5",
   },
   "badge-earned": {
-    icon: <Trophy className="h-3.5 w-3.5" />,
-    gradient: "from-success/10 to-transparent",
-    border: "border-l-success",
-    bg: "bg-success/5",
+    icon: <Trophy className="h-3.5 w-3.5 text-green-400" />,
+    border: "border-l-green-500",
+    bg: "bg-green-500/5",
   },
   "xp-milestone": {
-    icon: <Zap className="h-3.5 w-3.5" />,
-    gradient: "from-cyan-500/10 to-transparent",
+    icon: <Zap className="h-3.5 w-3.5 text-cyan-400" />,
     border: "border-l-cyan-500",
     bg: "bg-cyan-500/5",
   },
   "new-activity": {
-    icon: <Activity className="h-3.5 w-3.5" />,
-    gradient: "from-white/5 to-transparent",
+    icon: <Activity className="h-3.5 w-3.5 text-white/60" />,
     border: "border-l-white/20",
     bg: "bg-white/[0.02]",
   },
@@ -129,25 +124,25 @@ export function PulseFeed() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-[var(--radius-standard)]" />
+          <Skeleton key={i} className="h-14 w-full rounded-xl bg-[#18181b] border border-white/[0.04]" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="relative">
-      <ScrollArea className="h-[300px] w-full" onScrollCapture={handleScroll}>
-        <div ref={scrollRef} className="space-y-1.5 px-1">
+    <div className="relative h-full flex flex-col min-h-[300px]">
+      <ScrollArea className="flex-1 w-full" onScrollCapture={handleScroll}>
+        <div ref={scrollRef} className="space-y-2 pr-3 pb-8">
           <AnimatePresence initial={false}>
             {events.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center h-56 text-fg-muted"
+                className="flex flex-col items-center justify-center py-20 text-white/30"
               >
-                <Activity className="h-8 w-8 mb-2 animate-pulse" />
-                <p className="text-sm">Waiting for gang activity...</p>
+                <Activity className="h-8 w-8 mb-3 opacity-20" />
+                <p className="text-sm font-medium">Waiting for network activity...</p>
               </motion.div>
             ) : (
               events.map((e, i) => {
@@ -160,21 +155,21 @@ export function PulseFeed() {
                     initial="hidden"
                     animate="visible"
                     layout
-                    className={`flex items-start gap-3 p-3 rounded-[var(--radius-standard)] bg-gradient-to-r ${config.gradient} border-l-2 ${config.border} ${isNew ? config.bg : ""} transition-colors hover:bg-white/[0.02]`}
+                    className={`flex items-start gap-3.5 p-3.5 rounded-xl bg-[#111113] border-y border-r border-white/[0.04] border-l-2 ${config.border} ${isNew ? config.bg : ""} transition-colors hover:bg-[#18181b]`}
                   >
-                    <div className="mt-0.5 shrink-0 p-1.5 rounded-[var(--radius-compact)] bg-white/[0.04] text-fg-dim">
+                    <div className="mt-0.5 shrink-0 p-1.5 rounded-lg bg-[#18181b] border border-white/[0.06]">
                       {config.icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0 rounded text-fg-muted border border-white/[0.06]">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-md text-white/40 border border-white/[0.06] bg-[#18181b]">
                           {e.type.replace("-", " ")}
                         </span>
-                        {e.xp ? <span className="text-accent text-xs font-bold font-mono">+{e.xp} XP</span> : null}
+                        {e.xp ? <span className="text-white/80 text-[11px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/[0.04]">+{e.xp} XP</span> : null}
                       </div>
-                      <p className="text-sm text-fg-dim leading-snug">{e.message}</p>
-                      <p className="text-[10px] text-fg-muted mt-1 flex items-center gap-1">
-                        <Clock className="h-2.5 w-2.5" />
+                      <p className="text-[13px] font-medium text-white/70 leading-snug">{e.message}</p>
+                      <p className="text-[10px] text-white/30 mt-1.5 mb-0.5 flex items-center gap-1 font-semibold tracking-wide">
+                        <Clock className="h-3 w-3 opacity-60" />
                         {relativeTime(e.timestamp)}
                       </p>
                     </div>
@@ -191,9 +186,9 @@ export function PulseFeed() {
             setUserScrolled(false);
             if (scrollRef.current) scrollRef.current.scrollTop = 0;
           }}
-          className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider bg-surface border border-white/[0.08] text-fg-dim rounded-full shadow-z-float hover:text-white transition-colors"
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest bg-[#18181b] border border-white/[0.08] text-white/50 rounded-full hover:text-white hover:border-white/20 transition-all z-10"
         >
-          New activity ↓
+          New Origin Signals ↓
         </button>
       )}
     </div>
